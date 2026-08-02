@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="250" viewBox="0 0 800 250" font-family="Arial, Helvetica, sans-serif">
+  <rect width="800" height="250" fill="#f7f8fb"/>
+  <text x="400" y="30" text-anchor="middle" font-size="15" fill="#170C79" font-weight="bold">Sample ERD: Students - Enrollments - Courses</text>
+
+  <g>
+    <rect x="40" y="55" width="180" height="160" fill="#ffffff" stroke="#170C79" stroke-width="2" rx="6"/>
+    <rect x="40" y="55" width="180" height="30" fill="#170C79" rx="6"/>
+    <rect x="40" y="71" width="180" height="14" fill="#170C79"/>
+    <text x="130" y="75" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="bold">STUDENTS</text>
+    <line x1="40" y1="85" x2="220" y2="85" stroke="#170C79" stroke-width="1.5"/>
+    <text x="55" y="108" font-size="13">student_id</text>
+    <line x1="55" y1="114" x2="140" y2="114" stroke="#170C79" stroke-width="1.2"/>
+    <text x="205" y="108" text-anchor="end" font-size="11" fill="#56B6C6" font-weight="bold">PK</text>
+    <text x="55" y="142" font-size="13">name</text>
+    <text x="55" y="176" font-size="13">email</text>
+  </g>
+
+  <g>
+    <rect x="310" y="55" width="180" height="160" fill="#ffffff" stroke="#170C79" stroke-width="2" rx="6"/>
+    <rect x="310" y="55" width="180" height="30" fill="#170C79" rx="6"/>
+    <rect x="310" y="71" width="180" height="14" fill="#170C79"/>
+    <text x="400" y="75" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="bold">ENROLLMENTS</text>
+    <line x1="310" y1="85" x2="490" y2="85" stroke="#170C79" stroke-width="1.5"/>
+    <text x="325" y="108" font-size="13">enrollment_id</text>
+    <line x1="325" y1="114" x2="430" y2="114" stroke="#170C79" stroke-width="1.2"/>
+    <text x="475" y="108" text-anchor="end" font-size="11" fill="#56B6C6" font-weight="bold">PK</text>
+    <text x="325" y="142" font-size="13">student_id</text>
+    <text x="475" y="142" text-anchor="end" font-size="11" fill="#c0392b" font-weight="bold">FK</text>
+    <text x="325" y="176" font-size="13">course_code</text>
+    <text x="475" y="176" text-anchor="end" font-size="11" fill="#c0392b" font-weight="bold">FK</text>
+  </g>
+
+  <g>
+    <rect x="580" y="55" width="180" height="160" fill="#ffffff" stroke="#170C79" stroke-width="2" rx="6"/>
+    <rect x="580" y="55" width="180" height="30" fill="#170C79" rx="6"/>
+    <rect x="580" y="71" width="180" height="14" fill="#170C79"/>
+    <text x="670" y="75" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="bold">COURSES</text>
+    <line x1="580" y1="85" x2="760" y2="85" stroke="#170C79" stroke-width="1.5"/>
+    <text x="595" y="108" font-size="13">course_code</text>
+    <line x1="595" y1="114" x2="685" y2="114" stroke="#170C79" stroke-width="1.2"/>
+    <text x="745" y="108" text-anchor="end" font-size="11" fill="#56B6C6" font-weight="bold">PK</text>
+    <text x="595" y="142" font-size="13">title</text>
+  </g>
+
+  <g stroke="#56B6C6" stroke-width="2">
+    <line x1="220" y1="135" x2="310" y2="135"/>
+    <line x1="490" y1="135" x2="580" y2="135"/>
+  </g>
+  <text x="245" y="128" text-anchor="middle" font-size="13" fill="#170C79" font-weight="bold">1</text>
+  <text x="287" y="128" text-anchor="middle" font-size="13" fill="#170C79" font-weight="bold">N</text>
+  <text x="515" y="128" text-anchor="middle" font-size="13" fill="#170C79" font-weight="bold">N</text>
+  <text x="558" y="128" text-anchor="middle" font-size="13" fill="#170C79" font-weight="bold">1</text>
+  <text x="265" y="152" text-anchor="middle" font-size="11" fill="#170C79">enrolls</text>
+  <text x="535" y="152" text-anchor="middle" font-size="11" fill="#170C79">offered as</text>
+
+  <text x="400" y="238" text-anchor="middle" font-size="12" fill="#6c757d">PK = Primary Key (underlined) | FK = Foreign Key | 1 : N = one-to-many relationship</text>
+</svg>

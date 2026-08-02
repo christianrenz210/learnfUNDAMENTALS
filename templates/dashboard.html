@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CodeFundamentals{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="row align-items-center mb-4">
+    <div class="col-md-8">
+      <h2 class="mb-1">
+        <i class="bi bi-grid text-primary me-2"></i>Dashboard
+      </h2>
+      <p class="text-muted mb-0">
+        Welcome, <strong>{{ current_user.username }}</strong>. You have completed
+        {{ done }} of {{ total }} lessons.
+      </p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+      <a href="{{ url_for('compiler') }}" class="btn btn-primary">
+        <i class="bi bi-code-square me-1"></i>Open Compiler
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4 align-items-start">
+    <aside class="col-lg-4 dashboard-sidebar">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body text-center">
+          {% if current_user.avatar %}
+            <img src="{{ url_for('static', filename='uploads/' ~ current_user.avatar) }}?v={{ current_user.avatar }}"
+                 alt="{{ current_user.username }}" class="avatar-circle-img mx-auto mb-3">
+          {% else %}
+            <div class="avatar-circle mx-auto mb-3">{{ current_user.username[:2] | upper }}</div>
+          {% endif %}
+          <h5 class="mb-0">{{ current_user.username }}</h5>
+          <p class="text-muted small mb-0">{{ current_user.email }}</p>
+          <button type="button" class="btn btn-outline-primary btn-sm mt-3"
+                  data-bs-toggle="modal" data-bs-target="#profileModal">
+            <i class="bi bi-pencil me-1"></i>Edit Profile
+          </button>
+        </div>
+      </div>
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <h6 class="mb-0">
+            <i class="bi bi-graph-up text-primary me-2"></i>Your Progress
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="mb-2">Completed <strong>{{ done }}</strong> of {{ total }} lessons</p>
+          <div class="progress mb-3" style="height: 10px;">
+            <div class="progress-bar progress-bar-striped" role="progressbar"
+                 style="width: {{ percent }}%;" aria-valuenow="{{ percent }}"
+                 aria-valuemin="0" aria-valuemax="100">{{ percent }}%</div>
+          </div>
+          <div class="d-flex justify-content-between small">
+            <span>
+              <i class="bi bi-patch-question me-1 text-secondary"></i>
+              Quizzes taken: <strong>{{ quiz_count }}</strong>
+            </span>
+            <span>
+              <i class="bi bi-trophy me-1 text-warning"></i>
+              Points: <strong>{{ quiz_points }}</strong>
+            </span>
+          </div>
+          <a href="{{ url_for('certificate', name='Full Course') }}"
+             class="btn {{ 'btn-warning' if done >= total else 'btn-outline-warning' }} w-100 mt-3">
+            <i class="bi bi-award me-1"></i>Full Course Certificate
+            {% if done < total %}<i class="bi bi-lock-fill ms-1"></i>{% endif %}
+          </a>
+          <div class="mt-3 pt-3 border-top">
+            <p class="small fw-semibold text-muted mb-2">By Section</p>
+            {% for stat in section_stats %}
+              <div class="mb-2">
+                <div class="d-flex justify-content-between small">
+                  <span class="text-truncate">
+                    <i class="bi {{ 'bi-mortarboard' if stat.name == 'Fundamentals' else 'bi-database' }} me-1 text-secondary"></i>
+                    {{ stat.name }}
+                  </span>
+                  {% if stat.total %}
+                    <strong class="ms-2">{{ stat.done }}/{{ stat.total }}</strong>
+                  {% else %}
+                    <span class="text-muted ms-2">No lessons yet</span>
+                  {% endif %}
+                </div>
+                {% if stat.total %}
+                  <div class="progress mt-1" style="height: 6px;">
+                    <div class="progress-bar progress-bar-striped" role="progressbar"
+                         style="width: {{ stat.percent }}%;"></div>
+                  </div>
+                {% endif %}
+                {% if stat.has_quiz %}
+                  {% if stat.quiz_best is not none %}
+                    <div class="small text-muted mt-1">
+                      <i class="bi bi-trophy me-1 text-warning"></i>
+                      Long quiz: <strong>{{ stat.quiz_best }}/{{ stat.quiz_total }}</strong>
+                      <span class="text-secondary">({{ stat.quiz_attempts }}/2 attempts)</span>
+                    </div>
+                    {% if stat.quiz_attempts < 2 %}
+                      <a href="{{ url_for('section_quiz', section=stat.name) }}"
+                         class="btn btn-sm btn-success mt-2 w-100">
+                        <i class="bi bi-arrow-repeat me-1"></i>Retake the Long Quiz
+                      </a>
+                    {% else %}
+                      <a href="{{ url_for('section_quiz', section=stat.name) }}"
+                         class="btn btn-sm btn-outline-secondary mt-2 w-100">
+                        <i class="bi bi-eye me-1"></i>View Long Quiz
+                      </a>
+                    {% endif %}
+                  {% elif stat.total and stat.done == stat.total %}
+                    <a href="{{ url_for('section_quiz', section=stat.name) }}"
+                       class="btn btn-sm btn-success mt-2 w-100">
+                      <i class="bi bi-trophy me-1"></i>Take the Long Quiz
+                    </a>
+                  {% endif %}
+                {% endif %}
+                {% if stat.total %}
+                  <a href="{{ url_for('certificate', name=stat.name) }}"
+                     class="btn btn-sm {{ 'btn-warning' if stat.done == stat.total else 'btn-outline-secondary' }} mt-2 w-100">
+                    <i class="bi bi-award me-1"></i>Section Certificate
+                    {% if stat.done < stat.total %}<i class="bi bi-lock-fill ms-1"></i>{% endif %}
+                  </a>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-trophy text-warning me-2"></i>Leaderboard
+          </h5>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for entry in leaderboard %}
+            <li class="list-group-item d-flex align-items-center {{ 'leaderboard-you' if entry.username == current_user.username }}">
+              <span class="rank-badge {{ 'rank-gold' if entry.rank == 1 else ('rank-silver' if entry.rank == 2 else ('rank-bronze' if entry.rank == 3 else 'rank-rest')) }} me-3">
+                {% if entry.rank == 1 %}
+                  <i class="bi bi-trophy-fill"></i>
+                {% else %}
+                  {{ entry.rank }}
+                {% endif %}
+              </span>
+              <div class="flex-grow-1">
+                <span class="fw-semibold">{{ entry.username }}</span>
+                {% if entry.username == current_user.username %}
+                  <span class="badge bg-primary bg-opacity-10 text-primary ms-1">You</span>
+                {% endif %}
+                <div class="text-muted small">
+                  {{ entry.quizzes }} {{ 'quiz' if entry.quizzes == 1 else 'quizzes' }} taken
+                  <span class="mx-1">|</span>
+                  {{ entry.attempts }} {{ 'attempt' if entry.attempts == 1 else 'attempts' }}
+                </div>
+              </div>
+              <span class="fs-5 fw-bold text-primary">{{ entry.points }}
+                <span class="fs-6 fw-normal text-muted">pts</span>
+              </span>
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted">
+              <i class="bi bi-info-circle me-2"></i>No scores yet. Take a quiz to join the leaderboard!
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-patch-check text-primary me-2"></i>Your Badges
+          </h5>
+        </div>
+        <div class="card-body">
+          {% set badge_count = all_lessons|selectattr('id', 'in', completed)|list|length %}
+          <p class="small text-muted mb-3">
+            Complete each lesson to earn its badge.
+            <strong>{{ badge_count }}/{{ all_lessons|length }}</strong> earned.
+          </p>
+          <p class="small fw-semibold text-muted mb-2">By Section</p>
+          <div class="badge-grid section-badge-grid mb-2">
+            {% for stat in section_stats %}
+              <div class="badge-item" data-bs-toggle="tooltip" data-bs-placement="top"
+                   title="{{ 'Completed all lessons in ' ~ stat.name if stat.done >= stat.total else 'Complete all ' ~ stat.total ~ ' lessons in ' ~ stat.name ~ ' to unlock' }}">
+                <div class="badge-circle badge-lg {{ 'badge-locked' if stat.done < stat.total }}">
+                  <i class="bi {{ 'bi-mortarboard' if stat.name == 'Fundamentals' else 'bi-database' }}"></i>
+                  {% if stat.done < stat.total %}
+                    <i class="bi bi-lock-fill badge-lock"></i>
+                  {% else %}
+                    <i class="bi bi-star-fill badge-star"></i>
+                  {% endif %}
+                </div>
+                <div class="badge-title">{{ stat.name }}</div>
+              </div>
+            {% endfor %}
+            <div class="badge-item" data-bs-toggle="tooltip" data-bs-placement="top"
+                 title="{{ 'Full course completed!' if done >= total else 'Complete all ' ~ total ~ ' lessons to unlock' }}">
+              <div class="badge-circle badge-lg {{ 'badge-locked' if done < total }}">
+                <i class="bi bi-award"></i>
+                {% if done < total %}
+                  <i class="bi bi-lock-fill badge-lock"></i>
+                {% else %}
+                  <i class="bi bi-star-fill badge-star"></i>
+                {% endif %}
+              </div>
+              <div class="badge-title">Full Course</div>
+            </div>
+          </div>
+          <hr>
+          <p class="small fw-semibold text-muted mb-2">Per Lesson</p>
+          {% for section_name, section_lessons in sections.items() %}
+            {% if section_lessons %}
+              <p class="small text-muted mb-1">
+                <i class="bi {{ 'bi-mortarboard' if section_name == 'Fundamentals' else 'bi-database' }} me-1"></i>
+                {{ section_name }}
+              </p>
+              <div class="badge-grid mb-3">
+                {% for l in section_lessons if not l.coming_soon %}
+                  <div class="badge-item" data-bs-toggle="tooltip" data-bs-placement="top"
+                       title="{{ l.title }}">
+                    <div class="badge-circle {{ 'badge-locked' if l.id not in completed }}">
+                      <i class="bi {{ l.icon }}"></i>
+                      {% if l.id not in completed %}
+                        <i class="bi bi-lock-fill badge-lock"></i>
+                      {% endif %}
+                    </div>
+                    <div class="badge-title">{{ l.title }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+
+    <div class="col-lg-8">
+      {% for section, section_lessons in sections.items() %}
+        {% set sec_id = 'section-' ~ loop.index0 %}
+        {% set sec_done = section_lessons|selectattr('id', 'in', completed)|list|length %}
+        {% set sec_total = section_stats | selectattr('name', 'equalto', section) | map(attribute='total') | list | first %}
+        {% set sec_total = sec_total if sec_total else section_lessons|length %}
+        <div class="card folder-card shadow-sm mb-3">
+          <button type="button" class="folder-toggle w-100 d-flex align-items-center text-start bg-transparent border-0 p-3"
+                  data-bs-toggle="collapse" data-bs-target="#{{ sec_id }}"
+                  aria-expanded="{{ 'true' if loop.first else 'false' }}" aria-controls="{{ sec_id }}">
+            <i class="bi {{ 'bi-folder2-open' if loop.first else 'bi-folder2' }} folder-icon fs-3 text-primary me-3"></i>
+            <span class="flex-grow-1">
+              <span class="d-block fw-semibold fs-5">{{ section }}</span>
+              <span class="d-block text-muted small">
+                {% if section_lessons %}
+                  {{ sec_done }}/{{ sec_total }} completed
+                  {% set est = section_stats | selectattr('name', 'equalto', section) | map(attribute='estimate') | list | first %}
+                  {% if est %}
+                    <span class="ms-2">
+                      <i class="bi bi-clock me-1"></i>~{{ est // 60 }}h {{ est % 60 }}m to finish
+                    </span>
+                  {% endif %}
+                {% else %}
+                  Coming soon — 3rd year lessons on the way
+                {% endif %}
+              </span>
+            </span>
+            <span class="badge bg-primary bg-opacity-10 text-primary me-2">
+              {{ sec_total }} lesson{{ '' if sec_total == 1 else 's' }}
+            </span>
+            <i class="bi bi-chevron-down chevron-icon {{ 'rotate' if loop.first }} text-muted"></i>
+          </button>
+          <div id="{{ sec_id }}" class="collapse {{ 'show' if loop.first }}">
+            <div class="card-body border-top">
+              {% if section_lessons %}
+                <div class="row g-4">
+                  {% for lesson in section_lessons %}
+                    <div class="col-md-6">
+                      <div class="card h-100 lesson-card {{ 'lesson-card-locked' if lesson.id in locked_ids }} shadow-sm">
+                        <div class="card-body d-flex flex-column">
+                          <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge bg-primary bg-opacity-10 text-primary fs-6">
+                          Lesson {{ loop.index }}
+                        </span>
+                        <span class="d-flex gap-1 align-items-center">
+                          <span class="badge bg-secondary bg-opacity-10 text-secondary">
+                            <i class="bi bi-clock me-1"></i>~{{ lesson.minutes|default(section_minutes.get(section, 45)) }} min
+                          </span>
+                        {% if lesson.coming_soon %}
+                          <span class="badge bg-info text-dark">
+                            <i class="bi bi-hourglass-split me-1"></i>Coming Soon
+                          </span>
+                        {% elif lesson.id in locked_ids %}
+                          <span class="badge bg-warning text-dark">
+                            <i class="bi bi-lock me-1"></i>Locked
+                          </span>
+                        {% elif lesson.id in completed %}
+                          <span class="badge bg-success">
+                            <i class="bi bi-check2 me-1"></i>Completed
+                          </span>
+                        {% endif %}
+                        {% if lesson.id == 19 and lab_completed %}
+                          <span class="badge bg-success">
+                            <i class="bi bi-bug-fill me-1"></i>Lab Completed
+                          </span>
+                        {% endif %}
+                        </span>
+                          </div>
+                          <div class="d-flex align-items-center mb-2">
+                            <i class="bi {{ lesson.icon }} fs-3 text-primary me-2"></i>
+                            <h5 class="card-title mb-0">{{ lesson.title }}</h5>
+                          </div>
+                          <p class="card-text text-muted small flex-grow-1">
+                            {{ lesson.description[:110] }}{% if lesson.description|length > 110 %}...{% endif %}
+                          </p>
+                          {% if lesson.coming_soon %}
+                            <div class="alert alert-info py-2 px-2 small mb-3 d-flex align-items-center gap-2">
+                              <i class="bi bi-hourglass-split"></i>
+                              <span>This lesson is on the way. Check back later!</span>
+                            </div>
+                            <button type="button" class="btn btn-info btn-sm" disabled>
+                              <i class="bi bi-hourglass-split me-1"></i>Coming Soon
+                            </button>
+                          {% elif lesson.id in locked_ids %}
+                            <div class="alert alert-warning py-2 px-2 small mb-3 d-flex align-items-center gap-2">
+                              <i class="bi bi-lock-fill"></i>
+                              <span>Complete the previous lesson first to unlock this one.</span>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" disabled>
+                              <i class="bi bi-lock me-1"></i>Locked
+                            </button>
+                          {% else %}
+                            <div class="d-flex align-items-center text-muted small mb-3">
+                              {% set qs = scores.get(lesson.id) %}
+                              {% if qs %}
+                                <i class="bi bi-patch-question me-1 text-secondary"></i>
+                                Quiz:
+                                <span class="fw-semibold ms-1">{{ qs.best_score }}/{{ qs.total_questions }}</span>
+                                <span class="mx-2 text-secondary">|</span>
+                                <i class="bi bi-arrow-repeat me-1"></i>{{ qs.attempts }}
+                                {% if qs.attempts == 1 %}attempt{% else %}attempts{% endif %}
+                              {% else %}
+                                <i class="bi bi-patch-question me-1"></i>
+                                Quiz not taken yet
+                              {% endif %}
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                              <a href="{{ url_for('lesson', lesson_id=lesson.id) }}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-book me-1"></i>View Lesson
+                              </a>
+                              {% if lesson.id == 19 %}
+                                <a href="{{ url_for('sql_lab') }}" class="btn btn-danger btn-sm">
+                                  <i class="bi bi-bug-fill me-1"></i>SQL Lab
+                                </a>
+                              {% endif %}
+                            </div>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="coming-soon">
+                  <div class="text-center py-4">
+                    <i class="bi bi-hourglass-split fs-3 text-muted"></i>
+                    <h6 class="mb-1 mt-2">Coming soon</h6>
+                    <p class="text-muted small mb-0">
+                      New {{ section }} lessons are on the way.
+                    </p>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data">
+        <div class="modal-header">
+          <h5 class="modal-title" id="profileModalLabel">
+            <i class="bi bi-person-gear me-2"></i>Edit Profile
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-3">
+            <img id="pAvatarPreview" src="{{ url_for('static', filename='uploads/' ~ current_user.avatar) if current_user.avatar }}"
+                 alt="" class="avatar-circle-img d-none">
+            <div id="pAvatarInitials" class="avatar-circle mx-auto {{ 'd-none' if current_user.avatar }}">
+              {{ current_user.username[:2] | upper }}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="pAvatar" class="form-label">Profile Picture</label>
+            <input type="file" class="form-control" id="pAvatar" name="avatar"
+                   accept="image/png,image/jpeg,image/gif,image/webp">
+            {% if current_user.avatar %}
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="pRemoveAvatar"
+                       name="remove_avatar" value="yes">
+                <label class="form-check-label small" for="pRemoveAvatar">
+                  Remove current picture
+                </label>
+              </div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label for="pUsername" class="form-label">Username</label>
+            <input type="text" class="form-control" id="pUsername" name="username"
+                   value="{{ current_user.username }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="pEmail" class="form-label">Email</label>
+            <input type="email" class="form-control" id="pEmail" name="email"
+                   value="{{ current_user.email }}" required>
+          </div>
+          <hr>
+          <p class="text-muted small mb-3">Leave the password fields blank to keep your current password.</p>
+          <div class="mb-3">
+            <label for="pPassword" class="form-label">New Password</label>
+            <input type="password" class="form-control" id="pPassword" name="new_password">
+          </div>
+          <div class="mb-3">
+            <label for="pConfirm" class="form-label">Confirm New Password</label>
+            <input type="password" class="form-control" id="pConfirm" name="confirm_password">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2 me-1"></i>Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+  new bootstrap.Tooltip(el);
+});
+document.querySelectorAll('.folder-toggle').forEach(function (btn) {
+  const target = document.querySelector(btn.dataset.bsTarget);
+  if (!target) return;
+  const icon = btn.querySelector('.folder-icon');
+  const chevron = btn.querySelector('.chevron-icon');
+  target.addEventListener('shown.bs.collapse', function () {
+    icon.classList.remove('bi-folder2');
+    icon.classList.add('bi-folder2-open');
+    chevron.classList.add('rotate');
+    btn.setAttribute('aria-expanded', 'true');
+  });
+  target.addEventListener('hidden.bs.collapse', function () {
+    icon.classList.add('bi-folder2');
+    icon.classList.remove('bi-folder2-open');
+    chevron.classList.remove('rotate');
+    btn.setAttribute('aria-expanded', 'false');
+  });
+});
+document.getElementById('pAvatar').addEventListener('change', function () {
+  const file = this.files[0];
+  const preview = document.getElementById('pAvatarPreview');
+  const initials = document.getElementById('pAvatarInitials');
+  if (!file) {
+    if (preview.src && !preview.classList.contains('d-none')) {
+      preview.classList.remove('d-none');
+      initials.classList.add('d-none');
+    }
+    return;
+  }
+  if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) {
+    this.value = '';
+    alert('Only PNG, JPG, JPEG, GIF, or WebP images are allowed.');
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    this.value = '';
+    alert('Image must be 2 MB or smaller.');
+    return;
+  }
+  preview.src = URL.createObjectURL(file);
+  preview.classList.remove('d-none');
+  initials.classList.add('d-none');
+});
+document.getElementById('pRemoveAvatar').addEventListener('change', function () {
+  const preview = document.getElementById('pAvatarPreview');
+  const initials = document.getElementById('pAvatarInitials');
+  if (this.checked) {
+    preview.classList.add('d-none');
+    initials.classList.remove('d-none');
+  } else {
+    preview.classList.remove('d-none');
+    initials.classList.add('d-none');
+  }
+});
+</script>
+{% endblock %}

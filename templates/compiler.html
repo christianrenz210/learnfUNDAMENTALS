@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Compiler - CodeFundamentals{% endblock %}
+
+{% block head_extra %}
+<link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Compiler</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+    <h2 class="mb-0">
+      <i class="bi bi-code-square text-primary me-2"></i>Code Compiler
+    </h2>
+    <div class="d-flex align-items-center gap-2">
+      <label for="langSelect" class="form-label mb-0 small text-muted">Language</label>
+      <select id="langSelect" class="form-select form-select-sm w-auto">
+        <option value="python">Python</option>
+        <option value="cpp">C++</option>
+        <option value="java">Java</option>
+      </select>
+      <button type="button" id="exampleBtn" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-lightbulb me-1"></i>Load Example
+      </button>
+      <button type="button" id="resetBtn" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+      </button>
+      <button type="button" id="runBtn" class="btn btn-primary btn-sm">
+        <i class="bi bi-play-fill me-1"></i>Run
+      </button>
+      <button type="button" id="stopBtn" class="btn btn-outline-danger btn-sm d-none">
+        <i class="bi bi-stop-fill me-1"></i>Stop
+      </button>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <textarea id="codeEditor" class="code-editor p-3 rounded" spellcheck="false"
+                aria-label="Code editor"></textarea>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="small text-muted" id="runStatus">
+      <i class="bi bi-info-circle me-1"></i>Write or edit code, then click Run to execute it
+    </span>
+  </div>
+  <pre class="run-output d-none p-3 rounded mb-2"><code></code></pre>
+  <input type="text" id="compilerInput"
+         class="form-control run-input d-none"
+         autocomplete="off" spellcheck="false"
+         placeholder="Type your input here, then press Enter">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.min.js"></script>
+<script>
+(function () {
+  const MODES = { python: 'python', cpp: 'text/x-c++src', java: 'text/x-java' };
+  const SAMPLES = {
+    python: 'print("Hello, world!")',
+    cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, world!" << endl;\n    return 0;\n}',
+    java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, world!");\n    }\n}'
+  };
+
+  let lang = 'python';
+  let sessionId = null;
+  let pollTimer = null;
+  let simStrip = null;
+
+  const editor = CodeMirror.fromTextArea(
+    document.getElementById('codeEditor'),
+    { lineNumbers: true, mode: MODES[lang], indentUnit: 4, tabSize: 4 }
+  );
+  editor.setValue(SAMPLES[lang]);
+  editor.setOption('extraKeys', { 'Ctrl-Enter': runCode });
+
+  const langSelect = document.getElementById('langSelect');
+  const runBtn = document.getElementById('runBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const exampleBtn = document.getElementById('exampleBtn');
+  const statusEl = document.getElementById('runStatus');
+  const consoleEl = document.querySelector('.run-output');
+  const inputEl = document.getElementById('compilerInput');
+
+  function setStatus(cls, html) {
+    statusEl.className = 'small ' + cls;
+    statusEl.innerHTML = html;
+  }
+
+  function appendLine(text) {
+    const body = consoleEl.querySelector('code');
+    body.textContent = body.textContent === '' ? text : body.textContent + '\n' + text;
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function appendInline(text) {
+    const body = consoleEl.querySelector('code');
+    body.textContent = body.textContent + text;
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function setRunningUI(running) {
+    runBtn.disabled = running;
+    if (running) {
+      runBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running...';
+      stopBtn.classList.remove('d-none');
+    } else {
+      runBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Run';
+      stopBtn.classList.add('d-none');
+    }
+  }
+
+  function setInputVisibility(show) {
+    inputEl.classList.toggle('d-none', !show);
+  }
+
+  function finishRun(exitCode) {
+    simStrip = null;
+    sessionId = null;
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    setRunningUI(false);
+    setInputVisibility(false);
+    if (exitCode === 0) {
+      setStatus('text-success', '<i class="bi bi-check-circle me-1"></i>Finished (exit code 0)');
+    } else {
+      setStatus('text-danger', '<i class="bi bi-x-circle me-1"></i>Finished with exit code ' + exitCode);
+    }
+  }
+
+  function stripCppComments(code) {
+    return code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  }
+
+  function startStream() {
+    pollTimer = setInterval(function () {
+      fetch('{{ url_for("run_poll", session_id="SID") }}'.replace('SID', sessionId), {
+        method: 'POST',
+        cache: 'no-store'
+      })
+        .then(function (res) {
+          if (!res.ok) {
+            if (pollTimer) {
+              clearInterval(pollTimer);
+              pollTimer = null;
+              sessionId = null;
+              setStatus('text-danger', '<i class="bi bi-x-circle me-1"></i>Connection lost');
+              setRunningUI(false);
+              setInputVisibility(false);
+            }
+            return null;
+          }
+          return res.json();
+        })
+        .then(function (data) {
+          if (!data || !data.ok) return;
+          (data.events || []).forEach(function (item) {
+            if (item.type === 'out' || item.type === 'err') {
+              let text = item.data;
+              if (lang === 'cpp' && simStrip) {
+                simStrip.forEach(function (p) {
+                  if (text.indexOf(p) === 0) text = text.slice(p.length);
+                });
+                simStrip = null;
+              }
+              appendLine(text);
+            } else if (item.type === 'error') {
+              consoleEl.className = 'run-output run-output-error p-3 rounded mb-2';
+              appendLine(item.data);
+            }
+          });
+          if (data.finished) {
+            finishRun(data.exit_code);
+          }
+        })
+        .catch(function () {});
+    }, 400);
+  }
+
+  function startRun(stdinValue, keepConsole) {
+    setRunningUI(true);
+    setStatus('text-muted',
+      '<i class="bi bi-hourglass-split me-1"></i>Compiling and running...');
+    consoleEl.classList.remove('d-none');
+    consoleEl.className = 'run-output p-3 rounded mb-2';
+    if (!keepConsole) {
+      consoleEl.querySelector('code').textContent = '';
+    }
+    setInputVisibility(lang !== 'cpp');
+
+    fetch('{{ url_for("run_start") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        language: lang,
+        code: editor.getValue(),
+        stdin: stdinValue
+      })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.ok) {
+          simStrip = null;
+          consoleEl.className = 'run-output run-output-error p-3 rounded mb-2';
+          consoleEl.querySelector('code').textContent =
+            data.compile_error || data.error || 'Could not start the program.';
+          setStatus('text-danger',
+            '<i class="bi bi-x-circle me-1"></i>Could not start the program');
+          setRunningUI(false);
+          setInputVisibility(false);
+          return;
+        }
+        sessionId = data.session_id;
+        startStream();
+      })
+      .catch(function () {
+        simStrip = null;
+        consoleEl.className = 'run-output run-output-error p-3 rounded mb-2';
+        consoleEl.querySelector('code').textContent = 'Could not reach the server. Try again.';
+        setStatus('text-danger', '<i class="bi bi-x-circle me-1"></i>Run failed');
+        setRunningUI(false);
+        setInputVisibility(false);
+      });
+  }
+
+  function runCode() {
+    if (sessionId) return;
+    const typed = inputEl.value.trim();
+
+    if (lang === 'cpp') {
+      const need = (stripCppComments(editor.getValue()).match(/\bcin\b/g) || []).length;
+      if (need > 0) {
+        if (inputEl.classList.contains('d-none')) {
+          consoleEl.classList.remove('d-none');
+          consoleEl.className = 'run-output p-3 rounded mb-2';
+          consoleEl.querySelector('code').textContent = '';
+          setInputVisibility(true);
+          setStatus('text-muted',
+            '<i class="bi bi-keyboard me-1"></i>This program reads input with cin. Type it, then press Enter.');
+          inputEl.focus();
+          return;
+        }
+        if (!typed) {
+          inputEl.focus();
+          return;
+        }
+        startRun(typed, false);
+        return;
+      }
+      startRun('', false);
+      return;
+    }
+
+    startRun(typed, false);
+  }
+
+  runBtn.addEventListener('click', runCode);
+
+  stopBtn.addEventListener('click', function () {
+    if (sessionId) {
+      fetch('{{ url_for("run_stop", session_id="SID") }}'.replace('SID', sessionId), {
+        method: 'POST'
+      });
+      return;
+    }
+    setRunningUI(false);
+    setInputVisibility(false);
+    setStatus('text-muted', '<i class="bi bi-stop-fill me-1"></i>Stopped');
+  });
+
+  inputEl.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    const text = inputEl.value;
+    if (lang === 'cpp' && !sessionId) {
+      e.preventDefault();
+      runCode();
+      return;
+    }
+    if (!sessionId) return;
+    e.preventDefault();
+    if (text) {
+      appendInline(text);
+    }
+    inputEl.value = '';
+    fetch('{{ url_for("run_input", session_id="SID") }}'.replace('SID', sessionId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: text })
+    });
+  });
+
+  resetBtn.addEventListener('click', function () {
+    editor.setValue(SAMPLES[lang]);
+  });
+
+  exampleBtn.addEventListener('click', function () {
+    editor.setValue(SAMPLES[lang]);
+    setStatus('text-muted',
+      '<i class="bi bi-lightbulb me-1"></i>Example loaded for ' +
+      langSelect.options[langSelect.selectedIndex].text + '. Click Run.');
+  });
+
+  langSelect.addEventListener('change', function () {
+    lang = langSelect.value;
+    editor.setOption('mode', MODES[lang]);
+    editor.refresh();
+  });
+})();
+</script>
+{% endblock %}

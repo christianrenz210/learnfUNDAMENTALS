@@ -1,0 +1,904 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lesson.title }} - CodeFundamentals{% endblock %}
+
+{% block head_extra %}
+<link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Lesson {{ lesson_num }}</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center mb-3">
+            <i class="bi {{ lesson.icon }} fs-1 text-primary me-3"></i>
+            <div>
+              <h2 class="card-title mb-0">{{ lesson.title }}</h2>
+              <span class="text-muted small">
+                Lesson {{ lesson_num }} of {{ section_total }}
+                <span class="mx-1">|</span>
+                <i class="bi bi-clock me-1"></i>Estimated: ~{{ lesson.minutes|default(section_minutes.get(lesson.section, 45)) }} min
+              </span>
+            </div>
+            {% if lesson.id == 19 %}
+              {% if lab_completed %}
+                <a href="{{ url_for('sql_lab') }}" class="btn btn-success ms-auto d-inline-flex align-items-center">
+                  <i class="bi bi-check-circle-fill me-1"></i>Lab Completed
+                </a>
+              {% else %}
+                <a href="{{ url_for('sql_lab') }}" class="btn btn-danger ms-auto d-inline-flex align-items-center">
+                  <i class="bi bi-bug-fill me-1"></i>Try the SQL Injection Lab
+                </a>
+              {% endif %}
+            {% endif %}
+          </div>
+          <p class="lead">{{ lesson.description }}</p>
+        </div>
+      </div>
+
+      {% if lesson.diagram %}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-diagram-3 text-primary me-2"></i>
+            {% if lesson.diagram_title %}{{ lesson.diagram_title }}{% else %}Sample ERD Design{% endif %}
+          </h5>
+        </div>
+        <div class="card-body text-center">
+          <img src="{{ url_for('static', filename='img/' ~ lesson.diagram) }}"
+               alt="Sample entity relationship diagram" class="img-fluid rounded border mb-3">
+          <p class="text-muted small mb-0">{{ lesson.diagram_caption }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-code-square text-primary me-2"></i>Code Examples
+          </h5>
+        </div>
+        <div class="card-body">
+          <ul class="nav nav-tabs" id="langTabs" role="tablist">
+            {% if lesson.code.get('sql') %}
+              {% set langs = [("sql", "SQL")] %}
+            {% else %}
+              {% set langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java")] %}
+            {% endif %}
+            {% for key, label in langs %}
+              <li class="nav-item" role="presentation">
+                <button class="nav-link {% if loop.first %}active{% endif %}"
+                        id="{{ key }}-tab" data-bs-toggle="tab"
+                        data-bs-target="#{{ key }}-panel" type="button" role="tab"
+                        aria-controls="{{ key }}-panel"
+                        aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+                  {{ label }}
+                </button>
+              </li>
+            {% endfor %}
+          </ul>
+          <div class="tab-content pt-3" id="langTabsContent">
+            {% for key, label in langs %}
+              <div class="tab-pane fade {% if loop.first %}show active{% endif %}"
+                   id="{{ key }}-panel" role="tabpanel"
+                   aria-labelledby="{{ key }}-tab">
+                <textarea id="editor-{{ key }}" class="code-editor p-3 mb-2 rounded"
+                          data-original="{{ lesson.code[key] }}"
+                          spellcheck="false" aria-label="{{ label }} code editor">{{ lesson.code[key] }}</textarea>
+                <div class="d-flex align-items-center justify-content-between mb-2 mt-2">
+                  <span class="small text-muted run-status" id="status-{{ key }}">
+                    <i class="bi bi-info-circle me-1"></i>Edit the code, then click Run to execute it
+                  </span>
+                  <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm reset-btn"
+                            data-lang="{{ key }}">
+                      <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm run-btn"
+                            data-lang="{{ key }}">
+                      <i class="bi bi-play-fill me-1"></i>Run Code
+                    </button>
+                    {% if key != 'sql' %}
+                      <button type="button" class="btn btn-outline-danger btn-sm stop-btn d-none"
+                              data-lang="{{ key }}">
+                        <i class="bi bi-stop-fill me-1"></i>Stop
+                      </button>
+                    {% endif %}
+                  </div>
+                </div>
+                <pre class="run-output d-none p-3 rounded mb-2"><code></code></pre>
+                {% if key != 'sql' %}
+                  <input type="text" id="input-{{ key }}"
+                         class="form-control run-input d-none"
+                         autocomplete="off" spellcheck="false"
+                         placeholder="{% if key == 'cpp' %}Type the program's input here, then press Enter{% else %}Type your input here, then press Enter{% endif %}">
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-lightbulb text-warning me-2"></i>Key Points
+          </h5>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for point in lesson.key_points %}
+            <li class="list-group-item">
+              <i class="bi bi-check2-circle text-success me-2"></i>{{ point }}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-patch-question text-primary me-2"></i>Quick Quiz
+          </h5>
+        </div>
+        <div class="card-body">
+          {% if quiz_score %}
+            <div class="alert alert-secondary d-flex align-items-center gap-2 mb-3">
+              <i class="bi bi-lock"></i>
+              <span>You already took this quiz (1 attempt only). Best score:
+                <strong>{{ quiz_score.best_score }}/{{ quiz_score.total_questions }}</strong>
+              </span>
+            </div>
+          {% endif %}
+          <form id="quizForm" novalidate data-quiz-url="{{ url_for('submit_quiz', lesson_id=lesson.id) }}">
+            {% for q in lesson.quiz %}
+              {% set qi = loop.index0 %}
+              <fieldset class="mb-4">
+                <legend class="fs-6 fw-semibold mb-2">{{ loop.index }}. {{ q.question }}</legend>
+                {% for opt in q.options %}
+                  <div class="form-check">
+                    <input class="form-check-input quiz-option" type="radio"
+                           name="q{{ qi }}" id="q{{ qi }}o{{ loop.index0 }}"
+                           value="{{ loop.index0 }}"{% if quiz_score %} disabled{% endif %}>
+                    <label class="form-check-label{% if quiz_score and loop.index0 == q.correct %} text-success fw-semibold{% endif %}" for="q{{ qi }}o{{ loop.index0 }}">
+                      {{ opt }}
+                      {% if quiz_score and loop.index0 == q.correct %}
+                        <i class="quiz-status bi bi-check-circle-fill text-success ms-1"></i>
+                        <span class="badge bg-success bg-opacity-10 text-success ms-1">Correct</span>
+                      {% else %}
+                        <i class="quiz-status"></i>
+                      {% endif %}
+                    </label>
+                  </div>
+                {% endfor %}
+              </fieldset>
+            {% endfor %}
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <button type="submit" class="btn btn-primary" id="quizSubmitBtn"{% if quiz_score %} disabled{% endif %}>
+                <i class="bi bi-check2-square me-1"></i>Submit Quiz
+              </button>
+            </div>
+          </form>
+          <div id="quizResult" class="d-none mt-4"></div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between">
+        {% if prev_lesson_id %}
+          <a href="{{ url_for('lesson', lesson_id=prev_lesson_id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Previous Lesson
+          </a>
+        {% else %}
+          <span></span>
+        {% endif %}
+        {% if next_lesson_id %}
+          <a href="{{ url_for('lesson', lesson_id=next_lesson_id) }}" class="btn btn-outline-primary">
+            Next Lesson<i class="bi bi-arrow-right ms-1"></i>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm mb-4 mt-2">
+        <div class="card-body text-center">
+          {% if completed %}
+            <div class="mb-3">
+              <i class="bi bi-check-circle-fill text-success display-4"></i>
+            </div>
+            <h5 class="text-success">Lesson Completed</h5>
+            <p class="text-muted small mb-0">Great job! Keep up the momentum.</p>
+          {% else %}
+            <div class="mb-3">
+              <i class="bi bi-journal-check text-primary display-4"></i>
+            </div>
+            <h5>Finished reading?</h5>
+            <p class="text-muted small">Mark this lesson as complete.</p>
+            <button type="button" class="btn btn-success w-100"
+                    data-bs-toggle="modal" data-bs-target="#completeModal">
+              <i class="bi bi-check2 me-1"></i>Mark as Complete
+            </button>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card shadow-sm">
+        <div class="card-body" id="quizPerfCard">
+          {% if quiz_score %}
+            <h6 class="mb-2">
+              <i class="bi bi-trophy text-warning me-2"></i>Quiz Performance
+            </h6>
+            <p class="mb-1">
+              Best score:
+              <strong>{{ quiz_score.best_score }}/{{ quiz_score.total_questions }}</strong>
+            </p>
+            <p class="text-muted small mb-0">
+              {{ quiz_score.attempts }}
+              {% if quiz_score.attempts == 1 %}attempt{% else %}attempts{% endif %}
+              so far
+            </p>
+          {% else %}
+            <h6 class="mb-0 text-muted">
+              <i class="bi bi-trophy me-2"></i>No quiz taken yet
+            </h6>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white">
+          <h6 class="mb-0">
+            <i class="bi bi-trophy text-warning me-2"></i>Lesson Leaderboard
+          </h6>
+        </div>
+        <ul class="list-group list-group-flush" id="lessonLeaderboard">
+          {% for entry in lesson_leaderboard %}
+            <li class="list-group-item d-flex align-items-center py-2 {{ 'leaderboard-you' if entry.username == current_user.username }}">
+              <span class="rank-badge {{ 'rank-gold' if entry.rank == 1 else ('rank-silver' if entry.rank == 2 else ('rank-bronze' if entry.rank == 3 else 'rank-rest')) }} me-3">
+                {% if entry.rank == 1 %}
+                  <i class="bi bi-trophy-fill"></i>
+                {% else %}
+                  {{ entry.rank }}
+                {% endif %}
+              </span>
+              <div class="flex-grow-1">
+                <span class="fw-semibold">{{ entry.username }}</span>
+                {% if entry.username == current_user.username %}
+                  <span class="badge bg-primary bg-opacity-10 text-primary ms-1">You</span>
+                {% endif %}
+              </div>
+              <span class="fw-bold text-primary">{{ entry.best_score }}/{{ entry.total }}</span>
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted">
+              <i class="bi bi-info-circle me-2"></i>No scores yet. Take the quiz to join!
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% if not completed %}
+<div class="modal fade" id="completeModal" tabindex="-1" aria-labelledby="completeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="completeModalLabel">
+          <i class="bi bi-check-circle-fill text-success me-2"></i>Lesson Completed
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if next_lesson_id %}
+          <p class="mb-0">
+            You have completed this lesson successfully!
+            Do you want to proceed to the next lesson?
+          </p>
+        {% else %}
+          <p class="mb-0">
+            Congratulations! You have successfully completed
+            <strong>all the lessons</strong> in {{ lesson.section }}!
+          </p>
+          <p class="mb-0 mt-2">
+            {% if section_has_quiz %}
+              Do you want to take the <strong>15-question long quiz</strong>
+              (20 seconds per question), or review all the lessons first?
+            {% else %}
+              The long quiz for this section is coming soon.
+              You can review all the lessons for now.
+            {% endif %}
+          </p>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        {% if next_lesson_id %}
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="completeStayBtn">
+            Stay Here
+          </button>
+          <button type="button" class="btn btn-success" id="completeNextBtn">
+            Next Lesson<i class="bi bi-arrow-right ms-1"></i>
+          </button>
+        {% else %}
+          <button type="button" class="btn btn-secondary" id="completeReviewBtn">
+            <i class="bi bi-grid me-1"></i>Review All Lessons
+          </button>
+          {% if section_has_quiz %}
+            <button type="button" class="btn btn-success" id="completeQuizBtn">
+              <i class="bi bi-trophy me-1"></i>Proceed to Long Quiz
+            </button>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+<script type="application/json" id="quizAnswers">{{ lesson.quiz | map(attribute='correct') | list | tojson }}</script>
+<script>
+(function () {
+  const answers = JSON.parse(document.getElementById('quizAnswers').textContent);
+  const form = document.getElementById('quizForm');
+  const result = document.getElementById('quizResult');
+  const submitBtn = document.getElementById('quizSubmitBtn');
+
+  function quizBadge(text, kind) {
+    const b = document.createElement('span');
+    b.className = 'badge bg-' + kind + ' bg-opacity-10 text-' + kind + ' ms-1';
+    b.textContent = text;
+    return b;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const total = answers.length;
+    const allAnswered = answers.every(function (_, qi) {
+      return form.querySelector('input[name="q' + qi + '"]:checked');
+    });
+    if (!allAnswered) {
+      result.classList.remove('d-none');
+      result.className = 'alert alert-warning mt-4';
+      result.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Answer all the questions first, then submit.';
+      return;
+    }
+    let score = 0;
+    answers.forEach(function (correct, qi) {
+      const radios = form.querySelectorAll('input[name="q' + qi + '"]');
+      let selected = null;
+      radios.forEach(function (r) {
+        if (r.checked) { selected = parseInt(r.value); }
+        r.disabled = true;
+      });
+      if (selected === correct) { score++; }
+      radios.forEach(function (r) {
+        const icon = r.closest('.form-check').querySelector('.quiz-status');
+        const label = r.closest('.form-check').querySelector('.form-check-label');
+        if (parseInt(r.value) === correct) {
+          icon.className = 'quiz-status bi bi-check-circle-fill text-success ms-1';
+          label.classList.add('text-success', 'fw-semibold');
+          label.appendChild(quizBadge('Correct', 'success'));
+        } else if (parseInt(r.value) === selected) {
+          icon.className = 'quiz-status bi bi-x-circle-fill text-danger ms-1';
+          label.classList.add('text-danger');
+          label.appendChild(quizBadge('Your answer', 'danger'));
+        }
+      });
+    });
+    result.classList.remove('d-none');
+    if (score === total) {
+      result.className = 'alert alert-success mt-4';
+      result.innerHTML = '<i class="bi bi-trophy me-2"></i><strong>Perfect score!</strong> You answered all ' + total + ' questions correctly.';
+    } else if (score >= total / 2) {
+      result.className = 'alert alert-info mt-4';
+      result.innerHTML = '<i class="bi bi-star me-2"></i><strong>Good job!</strong> You scored ' + score + ' out of ' + total + '. Review the key points for the ones you missed.';
+    } else {
+      result.className = 'alert alert-warning mt-4';
+      result.innerHTML = '<i class="bi bi-book me-2"></i><strong>Keep practicing.</strong> You scored ' + score + ' out of ' + total + '. Re-read the lesson and try again.';
+    }
+    submitBtn.disabled = true;
+
+    const bestLine = document.createElement('div');
+    bestLine.className = 'mt-2 fw-semibold';
+    bestLine.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving your score...';
+    result.appendChild(bestLine);
+
+    fetch(form.dataset.quizUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score: score, total: total })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.ok) {
+          bestLine.innerHTML = '<i class="bi bi-trophy text-warning me-1"></i>Score saved: ' +
+            data.best_score + '/' + total;
+          const perf = document.getElementById('quizPerfCard');
+          if (perf && perf.querySelector('.text-muted')) {
+            perf.innerHTML = '<h6 class="mb-2">' +
+              '<i class="bi bi-trophy text-warning me-2"></i>Quiz Performance</h6>' +
+              '<p class="mb-1">Best score: <strong>' + data.best_score + '/' + total +
+              '</strong></p>' +
+              '<p class="text-muted small mb-0">1 attempt so far</p>';
+          }
+          refreshLessonLeaderboard();
+        } else {
+          bestLine.textContent = data.error || 'Your score could not be saved.';
+        }
+      })
+      .catch(function () {
+        bestLine.textContent = 'Your score could not be saved.';
+      });
+  });
+
+  function refreshLessonLeaderboard() {
+    const list = document.getElementById('lessonLeaderboard');
+    if (!list) return;
+    fetch('{{ url_for("lesson_leaderboard", lesson_id=lesson.id) }}', { cache: 'no-store' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.ok) return;
+        const me = {{ current_user.username | tojson }};
+        const rows = data.leaderboard;
+        if (!rows.length) return;
+        let html = '';
+        rows.forEach(function (entry) {
+          const badge = entry.rank === 1 ? 'rank-gold'
+            : entry.rank === 2 ? 'rank-silver'
+            : entry.rank === 3 ? 'rank-bronze' : 'rank-rest';
+          const icon = entry.rank === 1 ? '<i class="bi bi-trophy-fill"></i>' : entry.rank;
+          const you = entry.username === me
+            ? ' <span class="badge bg-primary bg-opacity-10 text-primary ms-1">You</span>' : '';
+          html += '<li class="list-group-item d-flex align-items-center py-2' +
+            (entry.username === me ? ' leaderboard-you' : '') + '">' +
+            '<span class="rank-badge ' + badge + ' me-3">' + icon + '</span>' +
+            '<div class="flex-grow-1"><span class="fw-semibold">' +
+            entry.username + '</span>' + you + '</div>' +
+            '<span class="fw-bold text-primary">' + entry.best_score + '/' +
+            entry.total + '</span></li>';
+        });
+        list.innerHTML = html;
+      })
+      .catch(function () {});
+  }
+})();
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/sql/sql.min.js"></script>
+<script>
+(function () {
+  const MODES = { python: 'python', cpp: 'text/x-c++src', java: 'text/x-java', sql: 'text/x-sql' };
+  const editors = {};
+  const sessions = {};
+  const pollTimers = {};
+
+  function getEditor(key) {
+    if (!editors[key]) {
+      editors[key] = CodeMirror.fromTextArea(
+        document.getElementById('editor-' + key),
+        { lineNumbers: true, mode: MODES[key], indentUnit: 4, tabSize: 4 }
+      );
+      editors[key].setOption('extraKeys', {
+        'Ctrl-Enter': function () { runCode(key); }
+      });
+    }
+    return editors[key];
+  }
+
+  function panelOf(lang) { return document.getElementById(lang + '-panel'); }
+  function consoleEl(lang) { return panelOf(lang).querySelector('.run-output'); }
+  function statusEl(lang) { return panelOf(lang).querySelector('.run-status'); }
+  function runBtn(lang) { return panelOf(lang).querySelector('.run-btn'); }
+  function stopBtn(lang) { return panelOf(lang).querySelector('.stop-btn'); }
+  function inputEl(lang) { return document.getElementById('input-' + lang); }
+
+  function setInputVisibility(lang, running) {
+    if (inputEl(lang)) {
+      inputEl(lang).classList.toggle('d-none', !running);
+    }
+  }
+
+  function appendLine(el, text) {
+    const body = el.querySelector('code');
+    body.textContent = body.textContent === '' ? text : body.textContent + '\n' + text;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function setStatus(lang, cls, html) {
+    const s = statusEl(lang);
+    s.className = 'small ' + cls + ' run-status';
+    s.innerHTML = html;
+  }
+
+  function setRunningUI(lang, running) {
+    runBtn(lang).disabled = running;
+    if (running) {
+      runBtn(lang).innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running...';
+      if (stopBtn(lang)) stopBtn(lang).classList.remove('d-none');
+    } else {
+      runBtn(lang).innerHTML = '<i class="bi bi-play-fill me-1"></i>Run Code';
+      if (stopBtn(lang)) stopBtn(lang).classList.add('d-none');
+    }
+  }
+
+  var cppSim = {};
+  var simStrip = {};
+
+  function stripCppComments(code) {
+    return code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  }
+
+  function finishRun(lang, exitCode) {
+    cppSim[lang] = null;
+    delete simStrip[lang];
+    delete sessions[lang];
+    if (pollTimers[lang]) {
+      clearInterval(pollTimers[lang]);
+      delete pollTimers[lang];
+    }
+    setRunningUI(lang, false);
+    setInputVisibility(lang, false);
+    if (exitCode === 0) {
+      setStatus(lang, 'text-success',
+        '<i class="bi bi-check-circle me-1"></i>Finished (exit code 0)');
+    } else {
+      setStatus(lang, 'text-danger',
+        '<i class="bi bi-x-circle me-1"></i>Finished with exit code ' + exitCode);
+    }
+  }
+
+  function startStream(lang, sid) {
+    pollTimers[lang] = setInterval(function () {
+      fetch('{{ url_for("run_poll", session_id="SID") }}'.replace('SID', sid), {
+        method: 'POST',
+        cache: 'no-store'
+      })
+        .then(function (res) {
+          if (!res.ok) {
+            if (pollTimers[lang]) {
+              clearInterval(pollTimers[lang]);
+              delete pollTimers[lang];
+              delete sessions[lang];
+              setStatus(lang, 'text-danger',
+                '<i class="bi bi-x-circle me-1"></i>Connection lost');
+              setRunningUI(lang, false);
+              setInputVisibility(lang, false);
+            }
+            return null;
+          }
+          return res.json();
+        })
+        .then(function (data) {
+          if (!data || !data.ok) return;
+          (data.events || []).forEach(function (item) {
+            if (item.type === 'out' || item.type === 'err') {
+              let text = item.data;
+              if (lang === 'cpp' && simStrip[lang]) {
+                simStrip[lang].forEach(function (p) {
+                  if (text.indexOf(p) === 0) text = text.slice(p.length);
+                });
+                delete simStrip[lang];
+              }
+              appendLine(consoleEl(lang), text);
+            } else if (item.type === 'error') {
+              const c = consoleEl(lang);
+              c.className = 'run-output run-output-error p-3 rounded mb-2';
+              appendLine(c, item.data);
+            }
+          });
+          if (data.finished) {
+            finishRun(lang, data.exit_code);
+          }
+        })
+        .catch(function () {});
+    }, 400);
+  }
+
+  function runSql(lang) {
+    const c = consoleEl(lang);
+    setRunningUI(lang, true);
+    setStatus(lang, 'text-muted',
+      '<i class="bi bi-hourglass-split me-1"></i>Executing SQL...');
+    c.classList.remove('d-none');
+    c.className = 'run-output p-3 rounded mb-2';
+    c.querySelector('code').textContent = '';
+
+    fetch('{{ url_for("run_sql") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: getEditor(lang).getValue() })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        setRunningUI(lang, false);
+        if (!data.ok) {
+          c.className = 'run-output run-output-error p-3 rounded mb-2';
+          c.querySelector('code').textContent = data.error || 'Could not run the SQL.';
+          setStatus(lang, 'text-danger',
+            '<i class="bi bi-x-circle me-1"></i>SQL failed');
+          return;
+        }
+        c.querySelector('code').textContent = data.output.join('\n');
+        setStatus(lang, 'text-success',
+          '<i class="bi bi-check-circle me-1"></i>SQL executed successfully');
+      })
+      .catch(function () {
+        setRunningUI(lang, false);
+        c.className = 'run-output run-output-error p-3 rounded mb-2';
+        c.querySelector('code').textContent = 'Could not reach the server. Try again.';
+        setStatus(lang, 'text-danger',
+          '<i class="bi bi-x-circle me-1"></i>Run failed');
+      });
+  }
+
+  function runCode(lang) {
+    if (lang === 'sql') {
+      runSql(lang);
+      return;
+    }
+    const input = inputEl(lang);
+    const c = consoleEl(lang);
+
+    if (lang === 'cpp' && !sessions[lang]) {
+      const need = (stripCppComments(getEditor(lang).getValue()).match(/\bcin\b/g) || []).length;
+
+      if (need > 0) {
+        const sim = cppSim[lang];
+        if (!sim) {
+          cppSim[lang] = { prompts: cppPrompts(getEditor(lang).getValue()), idx: 0, values: [], lastWasPrompt: false };
+          setRunningUI(lang, true);
+          setStatus(lang, 'text-muted',
+            '<i class="bi bi-hourglass-split me-1"></i>Program is running — type the first value and press Enter');
+          c.classList.remove('d-none');
+          c.className = 'run-output p-3 rounded mb-2';
+          c.querySelector('code').textContent = '';
+          setInputVisibility(lang, true);
+          showNextCppPrompt(lang);
+          input.focus();
+          return;
+        }
+        const typed = input.value.trim();
+        if (typed) {
+          if (sim.lastWasPrompt) {
+            appendInline(c, typed);
+          } else {
+            appendLine(c, typed);
+          }
+          sim.lastWasPrompt = false;
+          sim.values.push.apply(sim.values, typed.split(/\s+/));
+          input.value = '';
+          if (sim.values.length >= need) {
+            finishCppSim(lang);
+            return;
+          }
+          setStatus(lang, 'text-muted',
+            '<i class="bi bi-keyboard me-1"></i>' + sim.values.length + ' of ' +
+            need + ' values received');
+          showNextCppPrompt(lang);
+          input.focus();
+          return;
+        }
+        input.focus();
+        return;
+      }
+    }
+
+    startRun(lang, input.value);
+  }
+
+  function showNextCppPrompt(lang) {
+    const sim = cppSim[lang];
+    if (sim && sim.idx < sim.prompts.length) {
+      appendLine(consoleEl(lang), sim.prompts[sim.idx]);
+      sim.idx++;
+      sim.lastWasPrompt = true;
+      return;
+    }
+    if (sim) sim.lastWasPrompt = false;
+  }
+
+  function finishCppSim(lang) {
+    const sim = cppSim[lang];
+    const stdin = sim.values.join('\n');
+    simStrip[lang] = sim.prompts.slice(0, sim.idx);
+    cppSim[lang] = null;
+    startRun(lang, stdin, true);
+  }
+
+  function appendInline(el, text) {
+    const body = el.querySelector('code');
+    body.textContent = body.textContent + text;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function cppPrompts(code) {
+    const stripped = stripCppComments(code);
+    const couts = [];
+    const reCout = /cout\s*<<\s*"([^"]*)"/g;
+    let m;
+    while ((m = reCout.exec(stripped)) !== null) {
+      couts.push({ idx: m.index, text: m[1] });
+    }
+    const prompts = [];
+    const reCin = /\bcin\b/g;
+    while ((m = reCin.exec(stripped)) !== null) {
+      let best = null;
+      for (let i = 0; i < couts.length; i++) {
+        if (couts[i].idx < m.index) best = couts[i];
+      }
+      if (best) prompts.push(best.text);
+    }
+    return prompts;
+  }
+
+  function startRun(lang, stdinValue, keepConsole) {
+    const input = inputEl(lang);
+    const c = consoleEl(lang);
+
+    setRunningUI(lang, true);
+    setStatus(lang, 'text-muted',
+      '<i class="bi bi-hourglass-split me-1"></i>Compiling and running...');
+    c.classList.remove('d-none');
+    c.className = 'run-output p-3 rounded mb-2';
+    if (!keepConsole) {
+      c.querySelector('code').textContent = '';
+    }
+    setInputVisibility(lang, true);
+
+    fetch('{{ url_for("run_start") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        language: lang,
+        code: getEditor(lang).getValue(),
+        stdin: stdinValue
+      })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.ok) {
+          delete simStrip[lang];
+          c.className = 'run-output run-output-error p-3 rounded mb-2';
+          c.querySelector('code').textContent =
+            data.compile_error || data.error || 'Could not start the program.';
+          setStatus(lang, 'text-danger',
+            '<i class="bi bi-x-circle me-1"></i>Could not start the program');
+          setRunningUI(lang, false);
+          setInputVisibility(lang, false);
+          return;
+        }
+        sessions[lang] = data.session_id;
+        startStream(lang, data.session_id);
+      })
+      .catch(function () {
+        delete simStrip[lang];
+        c.className = 'run-output run-output-error p-3 rounded mb-2';
+        c.querySelector('code').textContent = 'Could not reach the server. Try again.';
+        setStatus(lang, 'text-danger',
+          '<i class="bi bi-x-circle me-1"></i>Run failed');
+        setRunningUI(lang, false);
+        setInputVisibility(lang, false);
+      });
+  }
+
+  document.querySelectorAll('.run-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { runCode(btn.dataset.lang); });
+  });
+
+  document.querySelectorAll('.stop-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const lang = btn.dataset.lang;
+      const sid = sessions[lang];
+      if (sid) {
+        fetch('{{ url_for("run_stop", session_id="SID") }}'.replace('SID', sid), {
+          method: 'POST'
+        });
+        return;
+      }
+      if (lang === 'cpp' && cppSim[lang]) {
+        cppSim[lang] = null;
+        setRunningUI(lang, false);
+        setInputVisibility(lang, false);
+        setStatus(lang, 'text-muted',
+          '<i class="bi bi-stop-fill me-1"></i>Stopped');
+      }
+    });
+  });
+
+  document.querySelectorAll('.run-input').forEach(function (input) {
+    if (input.id === 'input-cpp') return;
+    input.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      const lang = input.id.replace('input-', '');
+      const sid = sessions[lang];
+      if (!sid) return;
+      e.preventDefault();
+      const text = input.value;
+      if (text) {
+        appendInline(consoleEl(lang), text);
+      }
+      input.value = '';
+      fetch('{{ url_for("run_input", session_id="SID") }}'.replace('SID', sid), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: text })
+      });
+    });
+  });
+
+  const cppInput = document.getElementById('input-cpp');
+  if (cppInput) {
+    cppInput.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || sessions.cpp) return;
+      e.preventDefault();
+      runCode('cpp');
+    });
+  }
+
+  document.querySelectorAll('.reset-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const lang = btn.dataset.lang;
+      const textarea = document.getElementById('editor-' + lang);
+      if (editors[lang]) {
+        editors[lang].setValue(textarea.dataset.original);
+      } else {
+        textarea.value = textarea.dataset.original;
+      }
+    });
+  });
+
+  document.querySelectorAll('#langTabs .nav-link').forEach(function (tab) {
+    tab.addEventListener('shown.bs.tab', function (e) {
+      getEditor(e.target.id.replace('-tab', '')).refresh();
+    });
+  });
+
+  window.addEventListener('load', function () {
+    const active = document.querySelector('#langTabs .nav-link.active');
+    if (active) {
+      getEditor(active.id.replace('-tab', '')).refresh();
+    }
+  });
+})();
+</script>
+{% if not completed %}
+<script>
+(function () {
+  const completeUrl = '{{ url_for("complete_lesson", lesson_id=lesson.id) }}';
+  function completeAndGo(target) {
+    fetch(completeUrl, { method: 'POST' })
+      .catch(function () {})
+      .then(function () { window.location.href = target; });
+  }
+  {% if next_lesson_id %}
+    document.getElementById('completeNextBtn').addEventListener('click', function () {
+      completeAndGo('{{ url_for("lesson", lesson_id=next_lesson_id) }}');
+    });
+    document.getElementById('completeStayBtn').addEventListener('click', function () {
+      fetch(completeUrl, { method: 'POST' }).catch(function () {});
+      setTimeout(function () { window.location.reload(); }, 400);
+    });
+  {% else %}
+    {% if section_has_quiz %}
+      document.getElementById('completeQuizBtn').addEventListener('click', function () {
+        completeAndGo('{{ url_for("section_quiz", section=lesson.section) }}');
+      });
+    {% endif %}
+    document.getElementById('completeReviewBtn').addEventListener('click', function () {
+      completeAndGo('{{ url_for("dashboard") }}');
+    });
+  {% endif %}
+})();
+</script>
+{% endif %}
+{% endblock %}

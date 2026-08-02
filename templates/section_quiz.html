@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}Long Quiz - {{ section }} - CodeFundamentals{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body text-center">
+          <i class="bi bi-trophy-fill text-warning display-4"></i>
+          <h2 class="mb-1">Section Long Quiz</h2>
+          <p class="text-muted mb-0">{{ section }}</p>
+        </div>
+      </div>
+
+      {% if score %}
+      <div class="card shadow-sm border-0" id="lockCard">
+        <div class="card-body text-center py-5">
+          <i class="bi bi-lock-fill text-secondary display-3"></i>
+          <h4 class="mt-3 mb-2">You already took this quiz</h4>
+          <p class="text-muted mb-1">
+            Attempts used: <strong>{{ score.attempts }}/2</strong>
+            {% if score.attempts >= 2 %}(no attempts left){% endif %}
+          </p>
+          <p class="fs-5 mb-3">
+            Best score: <strong class="text-primary">{{ score.best_score }} / {{ score.total_questions }}</strong>
+          </p>
+          {% if score.attempts < 2 %}
+            <button type="button" class="btn btn-success" id="retakeBtn">
+              <i class="bi bi-arrow-repeat me-1"></i>Retake the Long Quiz
+            </button>
+          {% endif %}
+          <button type="button" class="btn btn-outline-secondary" id="viewQuizBtn">
+            <i class="bi bi-eye me-1"></i>View Long Quiz
+          </button>
+          {% if last_answers %}
+            <button type="button" class="btn btn-outline-secondary" id="lockReviewBtn">
+              <i class="bi bi-list-check me-1"></i>View Answer Review
+            </button>
+          {% endif %}
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+            <i class="bi bi-grid me-1"></i>Back to Dashboard
+          </a>
+        </div>
+      </div>
+
+      <div class="modal fade" id="retakeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-body text-center py-4">
+              <i class="bi bi-arrow-repeat text-warning display-4"></i>
+              <h5 class="mt-3 mb-2">Retake the Long Quiz?</h5>
+              <p class="text-muted mb-0">
+                You have <strong>1 attempt left</strong>.
+                Your best score will be kept if you do better.
+                Start the long quiz now?
+              </p>
+            </div>
+            <div class="modal-footer justify-content-center border-0 pt-0">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                Cancel
+              </button>
+              <button type="button" class="btn btn-success" id="retakeConfirmBtn">
+                <i class="bi bi-play-fill me-1"></i>Start Quiz
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      <div class="card shadow-sm border-0 {% if score %}d-none{% endif %}" id="quizCard">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="badge bg-primary bg-opacity-10 text-primary" id="qCounter">
+              Question 1 of {{ questions|length }}
+            </span>
+            <span class="fw-bold text-danger" id="qTimer">20s</span>
+          </div>
+          <div class="progress mb-4" style="height: 8px;">
+            <div id="qTimeBar" class="progress-bar bg-danger" role="progressbar" style="width: 100%;"></div>
+          </div>
+          <h5 class="mb-4" id="qText"></h5>
+          <div id="qOptions" class="d-grid gap-2"></div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0 d-none" id="resultCard">
+        <div class="card-body text-center py-5">
+          <i class="bi display-3" id="resultIcon"></i>
+          <h3 class="mt-2 mb-1" id="resultTitle"></h3>
+          <p class="fs-5 mb-1" id="resultScore"></p>
+          <p class="text-muted small" id="resultMsg"></p>
+          <button type="button" class="btn btn-outline-secondary mt-2 me-1" id="toggleReviewBtn">
+            <i class="bi bi-eye me-1"></i>Show Answer Review
+          </button>
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary mt-2">
+            <i class="bi bi-grid me-1"></i>Back to Dashboard
+          </a>
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0 d-none mt-3" id="reviewCard">
+        <div class="card-header bg-white fw-semibold" id="reviewCardHeader">
+          <i class="bi bi-check2-circle text-success me-1"></i>Answer Review
+        </div>
+        <div class="card-body" id="reviewBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const QUESTIONS = {{ questions | tojson }};
+  const TOTAL = QUESTIONS.length;
+  const TIME_LIMIT = 20;
+  const answers = new Array(TOTAL).fill(null);
+  let idx = 0;
+  let timer = null;
+  let remaining = TIME_LIMIT;
+
+  const qText = document.getElementById('qText');
+  const qOptions = document.getElementById('qOptions');
+  const qCounter = document.getElementById('qCounter');
+  const qTimer = document.getElementById('qTimer');
+  const qTimeBar = document.getElementById('qTimeBar');
+
+  function render() {
+    qCounter.textContent = 'Question ' + (idx + 1) + ' of ' + TOTAL;
+    qText.textContent = QUESTIONS[idx].question;
+    qOptions.innerHTML = '';
+    QUESTIONS[idx].options.forEach(function (opt, oi) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-primary text-start';
+      btn.textContent = (oi + 1) + '. ' + opt;
+      btn.addEventListener('click', function () { choose(oi); });
+      qOptions.appendChild(btn);
+    });
+    startTimer();
+  }
+
+  function startTimer() {
+    stopTimer();
+    remaining = TIME_LIMIT;
+    qTimer.textContent = remaining + 's';
+    qTimeBar.style.width = '100%';
+    timer = setInterval(function () {
+      remaining--;
+      qTimer.textContent = remaining + 's';
+      qTimeBar.style.width = (remaining / TIME_LIMIT * 100) + '%';
+      if (remaining <= 0) {
+        choose(null);
+      }
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  function choose(optionIndex) {
+    if (answers[idx] !== null) return;
+    answers[idx] = optionIndex;
+    stopTimer();
+    idx++;
+    if (idx < TOTAL) {
+      render();
+    } else {
+      finish();
+    }
+  }
+
+  function finish() {
+    fetch('{{ url_for("submit_section_quiz", section=section) }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers: answers })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) { showResult(data); })
+      .catch(function () {
+        showResult({ ok: false, error: 'Could not submit your answers. Please try again.' });
+      });
+  }
+
+  function showResult(data) {
+    document.getElementById('quizCard').classList.add('d-none');
+    const card = document.getElementById('resultCard');
+    card.classList.remove('d-none');
+    const icon = document.getElementById('resultIcon');
+    const title = document.getElementById('resultTitle');
+    const scoreEl = document.getElementById('resultScore');
+    const msg = document.getElementById('resultMsg');
+    if (!data.ok) {
+      icon.className = 'bi bi-x-circle-fill text-danger display-3';
+      title.textContent = 'Submission Failed';
+      scoreEl.textContent = data.error || '';
+      msg.textContent = '';
+      return;
+    }
+    const pct = Math.round(data.best_score / data.total_questions * 100);
+    icon.className = pct >= 50
+      ? 'bi bi-trophy-fill text-warning display-3'
+      : 'bi bi-arrow-repeat text-danger display-3';
+    title.textContent = pct >= 50 ? 'You Passed!' : 'Not This Time';
+    scoreEl.textContent = data.best_score + ' / ' + data.total_questions + ' (' + pct + '%)';
+    if (pct >= 87) {
+      msg.textContent = 'Outstanding! You really know this section well.';
+    } else if (pct >= 67) {
+      msg.textContent = 'Great job! A solid score.';
+    } else if (pct >= 50) {
+      msg.textContent = 'Good effort. Review the lessons you missed.';
+    } else {
+      msg.textContent = 'Review the lessons and try again later.';
+    }
+    buildReview(answers);
+  }
+
+  function buildReview(chosenAnswers) {
+    const body = document.getElementById('reviewBody');
+    body.innerHTML = '';
+    QUESTIONS.forEach(function (q, i) {
+      const chosen = chosenAnswers[i];
+      const correct = q.correct;
+      const isCorrect = chosen === correct;
+
+      const item = document.createElement('div');
+      item.className = 'border rounded p-3 mb-3';
+
+      const head = document.createElement('div');
+      head.className = 'd-flex justify-content-between align-items-center mb-2';
+      const qText = document.createElement('span');
+      qText.className = 'fw-semibold';
+      qText.textContent = 'Q' + (i + 1) + '. ' + q.question;
+      const badge = document.createElement('span');
+      badge.className = 'badge ' + (isCorrect ? 'text-bg-success' : 'text-bg-danger');
+      badge.textContent = isCorrect ? 'Correct' : (chosen === null ? 'Unanswered' : 'Wrong');
+      head.appendChild(qText);
+      head.appendChild(badge);
+      item.appendChild(head);
+
+      q.options.forEach(function (opt, oi) {
+        const row = document.createElement('div');
+        row.className = 'd-flex align-items-center rounded px-2 py-1 mb-1';
+        const icon = document.createElement('i');
+        icon.className = 'bi me-2';
+        if (oi === correct) {
+          row.classList.add('bg-success-subtle');
+          icon.classList.add('bi-check-circle-fill', 'text-success');
+        } else if (oi === chosen) {
+          row.classList.add('bg-danger-subtle');
+          icon.classList.add('bi-x-circle-fill', 'text-danger');
+        } else {
+          icon.classList.add('bi-circle', 'text-secondary');
+        }
+        const label = document.createElement('span');
+        label.textContent = (oi + 1) + '. ' + opt;
+        row.appendChild(icon);
+        row.appendChild(label);
+        item.appendChild(row);
+      });
+
+      body.appendChild(item);
+    });
+  }
+
+  const reviewCard = document.getElementById('reviewCard');
+
+  function buildQuizView() {
+    const body = document.getElementById('reviewBody');
+    body.innerHTML = '';
+    document.getElementById('reviewCardHeader').innerHTML =
+      '<i class="bi bi-question-circle text-primary me-1"></i>Long Quiz Questions';
+    QUESTIONS.forEach(function (q, i) {
+      const item = document.createElement('div');
+      item.className = 'border rounded p-3 mb-3';
+      const qText = document.createElement('div');
+      qText.className = 'fw-semibold mb-2';
+      qText.textContent = 'Q' + (i + 1) + '. ' + q.question;
+      item.appendChild(qText);
+      q.options.forEach(function (opt, oi) {
+        const row = document.createElement('div');
+        row.className = 'px-2 py-1';
+        const label = document.createElement('span');
+        label.textContent = (oi + 1) + '. ' + opt;
+        row.appendChild(label);
+        item.appendChild(row);
+      });
+      body.appendChild(item);
+    });
+  }
+
+  const viewQuizBtn = document.getElementById('viewQuizBtn');
+  if (viewQuizBtn) {
+    viewQuizBtn.addEventListener('click', function () {
+      reviewCard.classList.toggle('d-none');
+      buildQuizView();
+      this.innerHTML = reviewCard.classList.contains('d-none')
+        ? '<i class="bi bi-eye me-1"></i>View Long Quiz'
+        : '<i class="bi bi-eye-slash me-1"></i>Hide Long Quiz';
+    });
+  }
+
+  const lockReviewBtn = document.getElementById('lockReviewBtn');
+  if (lockReviewBtn) {
+    const lastAnswers = {{ last_answers | tojson }};
+    lockReviewBtn.addEventListener('click', function () {
+      reviewCard.classList.toggle('d-none');
+      document.getElementById('reviewCardHeader').innerHTML =
+        '<i class="bi bi-check2-circle text-success me-1"></i>Answer Review';
+      buildReview(lastAnswers);
+      this.innerHTML = reviewCard.classList.contains('d-none')
+        ? '<i class="bi bi-list-check me-1"></i>View Answer Review'
+        : '<i class="bi bi-list-check me-1"></i>Hide Answer Review';
+    });
+  }
+
+  const toggleReviewBtn = document.getElementById('toggleReviewBtn');
+  if (toggleReviewBtn) {
+    toggleReviewBtn.addEventListener('click', function () {
+      reviewCard.classList.toggle('d-none');
+      this.innerHTML = reviewCard.classList.contains('d-none')
+        ? '<i class="bi bi-eye me-1"></i>Show Answer Review'
+        : '<i class="bi bi-eye-slash me-1"></i>Hide Answer Review';
+    });
+  }
+
+  const retakeBtn = document.getElementById('retakeBtn');
+  const retakeModalEl = document.getElementById('retakeModal');
+  if (retakeBtn && retakeModalEl) {
+    const retakeModal = new bootstrap.Modal(retakeModalEl);
+    retakeBtn.addEventListener('click', function () {
+      retakeModal.show();
+    });
+    document.getElementById('retakeConfirmBtn').addEventListener('click', function () {
+      retakeModal.hide();
+      document.getElementById('lockCard').classList.add('d-none');
+      document.getElementById('quizCard').classList.remove('d-none');
+      render();
+    });
+  } else {
+    render();
+  }
+})();
+</script>
+{% endblock %}

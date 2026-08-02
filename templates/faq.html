@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}FAQ - CodeFundamentals{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h2 class="mb-1">
+        <i class="bi bi-question-circle text-primary me-2"></i>Frequently Asked Questions
+      </h2>
+      <p class="text-muted mb-4">
+        Quick answers to common questions about CodeFundamentals.
+      </p>
+      <div class="accordion accordion-flush shadow-sm rounded" id="faqAccordion">
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading1">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse1" aria-expanded="true" aria-controls="faqCollapse1">
+              Do I need to install anything to run the code?
+            </button>
+          </h3>
+          <div id="faqCollapse1" class="accordion-collapse collapse show"
+               aria-labelledby="faqHeading1" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              No. All the code runs right in your browser. Python and Java run live
+              on the server, and C++ uses an online compiler — there is nothing to
+              install on your computer.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading2">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse2" aria-expanded="false" aria-controls="faqCollapse2">
+              I have no programming experience. Is that okay?
+            </button>
+          </h3>
+          <div id="faqCollapse2" class="accordion-collapse collapse"
+               aria-labelledby="faqHeading2" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              Absolutely. The lessons are written for 1st year college students and
+              assume no prior knowledge. Every concept is explained from scratch.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading3">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse3" aria-expanded="false" aria-controls="faqCollapse3">
+              Which programming languages will I learn?
+            </button>
+          </h3>
+          <div id="faqCollapse3" class="accordion-collapse collapse"
+               aria-labelledby="faqHeading3" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              Python, C++, Java, and SQL. Programming concepts are shown in all
+              three languages side by side, then you move on to databases with
+              runnable SQL — and finally to SQL injection security with a
+              hands-on practice lab.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading4">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse4" aria-expanded="false" aria-controls="faqCollapse4">
+              How do the quizzes work?
+            </button>
+          </h3>
+          <div id="faqCollapse4" class="accordion-collapse collapse"
+               aria-labelledby="faqHeading4" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              Each lesson ends with a short quiz. You get one attempt per quiz, and
+              your score is saved on your dashboard and added to the leaderboard.
+              Finishing every lesson in a section unlocks that section's
+              15-question long quiz (2 attempts, 20 seconds per question) — your
+              best score is kept, and you can review your answers afterwards.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading5">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse5" aria-expanded="false" aria-controls="faqCollapse5">
+              How is the leaderboard ranked?
+            </button>
+          </h3>
+          <div id="faqCollapse5" class="accordion-collapse collapse"
+               aria-labelledby="faqHeading5" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              Users are ranked by their total quiz points. There is also a separate
+              leaderboard for each lesson so you can see who topped that lesson.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading6">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse6" aria-expanded="false" aria-controls="faqCollapse6">
+              Do I need an account to use the site?
+            </button>
+          </h3>
+          <div id="faqCollapse6" class="accordion-collapse collapse"
+               aria-labelledby="faqHeading6" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              Yes. A free account saves your progress, quiz scores, profile picture,
+              and leaderboard standing — all for free.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading7">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse7" aria-expanded="false" aria-controls="faqCollapse7">
+              How does the E.R.E.N assistant work?
+            </button>
+          </h3>
+          <div id="faqCollapse7" class="accordion-collapse collapse"
+               aria-labelledby="faqHeading7" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              E.R.E.N (Educational Response Engine for Novices) is an AI assistant
+              that appears on every page while you are logged in — just click the
+              robot button at the bottom-right corner. Type a question like
+              "What are variables?" or "Explain loops", tap a suggested chip, and
+              it will answer with examples in Python, C++, and Java. It can also
+              tell you your lesson progress, explain the quizzes and the long quiz,
+              and show how the leaderboard is ranked. E.R.E.N is built with simple
+              keyword matching rules, so it answers instantly without sending your
+              questions anywhere else.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading8">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse8" aria-expanded="false" aria-controls="faqCollapse8">
+              How many lessons are there?
+            </button>
+          </h3>
+          <div id="faqCollapse8" class="accordion-collapse collapse"
+               aria-labelledby="faqHeading8" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              There are 19 lessons available in three sections: 10 programming
+              fundamentals lessons (Python, C++, Java), 8 advanced database
+              lessons (SQL), and 1 SQL injection lesson. Nine more SQL injection
+              lessons are marked "Coming Soon" and will be released one by one.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading9">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse9" aria-expanded="false" aria-controls="faqCollapse9">
+              Can I earn certificates or badges?
+            </button>
+          </h3>
+          <div id="faqCollapse9" class="accordion-collapse collapse"
+               aria-labelledby="faqHeading9" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              Yes. Complete all lessons in a section to unlock that section's
+              certificate, and complete every lesson to unlock the Full Course
+              certificate — both can be printed or saved as PDF. You also earn a
+              badge for every completed lesson, plus gold badges for finishing
+              each section and the full course.
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h3 class="accordion-header" id="faqHeading10">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#faqCollapse10" aria-expanded="false" aria-controls="faqCollapse10">
+              What is the SQL Injection Lab?
+            </button>
+          </h3>
+          <div id="faqCollapse10" class="accordion-collapse collapse"
+               aria-labelledby="faqHeading10" data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              It is a safe practice playground that simulates a vulnerable
+              database entirely in your browser — no real SQL is executed. You try
+              login-bypass payloads, steal data with UNION attacks, compare the
+              vulnerable code with parameterized queries, and finish with a Final
+              Challenge: type your own payload (no copy-paste) using up to 3
+              hints. Once you solve it, the lab shows a green "Lab Completed"
+              checkmark on your dashboard.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

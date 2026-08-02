@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CodeFundamentals{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}?v=8" rel="stylesheet">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('index') }}">
+      <i class="bi bi-code-slash me-1"></i>CodeFundamentals
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto align-items-lg-center">
+        {% if current_user.is_authenticated %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <span class="nav-link text-white-50 d-none d-lg-inline">Welcome, {{ current_user.username }}</span>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="btn btn-light btn-sm ms-lg-2"
+                    data-bs-toggle="modal" data-bs-target="#logoutModal">
+              <i class="bi bi-box-arrow-right me-1"></i>Logout
+            </button>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('faq') }}">FAQ</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('login') }}">
+              <i class="bi bi-box-arrow-in-right me-1"></i>Login
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="btn btn-light btn-sm ms-lg-2" href="{{ url_for('register') }}">
+              <i class="bi bi-person-plus me-1"></i>Register
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="flex-grow-1">
+  <div class="container mt-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% set cats = messages | map(attribute=0) | list %}
+        {% if 'success' in cats %}
+          {% set micon = 'bi-check-circle-fill text-success' %}
+          {% set mtitle = 'Success' %}
+        {% elif 'danger' in cats %}
+          {% set micon = 'bi-x-circle-fill text-danger' %}
+          {% set mtitle = 'Error' %}
+        {% elif 'warning' in cats %}
+          {% set micon = 'bi-exclamation-triangle-fill text-warning' %}
+          {% set mtitle = 'Notice' %}
+        {% else %}
+          {% set micon = 'bi-info-circle-fill text-primary' %}
+          {% set mtitle = 'Notice' %}
+        {% endif %}
+        <div class="modal fade" id="flashModal" tabindex="-1" aria-labelledby="flashModalLabel"
+             aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="flashModalLabel">
+                  <i class="bi {{ micon }} me-2"></i>{{ mtitle }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                {% for category, message in messages %}
+                  <p class="mb-0 {% if not loop.last %}mb-2{% endif %}">{{ message }}</p>
+                {% endfor %}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    {% endwith %}
+  </div>
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="bg-dark text-white-50 text-center py-4 mt-5">
+  <div class="container">
+    <p class="mb-1"><i class="bi bi-code-slash me-1"></i>CodeFundamentals - Programming Fundamentals for 1st Year Students</p>
+    <p class="mb-1 small">
+      Python <i class="bi bi-dot"></i> C++ <i class="bi bi-dot"></i> Java
+      <i class="bi bi-dot"></i> SQL <i class="bi bi-dot"></i> SQL Injection Security
+    </p>
+    <p class="mb-0 small text-white-50">
+      19 lessons in 3 sections <i class="bi bi-dot"></i> Lesson long quizzes <i class="bi bi-dot"></i> Certificates <i class="bi bi-dot"></i> SQL Injection Lab
+    </p>
+  </div>
+</footer>
+
+<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="logoutModalLabel">
+          <i class="bi bi-box-arrow-right text-primary me-2"></i>Logout
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Are you sure you want to log out?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <a href="{{ url_for('logout') }}" class="btn btn-primary">
+          <i class="bi bi-box-arrow-right me-1"></i>Logout
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if current_user.is_authenticated %}
+<button type="button" id="assistToggle" class="assist-toggle" aria-label="Open AI Assistant">
+  <i class="bi bi-robot"></i>
+</button>
+
+<div id="assistPanel" class="assist-panel d-none">
+  <div class="assist-header d-flex align-items-center">
+    <i class="bi bi-robot me-2"></i>
+    <div class="flex-grow-1">
+      <strong>E.R.E.N</strong>
+      <div class="assist-status">Educational Response Engine for Novices</div>
+    </div>
+    <button type="button" id="assistAbout" class="assist-about" aria-label="E.R.E.N story">
+      <i class="bi bi-info-circle"></i>
+    </button>
+    <button type="button" id="assistClose" class="btn-close btn-close-white"
+            aria-label="Close assistant"></button>
+  </div>
+  <div id="assistMessages" class="assist-messages">
+    <div class="assist-bubble assist-bot">
+      Hi {{ current_user.username }}! I'm E.R.E.N — Educational Response Engine
+      for Novices. A long time ago, a frustrated student stayed up until 2 AM to
+      build me so no one would get stuck on the same lessons. You've completed
+      {{ user_done }} of {{ user_total }} lessons so far. Ask me anything!
+    </div>
+  </div>
+  <div id="assistChips" class="assist-chips">
+    <button type="button" class="assist-chip" data-q="Tell me your story, E.R.E.N">E.R.E.N's story</button>
+    <button type="button" class="assist-chip" data-q="What are variables?">Variables</button>
+    <button type="button" class="assist-chip" data-q="Explain loops">Loops</button>
+    <button type="button" class="assist-chip" data-q="How does the quiz work?">Quiz</button>
+    <button type="button" class="assist-chip" data-q="How is the leaderboard ranked?">Leaderboard</button>
+  </div>
+  <form id="assistForm" class="assist-form">
+    <input type="text" id="assistInput" class="form-control" placeholder="Type your question..."
+           autocomplete="off" maxlength="300">
+    <button type="submit" class="btn btn-primary" aria-label="Send">
+      <i class="bi bi-send"></i>
+    </button>
+  </form>
+</div>
+
+<div class="modal fade" id="erenModal" tabindex="-1" aria-labelledby="erenModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="erenModalLabel">
+          <i class="bi bi-robot text-primary me-2"></i>The Story of E.R.E.N
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">
+          It was 2 AM in a cramped dorm room. A first-year computer science
+          student had just failed the same quiz about loops for the third time.
+          Frustrated, exhausted, and running out of coffee, the student had an
+          idea: <em>what if the lesson could explain itself the way a friend
+          would?</em>
+        </p>
+        <p class="mb-3">
+          So they stayed up night after night, writing a program that answered
+          questions patiently, with examples and zero judgment. It began small —
+          just a few rules and a few lessons. But every time a classmate asked
+          something it could not answer, a new rule was added.
+        </p>
+        <p class="mb-3">
+          Hundreds of questions later, the little engine had learned how to
+          explain variables, loops, functions, and every other concept in this
+          course — the way a patient friend would.
+        </p>
+        <p class="mb-0">
+          <strong>E.R.E.N</strong> stands for <strong>Educational Response Engine
+          for Novices</strong>. But really, it just wants you to learn one thing
+          at a time — so you never have to be stuck at 2 AM.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const flashModal = document.getElementById('flashModal');
+  if (flashModal) {
+    new bootstrap.Modal(flashModal).show();
+  }
+});
+function togglePassword(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  icon.classList.toggle('bi-eye', show);
+  icon.classList.toggle('bi-eye-slash', !show);
+  icon.parentElement.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+}
+</script>
+{% block scripts %}{% endblock %}
+{% if current_user.is_authenticated %}
+<script>
+(function () {
+  const assistToggle = document.getElementById('assistToggle');
+  const assistPanel = document.getElementById('assistPanel');
+  const assistMessages = document.getElementById('assistMessages');
+  const assistForm = document.getElementById('assistForm');
+  const assistInput = document.getElementById('assistInput');
+
+  assistToggle.addEventListener('click', function () {
+    assistPanel.classList.toggle('d-none');
+    if (!assistPanel.classList.contains('d-none')) {
+      assistInput.focus();
+    }
+  });
+  document.getElementById('assistClose').addEventListener('click', function () {
+    assistPanel.classList.add('d-none');
+  });
+  document.getElementById('assistAbout').addEventListener('click', function () {
+    new bootstrap.Modal(document.getElementById('erenModal')).show();
+  });
+
+  function addAssistBubble(text, isUser) {
+    const bubble = document.createElement('div');
+    bubble.className = 'assist-bubble ' + (isUser ? 'assist-user' : 'assist-bot');
+    bubble.textContent = text;
+    assistMessages.appendChild(bubble);
+    assistMessages.scrollTop = assistMessages.scrollHeight;
+    return bubble;
+  }
+
+  function addTypingBubble() {
+    const bubble = document.createElement('div');
+    bubble.className = 'assist-bubble assist-bot assist-typing';
+    bubble.innerHTML = '<span></span><span></span><span></span>';
+    assistMessages.appendChild(bubble);
+    assistMessages.scrollTop = assistMessages.scrollHeight;
+    return bubble;
+  }
+
+  function finishTypingBubble(bubble, text) {
+    bubble.classList.remove('assist-typing');
+    bubble.textContent = '';
+    let i = 0;
+    const timer = setInterval(function () {
+      i += 3;
+      if (i >= text.length) {
+        clearInterval(timer);
+        bubble.textContent = text;
+      } else {
+        bubble.textContent = text.slice(0, i);
+      }
+      assistMessages.scrollTop = assistMessages.scrollHeight;
+    }, 20);
+  }
+
+  function wait(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  async function askAssistant(message) {
+    const started = Date.now();
+    let reply;
+    try {
+      const res = await fetch('{{ url_for("assistant") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message }),
+      });
+      const data = await res.json();
+      reply = data.ok ? data.reply : (data.error || 'Something went wrong.');
+    } catch (e) {
+      reply = 'I could not reach the server. Please try again.';
+    }
+    const elapsed = Date.now() - started;
+    await wait(Math.max(0, 450 - elapsed));
+    const typing = addTypingBubble();
+    await wait(900);
+    finishTypingBubble(typing, reply);
+  }
+
+  assistForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const message = assistInput.value.trim();
+    if (!message) return;
+    addAssistBubble(message, true);
+    assistInput.value = '';
+    askAssistant(message);
+  });
+  document.querySelectorAll('.assist-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      addAssistBubble(this.dataset.q, true);
+      askAssistant(this.dataset.q);
+    });
+  });
+})();
+</script>
+{% endif %}
+</body>
+</html>

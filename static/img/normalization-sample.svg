@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="480" viewBox="0 0 1240 480" font-family="Arial, Helvetica, sans-serif">
+  <rect width="1240" height="480" fill="#f7f8fb"/>
+  <text x="620" y="28" text-anchor="middle" font-size="16" fill="#170C79" font-weight="bold">Normalization Walkthrough: 1NF to 3NF (Orders Example)</text>
+
+  <g stroke="#56B6C6" stroke-width="2">
+    <rect x="40" y="48" width="340" height="50" fill="#ffffff" rx="6"/>
+    <rect x="420" y="48" width="340" height="50" fill="#ffffff" rx="6"/>
+    <rect x="800" y="48" width="340" height="50" fill="#ffffff" rx="6"/>
+  </g>
+  <text x="210" y="70" text-anchor="middle" font-size="14" fill="#170C79" font-weight="bold">1NF - No Repeating Groups</text>
+  <text x="210" y="88" text-anchor="middle" font-size="11" fill="#6c757d">Every cell holds a single value</text>
+  <text x="590" y="70" text-anchor="middle" font-size="14" fill="#170C79" font-weight="bold">2NF - No Partial Dependencies</text>
+  <text x="590" y="88" text-anchor="middle" font-size="11" fill="#6c757d">Satisfies 1NF; no dependency on part of the key</text>
+  <text x="970" y="70" text-anchor="middle" font-size="14" fill="#170C79" font-weight="bold">3NF - No Transitive Dependencies</text>
+  <text x="970" y="88" text-anchor="middle" font-size="11" fill="#6c757d">Satisfies 2NF; no dependency through non-key attributes</text>
+
+  <text x="400" y="205" text-anchor="middle" font-size="22" fill="#170C79">&#8594;</text>
+  <text x="780" y="205" text-anchor="middle" font-size="22" fill="#170C79">&#8594;</text>
+
+  <!-- STAGE 1: ORDERS (1NF) -->
+  <rect x="50" y="112" width="320" height="24" fill="#170C79" rx="4"/>
+  <text x="210" y="128" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">ORDERS</text>
+  <rect x="50" y="136" width="320" height="104" fill="#ffffff" stroke="#170C79" stroke-width="1.5"/>
+  <line x1="50" y1="162" x2="370" y2="162" stroke="#e2e6ee" stroke-width="1"/>
+  <line x1="50" y1="188" x2="370" y2="188" stroke="#e2e6ee" stroke-width="1"/>
+  <line x1="50" y1="214" x2="370" y2="214" stroke="#e2e6ee" stroke-width="1"/>
+  <text x="62" y="149" font-size="12" fill="#170C79" font-weight="bold">order_id</text>
+  <text x="135" y="149" font-size="12" fill="#170C79" font-weight="bold">customer_name</text>
+  <text x="225" y="149" font-size="12" fill="#170C79" font-weight="bold">item</text>
+  <text x="356" y="149" text-anchor="end" font-size="12" fill="#170C79" font-weight="bold">quantity</text>
+  <text x="116" y="149" text-anchor="end" font-size="10" fill="#56B6C6" font-weight="bold">PK</text>
+  <text x="62" y="175" font-size="12">1</text>
+  <text x="135" y="175" font-size="12">Alice</text>
+  <text x="225" y="175" font-size="12">Apple</text>
+  <text x="356" y="175" text-anchor="end" font-size="12">2</text>
+  <text x="62" y="201" font-size="12">1</text>
+  <text x="135" y="201" font-size="12">Alice</text>
+  <text x="225" y="201" font-size="12">Banana</text>
+  <text x="356" y="201" text-anchor="end" font-size="12">3</text>
+  <text x="62" y="227" font-size="12">2</text>
+  <text x="135" y="227" font-size="12">Bob</text>
+  <text x="225" y="227" font-size="12">Apple</text>
+  <text x="356" y="227" text-anchor="end" font-size="12">1</text>
+  <text x="210" y="260" text-anchor="middle" font-size="11.5" fill="#c0392b">Still redundant: customer_name repeats and depends on order_id alone.</text>
+
+  <!-- STAGE 2: ORDERS + ORDER_ITEMS -->
+  <rect x="430" y="112" width="320" height="24" fill="#170C79" rx="4"/>
+  <text x="590" y="128" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">ORDERS</text>
+  <rect x="430" y="136" width="320" height="78" fill="#ffffff" stroke="#170C79" stroke-width="1.5"/>
+  <line x1="430" y1="162" x2="750" y2="162" stroke="#e2e6ee" stroke-width="1"/>
+  <line x1="430" y1="188" x2="750" y2="188" stroke="#e2e6ee" stroke-width="1"/>
+  <text x="442" y="149" font-size="12" fill="#170C79" font-weight="bold">order_id</text>
+  <text x="545" y="149" font-size="12" fill="#170C79" font-weight="bold">customer_name</text>
+  <text x="722" y="149" text-anchor="end" font-size="10" fill="#56B6C6" font-weight="bold">PK</text>
+  <text x="442" y="175" font-size="12">1</text>
+  <text x="545" y="175" font-size="12">Alice</text>
+  <text x="442" y="201" font-size="12">2</text>
+  <text x="545" y="201" font-size="12">Bob</text>
+
+  <rect x="430" y="222" width="320" height="24" fill="#170C79" rx="4"/>
+  <text x="590" y="238" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">ORDER_ITEMS</text>
+  <rect x="430" y="246" width="320" height="104" fill="#ffffff" stroke="#170C79" stroke-width="1.5"/>
+  <line x1="430" y1="272" x2="750" y2="272" stroke="#e2e6ee" stroke-width="1"/>
+  <line x1="430" y1="298" x2="750" y2="298" stroke="#e2e6ee" stroke-width="1"/>
+  <line x1="430" y1="324" x2="750" y2="324" stroke="#e2e6ee" stroke-width="1"/>
+  <text x="442" y="259" font-size="12" fill="#170C79" font-weight="bold">order_id</text>
+  <text x="560" y="259" font-size="12" fill="#170C79" font-weight="bold">item</text>
+  <text x="722" y="259" text-anchor="end" font-size="12" fill="#170C79" font-weight="bold">quantity</text>
+  <text x="530" y="259" text-anchor="end" font-size="10" fill="#c0392b" font-weight="bold">FK</text>
+  <text x="644" y="259" text-anchor="end" font-size="10" fill="#56B6C6" font-weight="bold">PK</text>
+  <text x="442" y="285" font-size="12">1</text>
+  <text x="560" y="285" font-size="12">Apple</text>
+  <text x="722" y="285" text-anchor="end" font-size="12">2</text>
+  <text x="442" y="311" font-size="12">1</text>
+  <text x="560" y="311" font-size="12">Banana</text>
+  <text x="722" y="311" text-anchor="end" font-size="12">3</text>
+  <text x="442" y="337" font-size="12">2</text>
+  <text x="560" y="337" font-size="12">Apple</text>
+  <text x="722" y="337" text-anchor="end" font-size="12">1</text>
+  <text x="590" y="372" text-anchor="middle" font-size="11.5" fill="#c0392b">Fix: split so order data and item data are stored once each.</text>
+
+  <!-- STAGE 3: ORDERS + CUSTOMERS + ORDER_ITEMS -->
+  <rect x="810" y="112" width="320" height="24" fill="#170C79" rx="4"/>
+  <text x="970" y="128" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">ORDERS</text>
+  <rect x="810" y="136" width="320" height="78" fill="#ffffff" stroke="#170C79" stroke-width="1.5"/>
+  <line x1="810" y1="162" x2="1130" y2="162" stroke="#e2e6ee" stroke-width="1"/>
+  <line x1="810" y1="188" x2="1130" y2="188" stroke="#e2e6ee" stroke-width="1"/>
+  <text x="822" y="149" font-size="12" fill="#170C79" font-weight="bold">order_id</text>
+  <text x="925" y="149" font-size="12" fill="#170C79" font-weight="bold">customer_id</text>
+  <text x="1102" y="149" text-anchor="end" font-size="10" fill="#56B6C6" font-weight="bold">PK</text>
+  <text x="1050" y="149" text-anchor="end" font-size="10" fill="#c0392b" font-weight="bold">FK</text>
+  <text x="822" y="175" font-size="12">1</text>
+  <text x="925" y="175" font-size="12">1</text>
+  <text x="822" y="201" font-size="12">2</text>
+  <text x="925" y="201" font-size="12">2</text>
+
+  <rect x="810" y="222" width="320" height="24" fill="#170C79" rx="4"/>
+  <text x="970" y="238" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">CUSTOMERS</text>
+  <rect x="810" y="246" width="320" height="78" fill="#ffffff" stroke="#170C79" stroke-width="1.5"/>
+  <line x1="810" y1="272" x2="1130" y2="272" stroke="#e2e6ee" stroke-width="1"/>
+  <line x1="810" y1="298" x2="1130" y2="298" stroke="#e2e6ee" stroke-width="1"/>
+  <text x="822" y="259" font-size="12" fill="#170C79" font-weight="bold">customer_id</text>
+  <text x="925" y="259" font-size="12" fill="#170C79" font-weight="bold">customer_name</text>
+  <text x="1118" y="259" text-anchor="end" font-size="12" fill="#170C79" font-weight="bold">customer_city</text>
+  <text x="1030" y="259" text-anchor="end" font-size="10" fill="#56B6C6" font-weight="bold">PK</text>
+  <text x="822" y="285" font-size="12">1</text>
+  <text x="925" y="285" font-size="12">Alice</text>
+  <text x="1118" y="285" text-anchor="end" font-size="12">Manila</text>
+  <text x="822" y="311" font-size="12">2</text>
+  <text x="925" y="311" font-size="12">Bob</text>
+  <text x="1118" y="311" text-anchor="end" font-size="12">Cebu</text>
+
+  <rect x="810" y="332" width="320" height="24" fill="#170C79" rx="4"/>
+  <text x="970" y="348" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">ORDER_ITEMS</text>
+  <rect x="810" y="356" width="320" height="104" fill="#ffffff" stroke="#170C79" stroke-width="1.5"/>
+  <line x1="810" y1="382" x2="1130" y2="382" stroke="#e2e6ee" stroke-width="1"/>
+  <line x1="810" y1="408" x2="1130" y2="408" stroke="#e2e6ee" stroke-width="1"/>
+  <line x1="810" y1="434" x2="1130" y2="434" stroke="#e2e6ee" stroke-width="1"/>
+  <text x="822" y="369" font-size="12" fill="#170C79" font-weight="bold">order_id</text>
+  <text x="940" y="369" font-size="12" fill="#170C79" font-weight="bold">item</text>
+  <text x="1118" y="369" text-anchor="end" font-size="12" fill="#170C79" font-weight="bold">quantity</text>
+  <text x="910" y="369" text-anchor="end" font-size="10" fill="#c0392b" font-weight="bold">FK</text>
+  <text x="1024" y="369" text-anchor="end" font-size="10" fill="#56B6C6" font-weight="bold">PK</text>
+  <text x="822" y="395" font-size="12">1</text>
+  <text x="940" y="395" font-size="12">Apple</text>
+  <text x="1118" y="395" text-anchor="end" font-size="12">2</text>
+  <text x="822" y="421" font-size="12">1</text>
+  <text x="940" y="421" font-size="12">Banana</text>
+  <text x="1118" y="421" text-anchor="end" font-size="12">3</text>
+  <text x="822" y="447" font-size="12">2</text>
+  <text x="940" y="447" font-size="12">Apple</text>
+  <text x="1118" y="447" text-anchor="end" font-size="12">1</text>
+  <text x="970" y="472" text-anchor="middle" font-size="11.5" fill="#c0392b">Fix: customer details live in CUSTOMERS only - no transitive dependency.</text>
+</svg>

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Database (contains user data)
+instance/
+
+# User avatars
+static/uploads/
+
+# Local history snapshots
+.history/
+
+# Tunnel / session artifacts
+tunnel_cookies.txt
+te*.txt
+te*.html
+te_*.html
+v_*.html
+v_erd.svg
+
+# OS
+Thumbs.db
+.DS_Store
