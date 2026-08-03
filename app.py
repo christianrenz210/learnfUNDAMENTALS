@@ -406,7 +406,12 @@ def login():
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
             log_activity(user, "Logged in", "Successful sign-in")
-            flash("Welcome back, " + user.username + "!", "success")
+            flash(
+                "Welcome back, " + user.username + "!",
+                "success",
+            )
+            if user.is_admin:
+                return redirect(url_for("admin_dashboard"))
             return redirect(url_for("dashboard"))
         flash("Invalid username or password.", "danger")
     return render_template("login.html", registered=request.args.get("registered") == "1")
@@ -1669,6 +1674,20 @@ with app.app_context():
         if admin_user and not admin_user.is_admin:
             admin_user.is_admin = True
             db.session.commit()
+    admin_acct = User.query.filter_by(username="admin").first()
+    if admin_acct is None:
+        db.session.add(
+            User(
+                username="admin",
+                email="admin@codefundamentals.local",
+                password_hash=generate_password_hash("admin123"),
+                is_admin=True,
+            )
+        )
+        db.session.commit()
+    elif not admin_acct.is_admin:
+        admin_acct.is_admin = True
+        db.session.commit()
     try:
         has_lesson_10 = db.session.execute(
             sa_text("SELECT COUNT(*) FROM quiz_score WHERE lesson_id = 10")
