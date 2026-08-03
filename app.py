@@ -1169,43 +1169,47 @@ def run_start():
 
     workdir = tempfile.mkdtemp(prefix="cf_run_")
     source = RUN_CONFIGS[lang]["source"]
-    with open(os.path.join(workdir, source), "w", encoding="utf-8") as f:
-        f.write(code)
-
-    if lang == "java":
-        javac = find_tool("javac")
-        if not javac:
-            shutil.rmtree(workdir, ignore_errors=True)
-            return jsonify(
-                {"ok": False, "error": "Java compiler (javac) is not installed."}
-            ), 500
-        compiled = run_locally([javac, "Main.java"], workdir, 20)
-        if compiled.returncode != 0:
-            shutil.rmtree(workdir, ignore_errors=True)
-            return jsonify({"ok": False, "compile_error": compiled.stderr[:4000]})
-
     try:
-        proc = _start_local_process(lang, workdir)
-    except (OSError, FileNotFoundError):
-        shutil.rmtree(workdir, ignore_errors=True)
-        return jsonify({"ok": False, "error": "Could not start the program."}), 500
+        with open(os.path.join(workdir, source), "w", encoding="utf-8") as f:
+            f.write(code)
+        events = []
+        exit_code = 0
 
-    session = {
-        "queue": queue.Queue(),
-        "proc": proc,
-        "workdir": workdir,
-        "lang": lang,
-        "started": time.time(),
-    }
-    sid = uuid.uuid4().hex
-    RUN_SESSIONS[sid] = session
-    threading.Thread(
-        target=_pump_pipe, args=(proc.stdout, "out", session), daemon=True
-    ).start()
-    threading.Thread(
-        target=_pump_pipe, args=(proc.stderr, "err", session), daemon=True
-    ).start()
-    return jsonify({"ok": True, "session_id": sid})
+        if lang == "java":
+            javac = find_tool("javac")
+            if not javac:
+                return jsonify(
+                    {"ok": False, "error": "Java compiler (javac) is not installed."}
+                ), 500
+            compiled = run_locally([javac, "Main.java"], workdir, 20)
+            if compiled.returncode != 0:
+                return jsonify({"ok": False, "compile_error": compiled.stderr[:4000]})
+            run_cmd = [find_tool("java") or "java", "Main"]
+        else:
+            run_cmd = [sys.executable, "main.py"]
+
+        try:
+            result = run_locally(run_cmd, workdir, MAX_RUN_SECONDS, stdin=stdin)
+        except subprocess.TimeoutExpired:
+            events.append({
+                "type": "error",
+                "data": "Program was stopped (time limit of %d seconds)." % MAX_RUN_SECONDS,
+            })
+            return jsonify({
+                "ok": True, "events": events, "finished": True, "exit_code": -1,
+            })
+
+        output = result.stdout
+        if result.stderr.strip():
+            output += ("\n" if output.strip() else "") + result.stderr
+        if output.strip():
+            events.append({"type": "out", "data": output})
+        exit_code = result.returncode
+        return jsonify({
+            "ok": True, "events": events, "finished": True, "exit_code": exit_code,
+        })
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
 
 
 @app.route("/run/poll/<session_id>", methods=["POST"])
