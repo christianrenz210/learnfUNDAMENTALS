@@ -286,6 +286,15 @@ def inject_user_stats():
     return {}
 
 
+@app.after_request
+def no_cache_html(response):
+    if response.content_type and response.content_type.startswith("text/html"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
