@@ -13,7 +13,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import (
     Flask,
@@ -78,6 +78,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(200), nullable=False)
     avatar = db.Column(db.String(200), nullable=True)
     lab_completed = db.Column(db.Integer, default=0)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     progress = db.relationship("LessonProgress", backref="user", cascade="all, delete-orphan")
     quiz_scores = db.relationship("QuizScore", backref="user", cascade="all, delete-orphan")
@@ -117,6 +118,47 @@ class LabProgress(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     lesson_id = db.Column(db.Integer, nullable=False)
     completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    action = db.Column(db.String(100), nullable=False)
+    details = db.Column(db.String(500), nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    user = db.relationship("User", backref=db.backref("activity_logs", lazy="dynamic"))
+
+
+def log_activity(user, action, details=""):
+    try:
+        db.session.add(
+            ActivityLog(
+                user_id=user.id,
+                action=action,
+                details=details[:500] if details else None,
+                ip_address=request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip() or None,
+            )
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+def admin_required(view):
+    from functools import wraps
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for("login", next=request.path))
+        if not current_user.is_admin:
+            flash("You do not have permission to view that page.", "danger")
+            return redirect(url_for("dashboard"))
+        return view(*args, **kwargs)
+
+    return wrapped
 
 
 @login_manager.user_loader
@@ -347,6 +389,7 @@ def register():
             )
             db.session.add(user)
             db.session.commit()
+            log_activity(user, "Registered an account", "New user signed up")
             flash("Account created successfully! You can now log in.", "success")
             return redirect(url_for("login", registered=1))
     return render_template("register.html")
@@ -362,6 +405,7 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
+            log_activity(user, "Logged in", "Successful sign-in")
             flash("Welcome back, " + user.username + "!", "success")
             return redirect(url_for("dashboard"))
         flash("Invalid username or password.", "danger")
@@ -371,6 +415,7 @@ def login():
 @app.route("/logout")
 @login_required
 def logout():
+    log_activity(current_user, "Logged out", "User signed out")
     logout_user()
     flash("You have been logged out.", "info")
     return redirect(url_for("index"))
@@ -434,6 +479,7 @@ def update_profile():
                 os.remove(old)
             current_user.avatar = None
         db.session.commit()
+        log_activity(current_user, "Updated profile", "Changed username, email, avatar, or password")
         flash("Profile updated successfully.", "success")
     return redirect(url_for("dashboard"))
 
@@ -511,6 +557,79 @@ def dashboard():
         lab_completed=bool(lab_count),
         completed_lab_ids=lab_ids,
     )
+
+
+@app.route("/admin")
+@login_required
+@admin_required
+def admin_dashboard():
+    now = datetime.utcnow()
+    total_users = User.query.count()
+    new_users_7d = User.query.filter(
+        User.created_at >= now - timedelta(days=7)
+    ).count()
+    total_lessons_done = LessonProgress.query.count()
+    total_quizzes = QuizScore.query.count()
+    total_labs = LabProgress.query.count()
+    total_logs = ActivityLog.query.count()
+    recent_logs = (
+        ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(15).all()
+    )
+    recent_users = User.query.order_by(User.created_at.desc()).limit(10).all()
+    return render_template(
+        "admin.html",
+        total_users=total_users,
+        new_users_7d=new_users_7d,
+        total_lessons_done=total_lessons_done,
+        total_quizzes=total_quizzes,
+        total_labs=total_labs,
+        total_logs=total_logs,
+        recent_logs=recent_logs,
+        recent_users=recent_users,
+        now=now,
+    )
+
+
+@app.route("/admin/activity")
+@login_required
+@admin_required
+def admin_activity():
+    action = (request.args.get("action") or "").strip()
+    q = ActivityLog.query
+    if action:
+        q = q.filter(ActivityLog.action == action)
+    logs = q.order_by(ActivityLog.created_at.desc()).limit(300).all()
+    actions = (
+        db.session.query(ActivityLog.action)
+        .distinct()
+        .order_by(ActivityLog.action)
+        .all()
+    )
+    return render_template(
+        "admin_activity.html",
+        logs=logs,
+        actions=[a[0] for a in actions],
+        current_action=action,
+        log_count=len(logs),
+    )
+
+
+@app.route("/admin/users")
+@login_required
+@admin_required
+def admin_users():
+    users = User.query.order_by(User.created_at.desc()).all()
+    rows = []
+    for u in users:
+        rows.append(
+            {
+                "user": u,
+                "lessons_done": len(u.progress),
+                "quizzes": len(u.quiz_scores),
+                "labs": len(db.session.query(LabProgress).filter_by(user_id=u.id).all()),
+            }
+        )
+    return render_template("admin_users.html", rows=rows, total=len(rows), total_lessons=len(AVAILABLE_LESSONS))
 
 
 @app.route("/certificate/<path:name>")
@@ -711,6 +830,11 @@ def submit_quiz(lesson_id):
     )
     db.session.add(row)
     db.session.commit()
+    log_activity(
+        current_user,
+        "Completed lesson quiz",
+        "Scored %d/%d on \"%s\"" % (score, total, lesson["title"]),
+    )
     return jsonify(
         {"ok": True, "best_score": row.best_score, "attempts": row.attempts}
     )
@@ -728,6 +852,12 @@ def complete_lesson(lesson_id):
     if not exists:
         db.session.add(LessonProgress(user_id=current_user.id, lesson_id=lesson_id))
         db.session.commit()
+        lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
+        log_activity(
+            current_user,
+            "Completed lesson",
+            "Finished \"%s\"" % (lesson["title"] if lesson else "Lesson %d" % lesson_id),
+        )
         flash("Lesson marked as complete.", "success")
     else:
         flash("You already completed this lesson.", "info")
@@ -748,6 +878,7 @@ def sql_lab():
 @login_required
 def sql_lab_complete():
     mark_lab_completed(current_user, 19)
+    log_activity(current_user, "Completed lab", "Finished SQL Injection Lab 1")
     return jsonify({"ok": True})
 
 
@@ -755,6 +886,7 @@ def sql_lab_complete():
 @login_required
 def sql_lab_reset():
     unmark_lab_completed(current_user, 19)
+    log_activity(current_user, "Reset lab", "Reset SQL Injection Lab 1")
     return jsonify({"ok": True})
 
 
@@ -772,6 +904,7 @@ def sql_lab_2():
 @login_required
 def sql_lab_2_complete():
     mark_lab_completed(current_user, 20)
+    log_activity(current_user, "Completed lab", "Finished SQL Injection Lab 2")
     return jsonify({"ok": True})
 
 
@@ -779,6 +912,7 @@ def sql_lab_2_complete():
 @login_required
 def sql_lab_2_reset():
     unmark_lab_completed(current_user, 20)
+    log_activity(current_user, "Reset lab", "Reset SQL Injection Lab 2")
     return jsonify({"ok": True})
 
 
@@ -844,6 +978,11 @@ def submit_section_quiz(section):
         )
         db.session.add(row)
         db.session.commit()
+    log_activity(
+        current_user,
+        "Completed long quiz",
+        "Scored %d/%d on the %s quiz" % (score, len(questions), section),
+    )
     return jsonify(
         {
             "ok": True,
@@ -1510,6 +1649,26 @@ with app.app_context():
                 break
             except Exception:
                 time.sleep(0.5)
+    from sqlalchemy import inspect as _inspect
+
+    _cols = [c["name"] for c in _inspect(db.engine).get_columns("user")]
+    if "is_admin" not in _cols:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    if is_sqlite:
+                        conn.execute(sa_text("ALTER TABLE user ADD COLUMN is_admin BOOLEAN DEFAULT 0"))
+                    else:
+                        conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN is_admin BOOLEAN DEFAULT FALSE'))
+                break
+            except Exception:
+                time.sleep(0.5)
+    admin_username = os.environ.get("ADMIN_USERNAME", "").strip()
+    if admin_username:
+        admin_user = User.query.filter_by(username=admin_username).first()
+        if admin_user and not admin_user.is_admin:
+            admin_user.is_admin = True
+            db.session.commit()
     try:
         has_lesson_10 = db.session.execute(
             sa_text("SELECT COUNT(*) FROM quiz_score WHERE lesson_id = 10")

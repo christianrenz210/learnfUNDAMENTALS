@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Users - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+      <h2 class="mb-1">
+        <i class="bi bi-people text-primary me-2"></i>Users
+      </h2>
+      <p class="text-muted mb-0">{{ total }} registered user{{ '' if total == 1 else 's' }}.</p>
+    </div>
+    <ul class="nav nav-pills">
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_activity') }}">Activity Log</a></li>
+      <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_users') }}">Users</a></li>
+    </ul>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Joined</th>
+            <th>Lessons Done</th>
+            <th>Quizzes</th>
+            <th>Labs</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td class="fw-semibold">
+                {% if row.user.avatar %}
+                  <img src="{{ url_for('static', filename='uploads/' ~ row.user.avatar) }}?v={{ row.user.avatar }}"
+                       alt="" class="avatar-circle-sm me-2">
+                {% else %}
+                  <span class="avatar-circle-sm me-2">{{ row.user.username[:2] | upper }}</span>
+                {% endif %}
+                {{ row.user.username }}
+              </td>
+              <td class="text-muted small">{{ row.user.email }}</td>
+              <td class="small">{{ row.user.created_at.strftime('%Y-%m-%d') }}</td>
+              <td>
+                <span class="badge bg-info bg-opacity-10 text-info">{{ row.lessons_done }} / {{ total_lessons }}</span>
+              </td>
+              <td>
+                <span class="badge bg-warning bg-opacity-10 text-warning">{{ row.quizzes }}</span>
+              </td>
+              <td>
+                <span class="badge bg-danger bg-opacity-10 text-danger">{{ row.labs }}</span>
+              </td>
+              <td>
+                {% if row.user.is_admin %}
+                  <span class="badge bg-danger">Admin</span>
+                {% else %}
+                  <span class="badge bg-secondary">Member</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" class="text-center text-muted py-4">No users yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

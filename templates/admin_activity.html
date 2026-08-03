@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Log - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+      <h2 class="mb-1">
+        <i class="bi bi-list-check text-primary me-2"></i>Activity Log
+      </h2>
+      <p class="text-muted mb-0">Showing {{ log_count }} most recent events
+        {% if current_action %} for "{{ current_action }}"{% endif %}.</p>
+    </div>
+    <ul class="nav nav-pills">
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_activity') }}">Activity Log</a></li>
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_users') }}">Users</a></li>
+    </ul>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-center mb-3">
+        <div class="col-auto">
+          <label class="col-form-label small fw-semibold" for="actionFilter">Filter by action:</label>
+        </div>
+        <div class="col-auto">
+          <select id="actionFilter" name="action" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">All actions</option>
+            {% for a in actions %}
+              <option value="{{ a }}" {% if a == current_action %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-auto">
+          <a href="{{ url_for('admin_activity') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+        </div>
+      </form>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>User</th>
+              <th>Action</th>
+              <th>Details</th>
+              <th>IP Address</th>
+              <th>When</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+              <tr>
+                <td class="text-muted small">{{ log.id }}</td>
+                <td class="fw-semibold">{{ log.user.username if log.user else 'Deleted user' }}</td>
+                <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ log.action }}</span></td>
+                <td class="small">{{ log.details or '-' }}</td>
+                <td class="small text-muted">{{ log.ip_address or '-' }}</td>
+                <td class="small text-muted">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="6" class="text-center text-muted py-4">No activity found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -333,6 +333,21 @@ body {
   font-weight: 700;
 }
 
+.avatar-circle-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--brand-secondary);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  vertical-align: middle;
+  object-fit: cover;
+}
+
 .step-number {
   width: 36px;
   height: 36px;
