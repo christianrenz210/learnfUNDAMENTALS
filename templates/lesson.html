@@ -15,6 +15,52 @@
     </ol>
   </nav>
 
+  <div class="card shadow-sm mb-4 progress-steps-wrap">
+    <div class="card-body py-3">
+      <div class="d-flex align-items-center mb-2">
+        <span class="small fw-semibold text-muted text-uppercase tracking-wide">
+          <i class="bi bi-signpost-split me-1"></i>Progress in {{ lesson.section }}
+        </span>
+        <span class="ms-auto small text-muted">Lesson {{ lesson_num }} of {{ section_total }}</span>
+      </div>
+      <ol class="progress-steps list-unstyled d-flex mb-0" aria-label="Lesson progress">
+        {% for l in section_lessons %}
+          {% set i = loop.index %}
+          {% if l.id in completed_ids %}
+            {% set state = 'done' %}
+          {% elif l.id == lesson.id %}
+            {% set state = 'current' %}
+          {% else %}
+            {% if i > 1 and section_lessons[i - 2]['id'] not in completed_ids %}
+              {% set state = 'locked' %}
+            {% else %}
+              {% set state = 'upcoming' %}
+            {% endif %}
+          {% endif %}
+          <li class="progress-step {{ state }}">
+            <a class="progress-step-link {% if l.id == lesson.id %}disabled{% elif state == 'locked' %}disabled{% endif %}"
+               {% if l.id != lesson.id and state != 'locked' %}href="{{ url_for('lesson', lesson_id=l.id) }}"{% endif %}
+               title="{{ l.title }}" aria-current="{% if l.id == lesson.id %}step{% endif %}">
+              <span class="progress-step-badge">
+                {% if state == 'done' %}
+                  <i class="bi bi-check-lg"></i>
+                {% else %}
+                  {{ i }}
+                {% endif %}
+              </span>
+              <span class="progress-step-label">Lesson {{ i }}</span>
+            </a>
+          </li>
+          {% if not loop.last %}
+            <li class="progress-step-arrow" aria-hidden="true">
+              <i class="bi bi-chevron-right"></i>
+            </li>
+          {% endif %}
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+
   <div class="row">
     <div class="col-lg-8">
       <div class="card shadow-sm mb-4">
@@ -37,6 +83,16 @@
               {% else %}
                 <a href="{{ url_for('sql_lab') }}" class="btn btn-danger ms-auto d-inline-flex align-items-center">
                   <i class="bi bi-bug-fill me-1"></i>Try the SQL Injection Lab
+                </a>
+              {% endif %}
+            {% elif lesson.id == 20 %}
+              {% if lab_completed %}
+                <a href="{{ url_for('sql_lab_2') }}" class="btn btn-success ms-auto d-inline-flex align-items-center">
+                  <i class="bi bi-check-circle-fill me-1"></i>Lab Completed
+                </a>
+              {% else %}
+                <a href="{{ url_for('sql_lab_2') }}" class="btn btn-danger ms-auto d-inline-flex align-items-center">
+                  <i class="bi bi-pin-angle-fill me-1"></i>Try the Injection Points Lab
                 </a>
               {% endif %}
             {% endif %}
@@ -282,6 +338,41 @@
           {% endfor %}
         </ul>
       </div>
+      {% if has_lab %}
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white">
+          <h6 class="mb-0">
+            <i class="bi bi-bug-fill text-danger me-2"></i>Lab Leaderboard
+          </h6>
+        </div>
+        <ul class="list-group list-group-flush" id="labsLeaderboard">
+          {% for entry in labs_leaderboard %}
+            <li class="list-group-item d-flex align-items-center py-2 {{ 'leaderboard-you' if entry.username == current_user.username }}">
+              <span class="rank-badge {{ 'rank-gold' if entry.rank == 1 else ('rank-silver' if entry.rank == 2 else ('rank-bronze' if entry.rank == 3 else 'rank-rest')) }} me-3">
+                {% if entry.rank == 1 %}
+                  <i class="bi bi-trophy-fill"></i>
+                {% else %}
+                  {{ entry.rank }}
+                {% endif %}
+              </span>
+              <div class="flex-grow-1">
+                <span class="fw-semibold">{{ entry.username }}</span>
+                {% if entry.username == current_user.username %}
+                  <span class="badge bg-primary bg-opacity-10 text-primary ms-1">You</span>
+                {% endif %}
+              </div>
+              <span class="fw-bold text-danger">
+                <span class="fw-normal text-muted">+{{ entry.points }} pts</span>
+              </span>
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted">
+              <i class="bi bi-info-circle me-2"></i>No one has finished this lesson's lab yet. Be the first!
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>

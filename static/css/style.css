@@ -15,13 +15,15 @@
   --bs-link-hover-color: var(--brand-primary-dark);
   --bs-link-hover-color-rgb: 18, 10, 95;
   --bs-focus-ring-color: rgba(23, 12, 121, 0.25);
+  --cf-bg: #f7f9fc;
 }
 
 body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f7f9fc;
+  background-color: var(--cf-bg);
+  transition: background-color 0.2s ease;
 }
 
 .hero-section {
@@ -344,6 +346,12 @@ body {
   font-size: 1rem;
 }
 
+.quote-text {
+  font-size: 1.35rem;
+  font-style: italic;
+  line-height: 1.6;
+}
+
 .assist-toggle {
   position: fixed;
   right: 1.25rem;
@@ -603,4 +611,298 @@ body {
     border-right: 1px solid var(--bs-border-color);
     border-radius: 0;
   }
+}
+
+.progress-steps-wrap {
+  overflow-x: auto;
+}
+.progress-steps {
+  align-items: center;
+  min-width: max-content;
+  padding: 0.25rem 0;
+}
+.progress-step {
+  flex: 0 0 auto;
+  text-align: center;
+}
+.progress-step-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  color: #6c757d;
+}
+.progress-step-link.disabled {
+  cursor: default;
+  color: inherit;
+}
+.progress-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #6c757d;
+  background: #eef0f4;
+  border: 2px solid #d4d8e0;
+  transition: all 0.2s ease;
+}
+.progress-step-label {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.progress-step-arrow {
+  flex: 0 0 auto;
+  color: #c2c7d1;
+  font-size: 0.9rem;
+  padding: 0 0.35rem;
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+.progress-step.current .progress-step-badge {
+  color: #ffffff;
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 4px rgba(23, 12, 121, 0.15);
+}
+.progress-step.current .progress-step-label {
+  color: var(--brand-primary);
+  font-weight: 700;
+}
+
+.progress-step.done .progress-step-badge {
+  color: #ffffff;
+  background: #198754;
+  border-color: #198754;
+}
+.progress-step.done .progress-step-label {
+  color: #198754;
+  font-weight: 600;
+}
+
+.progress-step.locked {
+  opacity: 0.45;
+}
+.progress-step.locked .progress-step-badge {
+  background: #f5f6f9;
+}
+.progress-step.locked .progress-step-link {
+  cursor: not-allowed;
+  color: #a7adbd;
+}
+
+.how-flow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.how-flow-item {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.how-flow-card {
+  height: 100%;
+  box-shadow: 0 2px 8px rgba(23, 12, 121, 0.06);
+  border: 1px solid #e3e7ef;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  position: relative;
+}
+.how-flow-card-arrow .how-flow-arrow-icon {
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  z-index: 3;
+  box-shadow: 0 2px 6px rgba(23, 12, 121, 0.35);
+}
+.how-flow-card-last {
+  border-radius: 0.75rem;
+}
+@media (max-width: 575.98px) {
+  .how-flow-card-arrow .how-flow-arrow-icon {
+    right: 50%;
+    top: auto;
+    bottom: -14px;
+    transform: translateX(50%) rotate(90deg);
+  }
+}
+
+/* ================= Dark Mode Overrides ================= */
+[data-bs-theme="dark"] {
+  --cf-bg: #16161f;
+  --cf-sidebar: #1b1e29;
+  --cf-muted: #23242f;
+  --cf-muted-bg: #23242f;
+  --cf-locked: #23242f;
+}
+
+[data-bs-theme="dark"] body {
+  background-color: var(--cf-bg);
+  color: #e2e4ee;
+}
+
+[data-bs-theme="dark"] .bg-white {
+  background-color: var(--bs-body-bg) !important;
+  color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .bg-light {
+  background-color: var(--cf-sidebar) !important;
+}
+
+[data-bs-theme="dark"] .card {
+  background-color: var(--bs-body-bg);
+}
+
+[data-bs-theme="dark"] .card-header {
+  border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .lesson-card-locked {
+  background: var(--cf-locked) !important;
+}
+
+[data-bs-theme="dark"] .lesson-card-locked .card-title,
+[data-bs-theme="dark"] .lesson-card-locked .card-text {
+  color: #85879b !important;
+}
+
+[data-bs-theme="dark"] .coming-soon {
+  border-color: #3a3b4d !important;
+  background: var(--cf-locked);
+}
+
+[data-bs-theme="dark"] .folder-toggle:hover {
+  background: var(--cf-sidebar) !important;
+}
+
+[data-bs-theme="dark"] .nav-tabs .nav-link {
+  color: #a6a9bd;
+}
+
+[data-bs-theme="dark"] .nav-tabs .nav-link.active {
+  color: var(--brand-tertiary);
+  border-color: var(--bs-border-color);
+  border-bottom-color: var(--bs-body-bg);
+  background-color: var(--bs-body-bg);
+}
+
+[data-bs-theme="dark"] .rank-rest {
+  background-color: var(--cf-muted-bg);
+  color: #a6a9bd;
+  border: 1px solid #2a2b38;
+}
+
+[data-bs-theme="dark"] textarea,
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+  color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .assist-panel {
+  background: var(--cf-sidebar);
+}
+
+[data-bs-theme="dark"] .assist-messages {
+  background: var(--cf-sidebar);
+}
+
+[data-bs-theme="dark"] .assist-bot {
+  background: var(--cf-muted);
+  color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .assist-chips {
+  background: var(--cf-sidebar);
+}
+
+[data-bs-theme="dark"] .assist-form {
+  background: var(--cf-sidebar);
+}
+
+[data-bs-theme="dark"] .assist-chip {
+  color: var(--brand-tertiary);
+  border-color: var(--brand-secondary);
+}
+
+[data-bs-theme="dark"] .assist-chip:hover {
+  color: #16161f;
+}
+
+[data-bs-theme="dark"] .dashboard-sidebar {
+  background: var(--cf-sidebar);
+}
+
+[data-bs-theme="dark"] .badge-circle.badge-locked {
+  background: #23242f;
+  color: #7b7e92;
+  border-color: #2f313f;
+}
+
+[data-bs-theme="dark"] .badge-lock {
+  background: #16161f;
+  color: #7b7e92;
+  border-color: #2f313f;
+}
+
+[data-bs-theme="dark"] .badge-star {
+  background: #16161f;
+}
+
+[data-bs-theme="dark"] .badge-title {
+  color: #a6a9bd;
+}
+
+[data-bs-theme="dark"] .progress-step-badge {
+  color: #a6a9bd;
+  background: var(--cf-muted);
+  border-color: #2c2d3a;
+}
+
+[data-bs-theme="dark"] .progress-step.locked .progress-step-badge {
+  background: #23242f;
+}
+
+[data-bs-theme="dark"] .progress-step.locked .progress-step-link {
+  color: #7b7e92;
+}
+
+[data-bs-theme="dark"] .progress-step-arrow {
+  color: #3c3e4f;
+}
+
+[data-bs-theme="dark"] .how-flow-card {
+  border-color: #2a2b38;
+  background: var(--bs-body-bg);
+}
+
+[data-bs-theme="dark"] .lab-table thead th {
+  background: #23242f !important;
+  color: #cfd2e0;
+}
+
+[data-bs-theme="dark"] .lab-table tbody {
+  color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .text-muted {
+  color: #9b9eb3 !important;
 }

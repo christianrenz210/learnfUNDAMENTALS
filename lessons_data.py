@@ -693,10 +693,43 @@ LESSONS = [
         "section": "SQL Injection",
         "id": 20,
         "minutes": 40,
-        "coming_soon": True,
         "title": "How SQL Injection Works",
         "icon": "bi-terminal",
         "description": "Understand injection points, how queries are built from user input, and why string concatenation lets attackers rewrite the SQL statement.",
+        "key_points": [
+            "An injection point is any place where user input is placed directly into a SQL query.",
+            "Classic injection points: login forms, search boxes, URL parameters (id=), and profile fields.",
+            "String concatenation is the root cause: the program builds the query by pasting raw input into the SQL text.",
+            "Because the DB cannot tell code from data, an injected quote can close the string and rewrite the rest of the query.",
+            "The comment sequence -- hides everything after it, which lets attackers disable password checks.",
+            "The fix is always parameterized queries: user input becomes data (a ? or %s placeholder), never part of the SQL text.",
+        ],
+        "code": {
+            "sql": "-- VULNERABLE: the search box concatenates input\n-- Attacker types:  x' OR '1'='1 --\n\nSELECT * FROM products WHERE name LIKE '%x' OR '1'='1' --%';\n\n-- The OR '1'='1' is always true, and -- comments out the rest,\n-- so the query returns EVERY product. The attacker just filtered\n-- every row out of your database for free.",
+            "python": "# VULNERABLE: raw input is pasted into the SQL string\nproduct = input(\"Search: \")            # attacker: x' OR '1'='1 --\n\nquery = \"SELECT * FROM products \" \\\n        \"WHERE name LIKE '%' + product + \"%'\"\n\n# The query suddenly becomes:\n# SELECT * FROM products WHERE name LIKE '%x' OR '1'='1' --%'\n# The OR makes the condition always true, so every row is returned.\n\n# SAFE VERSION: the input is bound as data, never merged into the SQL text.\n# (Python with SQLite uses a ? placeholder)\nquery_safe = \"SELECT * FROM products WHERE name LIKE ?\"\ncursor.execute(query_safe, (\"%\" + product + \"%\",))",
+        },
+        "quiz": [
+            {
+                "question": "What is an injection point?",
+                "options": ["The server that hosts the database", "Any place where user input is placed directly into a SQL query", "The password hashing algorithm", "The network cable connecting the web server to the database"],
+                "correct": 1,
+            },
+            {
+                "question": "Which of these is a common injection point?",
+                "options": ["A search box", "A login form", "A URL parameter like ?id=5", "All of the above"],
+                "correct": 3,
+            },
+            {
+                "question": "What does the -- sequence do in a SQL injection payload?",
+                "options": ["Splits the query into two", "Comments out the rest of the query", "Errors on purpose", "Encrypts the input"],
+                "correct": 1,
+            },
+            {
+                "question": "What is the correct fix for string concatenation SQL queries?",
+                "options": ["Replace single quotes with double quotes", "Add more WHERE conditions", "Use parameterized queries (prepared statements)", "Disable the search feature"],
+                "correct": 2,
+            },
+        ],
     },
     {
         "section": "SQL Injection",

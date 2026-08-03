@@ -42,9 +42,17 @@ SECTION_ORDER = ["Fundamentals", "Advanced Database System", "SQL Injection"]
 SECTION_LESSON_MINUTES = {"Fundamentals": 40, "Advanced Database System": 45}
 AVAILABLE_LESSONS = [l for l in LESSONS if not l.get("coming_soon")]
 
+LAB_POINTS_PER_LAB = 2
+LAB_LESSON_IDS = {19, 20}
+LAB_ROUTES = {19: "sql_lab", 20: "sql_lab_2"}
+
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "change-this-secret-key-in-production"
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///students.db"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key-in-production")
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///students.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 
 ALLOWED_AVATAR_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
 AVATAR_DIR = os.path.join(app.root_path, "static", "uploads")
@@ -97,9 +105,50 @@ class SectionQuizScore(db.Model):
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class LabProgress(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    lesson_id = db.Column(db.Integer, nullable=False)
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+def is_lab_completed(user, lesson_id):
+    if user is None:
+        return False
+    return (
+        db.session.query(LabProgress)
+        .filter_by(user_id=user.id, lesson_id=lesson_id)
+        .first()
+        is not None
+    )
+
+
+def get_completed_lab_ids(user):
+    if user is None:
+        return set()
+    return {lp.lesson_id for lp in LabProgress.query.filter_by(user_id=user.id).all()}
+
+
+def mark_lab_completed(user, lesson_id):
+    if not is_lab_completed(user, lesson_id):
+        db.session.add(LabProgress(user_id=user.id, lesson_id=lesson_id))
+        db.session.commit()
+
+
+def unmark_lab_completed(user, lesson_id):
+    row = (
+        db.session.query(LabProgress)
+        .filter_by(user_id=user.id, lesson_id=lesson_id)
+        .first()
+    )
+    if row:
+        db.session.delete(row)
+        db.session.commit()
 
 
 def get_completed_ids(user):
@@ -122,12 +171,67 @@ def get_leaderboard():
     for qs, username in rows:
         entry = stats.setdefault(
             qs.user_id,
-            {"username": username, "points": 0, "quizzes": 0, "attempts": 0},
+            {
+                "username": username,
+                "points": 0,
+                "quizzes": 0,
+                "attempts": 0,
+                "labs": 0,
+                "lab_points": 0,
+            },
         )
         entry["points"] += qs.best_score
         entry["quizzes"] += 1
         entry["attempts"] += qs.attempts
+    lab_rows = (
+        db.session.query(LabProgress, User.username)
+        .join(User, LabProgress.user_id == User.id)
+        .all()
+    )
+    for lp, username in lab_rows:
+        entry = stats.setdefault(
+            lp.user_id,
+            {
+                "username": username,
+                "points": 0,
+                "quizzes": 0,
+                "attempts": 0,
+                "labs": 0,
+                "lab_points": 0,
+            },
+        )
+        entry["labs"] += 1
+        entry["lab_points"] += LAB_POINTS_PER_LAB
+    for entry in stats.values():
+        entry["points"] += entry["lab_points"]
     board = sorted(stats.values(), key=lambda e: (-e["points"], e["attempts"]))
+    for i, entry in enumerate(board, start=1):
+        entry["rank"] = i
+    return board
+
+
+def get_lesson_labs_leaderboard(lesson_id):
+    rows = (
+        db.session.query(User.username, db.func.count(LabProgress.id))
+        .outerjoin(
+            LabProgress,
+            db.and_(LabProgress.user_id == User.id, LabProgress.lesson_id == lesson_id),
+        )
+        .group_by(User.id, User.username)
+        .all()
+    )
+    board = sorted(
+        (
+            {
+                "username": username,
+                "labs": labs_done,
+                "points": labs_done * LAB_POINTS_PER_LAB,
+            }
+            for username, labs_done in rows
+            if labs_done > 0
+        ),
+        key=lambda e: (-e["labs"], e["username"].lower()),
+    )
     for i, entry in enumerate(board, start=1):
         entry["rank"] = i
     return board
@@ -183,6 +287,11 @@ def index():
 @app.route("/faq")
 def faq():
     return render_template("faq.html")
+
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
 
 
 @app.route("/compiler")
@@ -323,6 +432,10 @@ def dashboard():
     scores = get_quiz_scores(current_user)
     quiz_points = sum(qs.best_score for qs in scores.values())
     quiz_count = len(scores)
+    lab_ids = get_completed_lab_ids(current_user)
+    lab_count = len(lab_ids)
+    lab_points = lab_count * LAB_POINTS_PER_LAB
+    total_points = quiz_points + lab_points
     sections = {}
     for lesson in LESSONS:
         sections.setdefault(lesson.get("section", "Fundamentals"), []).append(lesson)
@@ -374,9 +487,13 @@ def dashboard():
         percent=percent,
         quiz_points=quiz_points,
         quiz_count=quiz_count,
+        total_points=total_points,
+        lab_points=lab_points,
+        lab_count=lab_count,
         all_lessons=AVAILABLE_LESSONS,
         section_minutes=SECTION_LESSON_MINUTES,
-        lab_completed=bool(current_user.lab_completed),
+        lab_completed=bool(lab_count),
+        completed_lab_ids=lab_ids,
     )
 
 
@@ -443,7 +560,7 @@ def assistant_reply(message):
     rules = [
         (lambda: has("long quiz", "section quiz"), "Each section ends with a Long Quiz: 15 questions with 20 seconds per question, and you get 2 attempts total. Your best score is saved on the dashboard. Unlock it by completing every lesson in the section, then find it on your dashboard under By Section, or use the Proceed to Long Quiz button after the last lesson. After taking it you can view the answer review to see which questions you got right or wrong."),
         (lambda: has("quiz", "quizzes", "attempt"), "Each lesson ends with a quiz. You get one attempt per quiz, so answer carefully! Your score is saved on your dashboard and added to the lesson and global leaderboards."),
-        (lambda: has("leaderboard", "rank", "ranking", "points", "compete"), "Leaderboards rank users by total quiz points. There is a global leaderboard on your dashboard and a separate one for each lesson page."),
+        (lambda: has("leaderboard", "rank", "ranking", "points", "compete"), "Leaderboards rank users by total points: quiz scores plus lab bonuses. Completing a SQL Injection Lab earns 2 points per lab. There is a global leaderboard on your dashboard and a separate one for each lesson page."),
         (lambda: has("progress", "completed", "dashboard"), "Your dashboard shows your progress: lessons completed, quiz stats, and total points. Mark a lesson complete from the lesson page, then watch your progress bar grow."),
         (lambda: has("vs"), "You learn Python, C++, and Java side by side. Python is interpreted and uses indentation; C++ and Java are compiled and use braces {} and semicolons. Every lesson shows the same concept in all three languages, so you can compare them directly in the lessons."),
         (lambda: has("c++", "cpp", "c plus plus"), "C++ is a compiled language: a compiler turns your source code into a fast machine program before it runs. It is used for games, operating systems, and performance-heavy software. C++ uses braces {} and requires semicolons at the end of each statement."),
@@ -510,6 +627,10 @@ def lesson(lesson_id):
         return redirect(url_for("lesson", lesson_id=section_lessons[idx - 1]["id"]))
     completed = lesson_id in completed_ids
     quiz_score = get_quiz_scores(current_user).get(lesson_id)
+    has_lab = lesson_id in LAB_LESSON_IDS
+    labs_leaderboard = get_lesson_labs_leaderboard(lesson_id) if has_lab else []
+    lab_completed = is_lab_completed(current_user, lesson_id) if has_lab else False
+    lab_route = LAB_ROUTES.get(lesson_id)
     prev_lesson_id = section_lessons[idx - 1]["id"] if idx > 0 else None
     next_lesson_id = section_lessons[idx + 1]["id"] if idx < len(section_lessons) - 1 else None
     return render_template(
@@ -520,12 +641,17 @@ def lesson(lesson_id):
         completed=completed,
         quiz_score=quiz_score,
         lesson_leaderboard=get_lesson_leaderboard(lesson_id),
+        has_lab=has_lab,
+        labs_leaderboard=labs_leaderboard,
+        lab_completed=lab_completed,
+        lab_route=lab_route,
         total_lessons=len(AVAILABLE_LESSONS),
         prev_lesson_id=prev_lesson_id,
         next_lesson_id=next_lesson_id,
         section_minutes=SECTION_LESSON_MINUTES,
         section_has_quiz=lesson.get("section", "Fundamentals") in LONG_QUIZZES,
-        lab_completed=bool(current_user.lab_completed),
+        section_lessons=section_lessons,
+        completed_ids=completed_ids,
     )
 
 
@@ -595,22 +721,48 @@ def complete_lesson(lesson_id):
 @app.route("/sql-lab")
 @login_required
 def sql_lab():
-    return render_template("sql_lab.html", lab_completed=bool(current_user.lab_completed))
+    return render_template(
+        "sql_lab.html",
+        lab_completed=is_lab_completed(current_user, 19),
+        lesson_id=19,
+    )
 
 
 @app.route("/sql-lab/complete", methods=["POST"])
 @login_required
 def sql_lab_complete():
-    current_user.lab_completed = 1
-    db.session.commit()
+    mark_lab_completed(current_user, 19)
     return jsonify({"ok": True})
 
 
 @app.route("/sql-lab/reset", methods=["POST"])
 @login_required
 def sql_lab_reset():
-    current_user.lab_completed = 0
-    db.session.commit()
+    unmark_lab_completed(current_user, 19)
+    return jsonify({"ok": True})
+
+
+@app.route("/sql-lab-2")
+@login_required
+def sql_lab_2():
+    return render_template(
+        "sql_lab_2.html",
+        lab_completed=is_lab_completed(current_user, 20),
+        lesson_id=20,
+    )
+
+
+@app.route("/sql-lab-2/complete", methods=["POST"])
+@login_required
+def sql_lab_2_complete():
+    mark_lab_completed(current_user, 20)
+    return jsonify({"ok": True})
+
+
+@app.route("/sql-lab-2/reset", methods=["POST"])
+@login_required
+def sql_lab_2_reset():
+    unmark_lab_completed(current_user, 20)
     return jsonify({"ok": True})
 
 
@@ -1195,23 +1347,86 @@ def run_sql():
         conn.close()
 
 
+PLAYGROUND_SCHEMA = [
+    "CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password TEXT, role TEXT)",
+    "INSERT INTO users (id, username, password, role) VALUES "
+    "(1, 'admin', 'admin123', 'admin'), "
+    "(2, 'alice', 'wonderland', 'staff'), "
+    "(3, 'bob', 'builder', 'staff'), "
+    "(4, 'carol', 'carol123', 'guest')",
+    "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price INTEGER)",
+    "INSERT INTO products (id, name, price) VALUES "
+    "(1, 'Laptop', 45000), "
+    "(2, 'Mouse', 500), "
+    "(3, 'Keyboard', 1200), "
+    "(4, 'Monitor', 8000)",
+]
+
+
+@app.route("/sql-playground")
+@login_required
+def sql_playground():
+    return render_template("sql_playground.html")
+
+
+@app.route("/run/playground", methods=["POST"])
+@login_required
+def run_playground():
+    data = request.get_json(silent=True) or {}
+    code = (data.get("code") or "").strip()
+    if not code:
+        return jsonify({"ok": False, "error": "No SQL provided."}), 400
+    if len(code) > 50000:
+        return jsonify({"ok": False, "error": "SQL is too long (50,000 characters max)."}), 400
+    conn = sqlite3.connect(":memory:")
+    output = []
+    try:
+        for statement in PLAYGROUND_SCHEMA:
+            conn.execute(statement)
+        for statement in code.split(";"):
+            statement = statement.strip()
+            if not statement:
+                continue
+            cur = conn.execute(statement)
+            if cur.description:
+                output.append(format_sql_table([d[0] for d in cur.description], cur.fetchall()))
+            elif cur.rowcount != -1:
+                output.append(f"-- {cur.rowcount} row(s) affected")
+            else:
+                output.append("-- Statement executed")
+        return jsonify({"ok": True, "output": output})
+    except sqlite3.Error as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    finally:
+        conn.close()
+
+
 with app.app_context():
     db.create_all()
     os.makedirs(AVATAR_DIR, exist_ok=True)
-    for _ in range(10):
-        try:
-            with db.engine.begin() as conn:
-                conn.execute(sa_text("ALTER TABLE user ADD COLUMN avatar VARCHAR(200)"))
-            break
-        except Exception:
-            time.sleep(0.5)
-    for _ in range(10):
-        try:
-            with db.engine.begin() as conn:
-                conn.execute(sa_text("ALTER TABLE user ADD COLUMN lab_completed INTEGER DEFAULT 0"))
-            break
-        except Exception:
-            time.sleep(0.5)
+    is_sqlite = db.engine.dialect.name == "sqlite"
+    if is_sqlite:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text("ALTER TABLE user ADD COLUMN avatar VARCHAR(200)"))
+                break
+            except Exception:
+                time.sleep(0.5)
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text("ALTER TABLE user ADD COLUMN lab_completed INTEGER DEFAULT 0"))
+                break
+            except Exception:
+                time.sleep(0.5)
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text("ALTER TABLE section_quiz_score ADD COLUMN last_answers TEXT"))
+                break
+            except Exception:
+                time.sleep(0.5)
     try:
         has_lesson_10 = db.session.execute(
             sa_text("SELECT COUNT(*) FROM quiz_score WHERE lesson_id = 10")
@@ -1226,33 +1441,20 @@ with app.app_context():
             db.session.commit()
     except Exception:
         pass
-    for _ in range(10):
-        try:
-            with db.engine.begin() as conn:
-                conn.execute(sa_text("ALTER TABLE section_quiz_score ADD COLUMN last_answers TEXT"))
-            break
-        except Exception:
-            time.sleep(0.5)
+    try:
+        legacy_users = db.session.execute(
+            sa_text(
+                "SELECT id FROM user WHERE lab_completed > 0 "
+                "AND NOT EXISTS (SELECT 1 FROM lab_progress lp WHERE lp.user_id = user.id)"
+            )
+        ).fetchall()
+        for (uid,) in legacy_users:
+            db.session.add(LabProgress(user_id=uid, lesson_id=19))
+        if legacy_users:
+            db.session.commit()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
-    app.run(debug=True, threaded=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    app.run(host="0.0.0.0", debug=True, threaded=True, port=int(os.environ.get("PORT", 5001)))

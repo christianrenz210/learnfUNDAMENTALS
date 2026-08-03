@@ -3,38 +3,57 @@
 {% block title %}CodeFundamentals - Learn Programming Basics{% endblock %}
 
 {% block content %}
-<section class="hero-section text-white">
-  <div class="container py-5">
-    <div class="row align-items-center">
-      <div class="col-lg-7">
-        <h1 class="display-4 fw-bold">Learn the Fundamentals of Programming</h1>
-        <p class="lead">
-          Free lessons in Python, C++, Java, and SQL — plus a hands-on
-          SQL injection security lab — designed for first-year
-          college students. Understand the core concepts that every
-          programming language shares.
-        </p>
-        <div class="d-flex gap-2 flex-wrap">
-          {% if current_user.is_authenticated %}
-            <a href="{{ url_for('dashboard') }}" class="btn btn-light btn-lg">
-              <i class="bi bi-grid me-2"></i>Go to Dashboard
-            </a>
-          {% else %}
-            <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">
-              <i class="bi bi-rocket-takeoff me-2"></i>Start Learning
-            </a>
-            <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg">
-              <i class="bi bi-box-arrow-in-right me-2"></i>Login
-            </a>
-          {% endif %}
+<section class="py-5">
+  <div class="container">
+    <div class="hero-section rounded-4 text-white p-4 p-lg-5 shadow-lg">
+      <div class="row align-items-center">
+        <div class="col-lg-7">
+          <h1 class="display-4 fw-bold">Learn the Fundamentals of Programming</h1>
+          <p class="lead">
+            Free lessons in Python, C++, Java, and SQL — plus a hands-on
+            SQL injection security lab — designed for first-year
+            college students. Understand the core concepts that every
+            programming language shares.
+          </p>
+          <div class="d-flex gap-2 flex-wrap">
+            {% if current_user.is_authenticated %}
+              <a href="{{ url_for('dashboard') }}" class="btn btn-light btn-lg">
+                <i class="bi bi-grid me-2"></i>Go to Dashboard
+              </a>
+            {% else %}
+              <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">
+                <i class="bi bi-rocket-takeoff me-2"></i>Start Learning
+              </a>
+              <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Login
+              </a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-lg-5 d-none d-lg-block">
+          <div class="card code-preview shadow-lg">
+            <div class="card-header bg-dark text-white small">hello_world.py</div>
+            <div class="card-body bg-dark code-block">
+              <span class="text-danger">print</span><span class="text-white">(</span><span class="text-warning">"Hello, world!"</span><span class="text-white">)</span><br>
+              <span class="text-danger">print</span><span class="text-white">(</span><span class="text-warning">"Programming is fun!"</span><span class="text-white">)</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="col-lg-5 d-none d-lg-block">
-        <div class="card code-preview shadow-lg">
-          <div class="card-header bg-dark text-white small">hello_world.py</div>
-          <div class="card-body bg-dark code-block">
-            <span class="text-danger">print</span><span class="text-white">(</span><span class="text-warning">"Hello, world!"</span><span class="text-white">)</span><br>
-            <span class="text-danger">print</span><span class="text-white">(</span><span class="text-warning">"Programming is fun!"</span><span class="text-white">)</span>
+      <hr class="border-secondary my-4">
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+          <div class="text-center">
+            <i class="bi bi-quote fs-1 text-white-50"></i>
+            <blockquote class="quote-text mb-2">
+              "When you feel like giving up, remember why you started. Every
+              bug, every error, every confusion is proof that you are learning.
+              The students who succeed are not the smartest ones — they are the
+              ones who refused to quit. Pahinga ka lang. Then, laban ulit."
+            </blockquote>
+            <figcaption class="text-white-50">
+              — a reminder for every student who feels like sumuko na
+            </figcaption>
           </div>
         </div>
       </div>
@@ -93,9 +112,10 @@
       Go from zero to your first running program — and beyond into databases
       and security — in four simple steps.
     </p>
-    <div class="row g-4">
-      <div class="col-md-6 col-lg-3">
-        <div class="card h-100 feature-card border-0 shadow-sm">
+    <div class="how-flow">
+      <div class="how-flow-item">
+        <div class="card h-100 feature-card border-0 how-flow-card how-flow-card-arrow">
+          <span class="how-flow-arrow-icon" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
           <div class="card-body text-center p-4">
             <div class="step-number mx-auto mb-3">1</div>
             <i class="bi bi-person-plus fs-2 text-primary"></i>
@@ -107,8 +127,9 @@
           </div>
         </div>
       </div>
-      <div class="col-md-6 col-lg-3">
-        <div class="card h-100 feature-card border-0 shadow-sm">
+      <div class="how-flow-item">
+        <div class="card h-100 feature-card border-0 how-flow-card how-flow-card-arrow">
+          <span class="how-flow-arrow-icon" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
           <div class="card-body text-center p-4">
             <div class="step-number mx-auto mb-3">2</div>
             <i class="bi bi-book fs-2 text-primary"></i>
@@ -121,8 +142,9 @@
           </div>
         </div>
       </div>
-      <div class="col-md-6 col-lg-3">
-        <div class="card h-100 feature-card border-0 shadow-sm">
+      <div class="how-flow-item">
+        <div class="card h-100 feature-card border-0 how-flow-card how-flow-card-arrow">
+          <span class="how-flow-arrow-icon" aria-hidden="true"><i class="bi bi-arrow-right"></i></span>
           <div class="card-body text-center p-4">
             <div class="step-number mx-auto mb-3">3</div>
             <i class="bi bi-terminal fs-2 text-primary"></i>
@@ -135,8 +157,8 @@
           </div>
         </div>
       </div>
-      <div class="col-md-6 col-lg-3">
-        <div class="card h-100 feature-card border-0 shadow-sm">
+      <div class="how-flow-item">
+        <div class="card h-100 feature-card border-0 how-flow-card how-flow-card-last">
           <div class="card-body text-center p-4">
             <div class="step-number mx-auto mb-3">4</div>
             <i class="bi bi-trophy fs-2 text-primary"></i>

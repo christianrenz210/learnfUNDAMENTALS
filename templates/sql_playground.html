@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Injections Playground - CodeFundamentals{% endblock %}
+
+{% block head_extra %}
+<link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+      <li class="breadcrumb-item active" aria-current="page">SQL Injections Playground</li>
+    </ol>
+  </nav>
+
+  <div class="card shadow-sm mb-4 border-danger">
+    <div class="card-header bg-white">
+      <h4 class="mb-0">
+        <i class="bi bi-joystick text-danger me-2"></i>SQL Injections Playground
+      </h4>
+    </div>
+    <div class="card-body">
+      <p class="mb-1">
+        A free-form practice area. Every statement you run executes against a fresh,
+        <strong>vulnerable</strong> in-memory database that is pre-loaded with the tables below.
+        Experiment with payloads until the concepts click - nothing on this page can hurt a real database.
+      </p>
+      <p class="mb-0 small text-muted">
+        Tips: use <code>' OR 1=1 --</code> to bypass a login, <code>' UNION SELECT ...</code> to steal
+        other tables, and <code>--</code> to comment out the rest of a query.
+      </p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <h5 class="mb-0"><i class="bi bi-terminal text-primary me-2"></i>SQL Console</h5>
+        </div>
+        <div class="card-body">
+          <textarea id="sqlEditor" class="code-editor p-3 mb-2 rounded" spellcheck="false"
+                    aria-label="SQL editor">-- Write your SQL here. The database already has users and products.
+-- Example: log in as admin without the password:
+-- SELECT * FROM users WHERE username = '' OR '1'='1' -- ' AND password = 'x';
+SELECT * FROM products;</textarea>
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2 mt-2">
+            <button type="button" class="btn btn-danger" id="runBtn">
+              <i class="bi bi-play-fill me-1"></i>Run SQL
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="resetBtn">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+            </button>
+            <span class="small text-muted run-status" id="runStatus">
+              <i class="bi bi-info-circle me-1"></i>Edit the SQL, then click Run
+            </span>
+          </div>
+          <pre class="run-output p-3 rounded mb-0"><code>-- Results appear here.</code></pre>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0"><i class="bi bi-lightning-charge text-warning me-2"></i>Try These Payloads</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-danger btn-sm payload-btn"
+                    data-payload="-- Login bypass: the app pastes your input into the query.
+SELECT * FROM users WHERE username = '' OR '1'='1' -- ' AND password = 'x';">' OR '1'='1' --</button>
+            <button type="button" class="btn btn-outline-danger btn-sm payload-btn"
+                    data-payload="-- Search box UNION steal: pulls the passwords from users.
+SELECT id, name, price FROM products WHERE name LIKE '%' UNION SELECT id, username, password FROM users --%';">UNION SELECT steal</button>
+            <button type="button" class="btn btn-outline-danger btn-sm payload-btn"
+                    data-payload="-- Numeric parameter: the id value is injected with no quotes.
+SELECT * FROM products WHERE id = 1 OR 1=1;">1 OR 1=1</button>
+            <button type="button" class="btn btn-outline-danger btn-sm payload-btn"
+                    data-payload="-- Numeric UNION: two columns become three with a UNION.
+SELECT id, name, price FROM products WHERE id = 1 UNION SELECT id, username, password FROM users;">1 UNION SELECT users</button>
+            <button type="button" class="btn btn-outline-warning btn-sm payload-btn"
+                    data-payload="-- Dangerous: what a careless DELETE looks like with a comment trick.
+DELETE FROM products WHERE id = 1 OR 1=1; -- removes EVERY product">DELETE all products</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm payload-btn"
+                    data-payload="SELECT * FROM products;">Reset view</button>
+          </div>
+          <div class="alert alert-light border py-2 px-3 small mb-0 mt-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Each button loads a <strong>complete, working attack</strong> so you can see exactly what the
+            injected text does. Study the query, change it, and press <strong>Run SQL</strong> to experiment.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <h5 class="mb-0"><i class="bi bi-database text-primary me-2"></i>Pre-loaded Schema</h5>
+        </div>
+        <div class="card-body">
+          <p class="small fw-semibold mb-1">users</p>
+          <table class="table table-sm table-bordered lab-table">
+            <thead><tr><th>id</th><th>username</th><th>password</th><th>role</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>admin</td><td>admin123</td><td>admin</td></tr>
+              <tr><td>2</td><td>alice</td><td>wonderland</td><td>staff</td></tr>
+              <tr><td>3</td><td>bob</td><td>builder</td><td>staff</td></tr>
+              <tr><td>4</td><td>carol</td><td>carol123</td><td>guest</td></tr>
+            </tbody>
+          </table>
+          <p class="small fw-semibold mb-1 mt-3">products</p>
+          <table class="table table-sm table-bordered lab-table">
+            <thead><tr><th>id</th><th>name</th><th>price</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Laptop</td><td>45000</td></tr>
+              <tr><td>2</td><td>Mouse</td><td>500</td></tr>
+              <tr><td>3</td><td>Keyboard</td><td>1200</td></tr>
+              <tr><td>4</td><td>Monitor</td><td>8000</td></tr>
+            </tbody>
+          </table>
+          <p class="small text-muted mb-0 mt-3">
+            <i class="bi bi-shield-exclamation me-1"></i>
+            The "vulnerable" queries shown in the lessons are written <strong>without</strong>
+            parameters so you can see the injection clearly. Real code should always use
+            parameterized queries.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.lab-table { font-size: 0.8rem; margin-bottom: 0; }
+.lab-table thead th { background: #f2f5ff; }
+.run-output { background: #0f1020; color: #e6f7ff; font-size: 0.78rem; max-height: 420px; overflow-y: auto; white-space: pre-wrap; }
+.run-output-error { color: #ff6b6b; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/sql/sql.min.js"></script>
+<script>
+(function () {
+  const editor = CodeMirror.fromTextArea(
+    document.getElementById('sqlEditor'),
+    { lineNumbers: true, mode: 'text/x-sql', indentUnit: 2, tabSize: 2 }
+  );
+  editor.setOption('extraKeys', { 'Ctrl-Enter': run });
+
+  const consoleEl = document.querySelector('.run-output');
+  const statusEl = document.getElementById('runStatus');
+  const runBtn = document.getElementById('runBtn');
+  const ORIGINAL = document.getElementById('sqlEditor').dataset.original ||
+    document.getElementById('sqlEditor').textContent.trim();
+
+  function setStatus(cls, html) {
+    statusEl.className = 'small ' + cls + ' run-status';
+    statusEl.innerHTML = html;
+  }
+
+  function setRunning(running) {
+    runBtn.disabled = running;
+    if (running) {
+      runBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running...';
+    } else {
+      runBtn.innerHTML = '<i class="bi bi-play-fill me-1"></i>Run SQL';
+    }
+  }
+
+  function run() {
+    setRunning(true);
+    setStatus('text-muted', '<i class="bi bi-hourglass-split me-1"></i>Executing SQL...');
+    fetch('{{ url_for("run_playground") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: editor.getValue() })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        setRunning(false);
+        if (!data.ok) {
+          consoleEl.className = 'run-output run-output-error p-3 rounded mb-0';
+          consoleEl.textContent = data.error || 'Could not run the SQL.';
+          setStatus('text-danger', '<i class="bi bi-x-circle me-1"></i>SQL failed');
+          return;
+        }
+        consoleEl.className = 'run-output p-3 rounded mb-0';
+        consoleEl.textContent = data.output.join('\n');
+        setStatus('text-success', '<i class="bi bi-check-circle me-1"></i>SQL executed successfully');
+      })
+      .catch(function () {
+        setRunning(false);
+        consoleEl.className = 'run-output run-output-error p-3 rounded mb-0';
+        consoleEl.textContent = 'Could not reach the server. Try again.';
+        setStatus('text-danger', '<i class="bi bi-x-circle me-1"></i>Run failed');
+      });
+  }
+
+  runBtn.addEventListener('click', run);
+
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    editor.setValue(ORIGINAL);
+  });
+
+  document.querySelectorAll('.payload-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      editor.setValue(btn.getAttribute('data-payload') + '\n');
+      editor.focus();
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -14,9 +14,12 @@
         {{ done }} of {{ total }} lessons.
       </p>
     </div>
-    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+    <div class="col-md-4 text-md-end mt-3 mt-md-0 d-flex gap-2 justify-content-md-end flex-wrap">
       <a href="{{ url_for('compiler') }}" class="btn btn-primary">
         <i class="bi bi-code-square me-1"></i>Open Compiler
+      </a>
+      <a href="{{ url_for('sql_playground') }}" class="btn btn-danger">
+        <i class="bi bi-joystick me-1"></i>Open SQL Injections Playground
       </a>
     </div>
   </div>
@@ -59,7 +62,17 @@
             </span>
             <span>
               <i class="bi bi-trophy me-1 text-warning"></i>
-              Points: <strong>{{ quiz_points }}</strong>
+              Points: <strong>{{ total_points }}</strong>
+            </span>
+          </div>
+          <div class="d-flex justify-content-between small mt-2 border-top pt-2">
+            <span>
+              <i class="bi bi-bug-fill me-1 text-danger"></i>
+              Labs completed: <strong>{{ lab_count }}</strong>
+            </span>
+            <span>
+              <i class="bi bi-plus-circle me-1 text-success"></i>
+              Lab points: <strong>+{{ lab_points }}</strong>
             </span>
           </div>
           <a href="{{ url_for('certificate', name='Full Course') }}"
@@ -150,6 +163,12 @@
                   {{ entry.quizzes }} {{ 'quiz' if entry.quizzes == 1 else 'quizzes' }} taken
                   <span class="mx-1">|</span>
                   {{ entry.attempts }} {{ 'attempt' if entry.attempts == 1 else 'attempts' }}
+                  {% if entry.lab_points %}
+                    <span class="mx-1">|</span>
+                    <i class="bi bi-bug-fill text-danger me-1"></i>
+                    {{ entry.labs }} {{ 'lab' if entry.labs == 1 else 'labs' }}
+                    <span class="text-success">(+{{ entry.lab_points }} pts)</span>
+                  {% endif %}
                 </div>
               </div>
               <span class="fs-5 fw-bold text-primary">{{ entry.points }}
@@ -241,8 +260,8 @@
         <div class="card folder-card shadow-sm mb-3">
           <button type="button" class="folder-toggle w-100 d-flex align-items-center text-start bg-transparent border-0 p-3"
                   data-bs-toggle="collapse" data-bs-target="#{{ sec_id }}"
-                  aria-expanded="{{ 'true' if loop.first else 'false' }}" aria-controls="{{ sec_id }}">
-            <i class="bi {{ 'bi-folder2-open' if loop.first else 'bi-folder2' }} folder-icon fs-3 text-primary me-3"></i>
+                  aria-expanded="false" aria-controls="{{ sec_id }}">
+            <i class="bi bi-folder2 folder-icon fs-3 text-primary me-3"></i>
             <span class="flex-grow-1">
               <span class="d-block fw-semibold fs-5">{{ section }}</span>
               <span class="d-block text-muted small">
@@ -262,9 +281,9 @@
             <span class="badge bg-primary bg-opacity-10 text-primary me-2">
               {{ sec_total }} lesson{{ '' if sec_total == 1 else 's' }}
             </span>
-            <i class="bi bi-chevron-down chevron-icon {{ 'rotate' if loop.first }} text-muted"></i>
+            <i class="bi bi-chevron-down chevron-icon text-muted"></i>
           </button>
-          <div id="{{ sec_id }}" class="collapse {{ 'show' if loop.first }}">
+          <div id="{{ sec_id }}" class="collapse">
             <div class="card-body border-top">
               {% if section_lessons %}
                 <div class="row g-4">
@@ -293,9 +312,13 @@
                             <i class="bi bi-check2 me-1"></i>Completed
                           </span>
                         {% endif %}
-                        {% if lesson.id == 19 and lab_completed %}
+                        {% if lesson.id == 19 and 19 in completed_lab_ids %}
                           <span class="badge bg-success">
                             <i class="bi bi-bug-fill me-1"></i>Lab Completed
+                          </span>
+                        {% elif lesson.id == 20 and 20 in completed_lab_ids %}
+                          <span class="badge bg-success">
+                            <i class="bi bi-pin-angle-fill me-1"></i>Lab Completed
                           </span>
                         {% endif %}
                         </span>
@@ -345,6 +368,10 @@
                               {% if lesson.id == 19 %}
                                 <a href="{{ url_for('sql_lab') }}" class="btn btn-danger btn-sm">
                                   <i class="bi bi-bug-fill me-1"></i>SQL Lab
+                                </a>
+                              {% elif lesson.id == 20 %}
+                                <a href="{{ url_for('sql_lab_2') }}" class="btn btn-danger btn-sm">
+                                  <i class="bi bi-pin-angle-fill me-1"></i>Injection Points Lab
                                 </a>
                               {% endif %}
                             </div>
@@ -443,24 +470,52 @@
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
   new bootstrap.Tooltip(el);
 });
-document.querySelectorAll('.folder-toggle').forEach(function (btn) {
-  const target = document.querySelector(btn.dataset.bsTarget);
-  if (!target) return;
-  const icon = btn.querySelector('.folder-icon');
-  const chevron = btn.querySelector('.chevron-icon');
-  target.addEventListener('shown.bs.collapse', function () {
-    icon.classList.remove('bi-folder2');
-    icon.classList.add('bi-folder2-open');
-    chevron.classList.add('rotate');
-    btn.setAttribute('aria-expanded', 'true');
+(function () {
+  const STORE = 'dashboardSections';
+  function readState() {
+    try { return JSON.parse(localStorage.getItem(STORE)) || {}; }
+    catch (e) { return {}; }
+  }
+  function saveState(state) {
+    try { localStorage.setItem(STORE, JSON.stringify(state)); }
+    catch (e) {}
+  }
+  const state = readState();
+  document.querySelectorAll('.folder-toggle').forEach(function (btn) {
+    const target = document.querySelector(btn.dataset.bsTarget);
+    if (!target) return;
+    const icon = btn.querySelector('.folder-icon');
+    const chevron = btn.querySelector('.chevron-icon');
+    function syncIcon(open) {
+      if (open) {
+        icon.classList.remove('bi-folder2');
+        icon.classList.add('bi-folder2-open');
+        chevron.classList.add('rotate');
+        btn.setAttribute('aria-expanded', 'true');
+      } else {
+        icon.classList.add('bi-folder2');
+        icon.classList.remove('bi-folder2-open');
+        chevron.classList.remove('rotate');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    }
+    const stored = state[target.id];
+    if (stored !== undefined) {
+      target.classList.toggle('show', stored);
+      syncIcon(stored);
+    }
+    target.addEventListener('shown.bs.collapse', function () {
+      syncIcon(true);
+      state[target.id] = true;
+      saveState(state);
+    });
+    target.addEventListener('hidden.bs.collapse', function () {
+      syncIcon(false);
+      state[target.id] = false;
+      saveState(state);
+    });
   });
-  target.addEventListener('hidden.bs.collapse', function () {
-    icon.classList.add('bi-folder2');
-    icon.classList.remove('bi-folder2-open');
-    chevron.classList.remove('rotate');
-    btn.setAttribute('aria-expanded', 'false');
-  });
-});
+})();
 document.getElementById('pAvatar').addEventListener('change', function () {
   const file = this.files[0];
   const preview = document.getElementById('pAvatarPreview');
