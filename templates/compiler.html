@@ -201,7 +201,7 @@
     if (!keepConsole) {
       consoleEl.querySelector('code').textContent = '';
     }
-    setInputVisibility(lang !== 'cpp');
+    setInputVisibility(false);
 
     function renderEvents(events) {
       (events || []).forEach(function (item) {
@@ -264,32 +264,47 @@
   function runCode() {
     if (sessionId) return;
     const typed = inputEl.value.trim();
+    const need = programNeedsInput();
 
-    if (lang === 'cpp') {
-      const need = (stripCppComments(editor.getValue()).match(/\bcin\b/g) || []).length;
-      if (need > 0) {
-        if (inputEl.classList.contains('d-none')) {
-          consoleEl.classList.remove('d-none');
-          consoleEl.className = 'run-output p-3 rounded mb-2';
-          consoleEl.querySelector('code').textContent = '';
-          setInputVisibility(true);
-          setStatus('text-muted',
-            '<i class="bi bi-keyboard me-1"></i>This program reads input with cin. Type it, then press Enter.');
-          inputEl.focus();
-          return;
-        }
-        if (!typed) {
-          inputEl.focus();
-          return;
-        }
-        startRun(typed, false);
+    if (need) {
+      if (inputEl.classList.contains('d-none')) {
+        consoleEl.classList.remove('d-none');
+        consoleEl.className = 'run-output p-3 rounded mb-2';
+        consoleEl.querySelector('code').textContent = '';
+        setInputVisibility(true);
+        setStatus('text-muted',
+          '<i class="bi bi-keyboard me-1"></i>This program reads input. Type it, then press Enter.');
+        inputEl.focus();
         return;
       }
-      startRun('', false);
+      if (!typed) {
+        inputEl.focus();
+        return;
+      }
+      consoleEl.querySelector('code').textContent = typed + '\n';
+      startRun(typed, true);
       return;
     }
 
-    startRun(typed, false);
+    if (typed) {
+      consoleEl.querySelector('code').textContent = typed + '\n';
+      startRun(typed, true);
+      return;
+    }
+    startRun('', false);
+  }
+
+  function programNeedsInput() {
+    if (lang === 'cpp') {
+      return stripCppComments(editor.getValue()).match(/\bcin\b/g);
+    }
+    if (lang === 'python') {
+      return editor.getValue().match(/\binput\s*\(/g);
+    }
+    if (lang === 'java') {
+      return editor.getValue().match(/Scanner|System\.in|BufferedReader/g);
+    }
+    return null;
   }
 
   runBtn.addEventListener('click', runCode);
@@ -309,12 +324,11 @@
   inputEl.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter') return;
     const text = inputEl.value;
-    if (lang === 'cpp' && !sessionId) {
+    if (!sessionId) {
       e.preventDefault();
       runCode();
       return;
     }
-    if (!sessionId) return;
     e.preventDefault();
     if (text) {
       appendInline(text);

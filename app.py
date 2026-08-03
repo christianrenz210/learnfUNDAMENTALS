@@ -878,6 +878,7 @@ MINGW_BIN = r"C:\Users\chris\mingw64\bin"
 # C++ online fallback: Compiler Explorer (free, keyless). Optional Judge0 backup
 # via CODE_API_KEY env var: https://rapidapi.com/judge0-official/api/judge0-ce
 CE_URL = "https://godbolt.org/api/compiler/g122/compile"
+JAVA_CE_URL = "https://godbolt.org/api/compiler/java2102/compile"
 JUDGE0_URL = "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true"
 
 
@@ -997,6 +998,56 @@ def run_cpp_online(code, stdin=""):
         if response is not None:
             return response
     return run_cpp_ce(code, stdin)
+
+
+def run_java_ce(code, stdin=""):
+    ce_code = re.sub(r"\bpublic\s+class\s+Main\b", "class Main", code, count=1)
+    payload = json.dumps(
+        {
+            "source": ce_code,
+            "options": {
+                "userArguments": "",
+                "filters": {"execute": True},
+                "executeParameters": {"args": [], "stdin": stdin},
+            },
+        }
+    ).encode()
+    req = urllib.request.Request(
+        JAVA_CE_URL,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "CodeFundamentals/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            data = json.loads(resp.read().decode())
+    except (urllib.error.URLError, OSError):
+        return jsonify(
+            {
+                "ok": False,
+                "error": "Could not reach the online Java service (Compiler Explorer).",
+            }
+        )
+    if data.get("code") != 0 or data.get("timedOut"):
+        err = "\n".join(item.get("text", "") for item in data.get("stderr", []))
+        err = re.sub(r"\x1b\[[0-9;]*m", "", err)
+        return jsonify(
+            {"ok": False, "compile_error": err or "Compilation failed."}
+        )
+    exec_result = data.get("execResult") or {}
+    out_lines = [item.get("text", "") for item in exec_result.get("stdout", [])]
+    err_lines = [item.get("text", "") for item in exec_result.get("stderr", [])]
+    text = "\n".join([p for p in out_lines + err_lines if p.strip()])
+    if exec_result.get("timedOut"):
+        text = "Error: execution timed out.\n" + text
+    if not text.strip():
+        text = "No output."
+    return jsonify(
+        {"ok": True, "output": text, "exit_code": exec_result.get("code") or 0}
+    )
 
 
 def compile_and_run_local(workdir, compile_cmd, stdin=""):
@@ -1178,9 +1229,22 @@ def run_start():
         if lang == "java":
             javac = find_tool("javac")
             if not javac:
-                return jsonify(
-                    {"ok": False, "error": "Java compiler (javac) is not installed."}
-                ), 500
+                result = run_java_ce(code, stdin)
+                payload = result.get_json()
+                if not payload.get("ok"):
+                    return jsonify(
+                        {"ok": False, "compile_error": payload.get("compile_error") or payload.get("error")}
+                    ), 502
+                events = []
+                output = payload.get("output", "")
+                if output:
+                    events.append({"type": "out", "data": output})
+                return jsonify({
+                    "ok": True,
+                    "events": events,
+                    "finished": True,
+                    "exit_code": payload.get("exit_code", 0),
+                })
             compiled = run_locally([javac, "Main.java"], workdir, 20)
             if compiled.returncode != 0:
                 return jsonify({"ok": False, "compile_error": compiled.stderr[:4000]})
