@@ -648,6 +648,25 @@
     }
   }
 
+  function renderEvents(lang, events) {
+    (events || []).forEach(function (item) {
+      if (item.type === 'out' || item.type === 'err') {
+        let text = item.data;
+        if (lang === 'cpp' && simStrip[lang]) {
+          simStrip[lang].forEach(function (p) {
+            if (text.indexOf(p) === 0) text = text.slice(p.length);
+          });
+          delete simStrip[lang];
+        }
+        appendLine(consoleEl(lang), text);
+      } else if (item.type === 'error') {
+        const c = consoleEl(lang);
+        c.className = 'run-output run-output-error p-3 rounded mb-2';
+        appendLine(c, item.data);
+      }
+    });
+  }
+
   function startStream(lang, sid) {
     pollTimers[lang] = setInterval(function () {
       fetch('{{ url_for("run_poll", session_id="SID") }}'.replace('SID', sid), {
@@ -671,22 +690,7 @@
         })
         .then(function (data) {
           if (!data || !data.ok) return;
-          (data.events || []).forEach(function (item) {
-            if (item.type === 'out' || item.type === 'err') {
-              let text = item.data;
-              if (lang === 'cpp' && simStrip[lang]) {
-                simStrip[lang].forEach(function (p) {
-                  if (text.indexOf(p) === 0) text = text.slice(p.length);
-                });
-                delete simStrip[lang];
-              }
-              appendLine(consoleEl(lang), text);
-            } else if (item.type === 'error') {
-              const c = consoleEl(lang);
-              c.className = 'run-output run-output-error p-3 rounded mb-2';
-              appendLine(c, item.data);
-            }
-          });
+          renderEvents(lang, data.events);
           if (data.finished) {
             finishRun(lang, data.exit_code);
           }
@@ -784,7 +788,46 @@
       }
     }
 
-    startRun(lang, input.value);
+    const typed = input.value.trim();
+    const needInput = programNeedsInput(lang);
+
+    if (needInput) {
+      if (input.classList.contains('d-none')) {
+        c.classList.remove('d-none');
+        c.className = 'run-output p-3 rounded mb-2';
+        c.querySelector('code').textContent = '';
+        setInputVisibility(lang, true);
+        setStatus(lang, 'text-muted',
+          '<i class="bi bi-keyboard me-1"></i>This program reads input. Type it, then press Enter.');
+        input.focus();
+        return;
+      }
+      if (!typed) {
+        input.focus();
+        return;
+      }
+      c.querySelector('code').textContent = typed + '\n';
+      startRun(lang, typed, true);
+      return;
+    }
+
+    if (typed) {
+      c.querySelector('code').textContent = typed + '\n';
+      startRun(lang, typed, true);
+      return;
+    }
+    startRun(lang, '', false);
+  }
+
+  function programNeedsInput(lang) {
+    const code = getEditor(lang).getValue();
+    if (lang === 'python') {
+      return code.match(/\binput\s*\(/g);
+    }
+    if (lang === 'java') {
+      return code.match(/Scanner|System\.in|BufferedReader/g);
+    }
+    return null;
   }
 
   function showNextCppPrompt(lang) {
@@ -833,7 +876,6 @@
   }
 
   function startRun(lang, stdinValue, keepConsole) {
-    const input = inputEl(lang);
     const c = consoleEl(lang);
 
     setRunningUI(lang, true);
@@ -844,7 +886,8 @@
     if (!keepConsole) {
       c.querySelector('code').textContent = '';
     }
-    setInputVisibility(lang, true);
+    setInputVisibility(lang, false);
+    sessions[lang] = true;
 
     fetch('{{ url_for("run_start") }}', {
       method: 'POST',
@@ -859,6 +902,7 @@
       .then(function (data) {
         if (!data.ok) {
           delete simStrip[lang];
+          delete sessions[lang];
           c.className = 'run-output run-output-error p-3 rounded mb-2';
           c.querySelector('code').textContent =
             data.compile_error || data.error || 'Could not start the program.';
@@ -868,11 +912,29 @@
           setInputVisibility(lang, false);
           return;
         }
-        sessions[lang] = data.session_id;
-        startStream(lang, data.session_id);
+        if (data.finished) {
+          delete simStrip[lang];
+          renderEvents(lang, data.events);
+          finishRun(lang, data.exit_code);
+          return;
+        }
+        if (data.session_id) {
+          sessions[lang] = data.session_id;
+          startStream(lang, data.session_id);
+          return;
+        }
+        delete simStrip[lang];
+        delete sessions[lang];
+        c.className = 'run-output run-output-error p-3 rounded mb-2';
+        c.querySelector('code').textContent = 'Could not start the program.';
+        setStatus(lang, 'text-danger',
+          '<i class="bi bi-x-circle me-1"></i>Could not start the program');
+        setRunningUI(lang, false);
+        setInputVisibility(lang, false);
       })
       .catch(function () {
         delete simStrip[lang];
+        delete sessions[lang];
         c.className = 'run-output run-output-error p-3 rounded mb-2';
         c.querySelector('code').textContent = 'Could not reach the server. Try again.';
         setStatus(lang, 'text-danger',
@@ -890,19 +952,19 @@
     btn.addEventListener('click', function () {
       const lang = btn.dataset.lang;
       const sid = sessions[lang];
-      if (sid) {
+      if (typeof sid === 'string') {
         fetch('{{ url_for("run_stop", session_id="SID") }}'.replace('SID', sid), {
           method: 'POST'
         });
         return;
       }
-      if (lang === 'cpp' && cppSim[lang]) {
-        cppSim[lang] = null;
-        setRunningUI(lang, false);
-        setInputVisibility(lang, false);
-        setStatus(lang, 'text-muted',
-          '<i class="bi bi-stop-fill me-1"></i>Stopped');
-      }
+      cppSim[lang] = null;
+      delete simStrip[lang];
+      sessions[lang] = null;
+      setRunningUI(lang, false);
+      setInputVisibility(lang, false);
+      setStatus(lang, 'text-muted',
+        '<i class="bi bi-stop-fill me-1"></i>Stopped');
     });
   });
 
@@ -912,18 +974,22 @@
       if (e.key !== 'Enter') return;
       const lang = input.id.replace('input-', '');
       const sid = sessions[lang];
-      if (!sid) return;
-      e.preventDefault();
-      const text = input.value;
-      if (text) {
-        appendInline(consoleEl(lang), text);
+      if (typeof sid === 'string') {
+        e.preventDefault();
+        const text = input.value;
+        if (text) {
+          appendInline(consoleEl(lang), text);
+        }
+        input.value = '';
+        fetch('{{ url_for("run_input", session_id="SID") }}'.replace('SID', sid), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input: text })
+        });
+        return;
       }
-      input.value = '';
-      fetch('{{ url_for("run_input", session_id="SID") }}'.replace('SID', sid), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: text })
-      });
+      e.preventDefault();
+      runCode(lang);
     });
   });
 
