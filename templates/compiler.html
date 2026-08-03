@@ -203,6 +203,24 @@
     }
     setInputVisibility(lang !== 'cpp');
 
+    function renderEvents(events) {
+      (events || []).forEach(function (item) {
+        if (item.type === 'out' || item.type === 'err') {
+          let text = item.data;
+          if (lang === 'cpp' && simStrip) {
+            simStrip.forEach(function (p) {
+              if (text.indexOf(p) === 0) text = text.slice(p.length);
+            });
+            simStrip = null;
+          }
+          appendLine(text);
+        } else if (item.type === 'error') {
+          consoleEl.className = 'run-output run-output-error p-3 rounded mb-2';
+          appendLine(item.data);
+        }
+      });
+    }
+
     fetch('{{ url_for("run_start") }}', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -223,6 +241,11 @@
             '<i class="bi bi-x-circle me-1"></i>Could not start the program');
           setRunningUI(false);
           setInputVisibility(false);
+          return;
+        }
+        if (data.finished) {
+          renderEvents(data.events);
+          finishRun(data.exit_code);
           return;
         }
         sessionId = data.session_id;

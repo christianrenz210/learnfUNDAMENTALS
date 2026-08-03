@@ -1129,13 +1129,10 @@ def run_start():
     if lang not in RUN_CONFIGS or not code.strip():
         return jsonify({"ok": False, "error": "Invalid request."}), 400
 
-    workdir = tempfile.mkdtemp(prefix="cf_run_")
-
     if lang == "cpp":
         stripped = re.sub(r"/\*.*?\*/", "", code, flags=re.S)
         stripped = re.sub(r"//[^\n]*", "", stripped)
         if re.search(r"\bcin\b", stripped) and not stdin.strip():
-            shutil.rmtree(workdir, ignore_errors=True)
             return jsonify({
                 "ok": False,
                 "error": "This C++ program reads input with cin. "
@@ -1143,23 +1140,25 @@ def run_start():
             }), 400
         result = run_cpp(code, stdin)
         payload = result.get_json()
-        session = {
-            "queue": queue.Queue(),
-            "proc": None,
-            "workdir": workdir,
-            "lang": "cpp",
-        }
+        events = []
+        exit_code = 0
         if payload.get("ok"):
-            session["queue"].put({"type": "out", "data": payload.get("output", "")})
-            session["queue"].put({"type": "exit", "data": payload.get("exit_code", 0)})
+            output = payload.get("output", "")
+            if output:
+                events.append({"type": "out", "data": output})
+            exit_code = payload.get("exit_code", 0)
         else:
             msg = payload.get("compile_error") or payload.get("error") or "Compilation failed."
-            session["queue"].put({"type": "error", "data": msg})
-            session["queue"].put({"type": "exit", "data": -1})
-        sid = uuid.uuid4().hex
-        RUN_SESSIONS[sid] = session
-        return jsonify({"ok": True, "session_id": sid})
+            events.append({"type": "error", "data": msg})
+            exit_code = -1
+        return jsonify({
+            "ok": True,
+            "events": events,
+            "finished": True,
+            "exit_code": exit_code,
+        })
 
+    workdir = tempfile.mkdtemp(prefix="cf_run_")
     source = RUN_CONFIGS[lang]["source"]
     with open(os.path.join(workdir, source), "w", encoding="utf-8") as f:
         f.write(code)
