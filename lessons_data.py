@@ -369,6 +369,44 @@ LESSONS = [
         ],
     },
     {
+        "section": "Fundamentals",
+        "id": 29,
+        "minutes": 35,
+        "title": "Programming History",
+        "icon": "bi-clock-history",
+        "description": "Every programming language has a creator and a story. In this lesson you will learn how C++, Java, and Python were invented — who built them, when, and why each language was designed.",
+        "key_points": [
+            "C++ was created by Bjarne Stroustrup at Bell Labs in 1983, starting out as \"C with Classes\".",
+            "C++ added object-oriented features on top of C while keeping C's speed and low-level control.",
+            "Java was created by James Gosling at Sun Microsystems and released in 1995; its original name was Oak.",
+            "Java runs on the Java Virtual Machine (JVM), which is why its motto is \"write once, run anywhere\".",
+            "Python was created by Guido van Rossum and released in 1991; the name comes from the Monty Python comedy group, not the snake.",
+            "Python was designed for readability, which is why it uses indentation instead of braces.",
+        ],
+        "code": {
+            "python": "# A quick history lesson in code\n\nmilestones = [\n    (1983, \"C++\", \"Bjarne Stroustrup\"),\n    (1991, \"Python\", \"Guido van Rossum\"),\n    (1995, \"Java\", \"James Gosling\"),\n]\n\nfor year, name, creator in milestones:\n    print(str(year) + \": \" + name + \" was created by \" + creator)",
+            "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"1983: C++ was created by Bjarne Stroustrup\" << endl;\n    cout << \"1991: Python was created by Guido van Rossum\" << endl;\n    cout << \"1995: Java was created by James Gosling\" << endl;\n    return 0;\n}",
+            "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"1983: C++ was created by Bjarne Stroustrup\");\n        System.out.println(\"1991: Python was created by Guido van Rossum\");\n        System.out.println(\"1995: Java was created by James Gosling\");\n    }\n}",
+        },
+        "quiz": [
+            {
+                "question": "Who created the C++ programming language?",
+                "options": ["James Gosling", "Bjarne Stroustrup", "Guido van Rossum", "Dennis Ritchie"],
+                "correct": 1,
+            },
+            {
+                "question": "What was Java originally called before it was renamed?",
+                "options": ["Oak", "Pine", "Coffee", "Bean"],
+                "correct": 0,
+            },
+            {
+                "question": "Where does the name Python come from?",
+                "options": ["The snake", "The Monty Python comedy group", "The inventor's surname", "A Greek myth"],
+                "correct": 1,
+            },
+        ],
+    },
+    {
         "section": "Advanced Database System",
         "id": 11,
         "minutes": 35,
