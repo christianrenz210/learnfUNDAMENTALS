@@ -53,6 +53,13 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///students.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+if DATABASE_URL.startswith("postgresql"):
+    connect_args = {"sslmode": "require"}
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 240,
+        "connect_args": connect_args,
+    }
 
 ALLOWED_AVATAR_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
 AVATAR_DIR = os.path.join(app.root_path, "static", "uploads")
