@@ -436,9 +436,12 @@ def faq():
 
 
 @app.route("/feedback", methods=["GET", "POST"])
-@login_required
 def feedback():
     if request.method == "POST":
+        if not current_user.is_authenticated:
+            flash("Please log in to submit feedback.", "warning")
+            return redirect(url_for("login", next=request.path))
+
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
         category = request.form.get("category", "general").strip()

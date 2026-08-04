@@ -10,48 +10,60 @@
         <i class="bi bi-chat-heart text-primary me-2"></i>Feedback
       </h2>
       <p class="text-muted mb-4">
-        Have a suggestion, found a bug, or want to request a feature? Let us know!
+        See what others are saying and share your own feedback!
       </p>
 
-      <div class="card shadow-sm mb-4">
-        <div class="card-body p-4">
-          <form method="POST" action="{{ url_for('feedback') }}">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label for="name" class="form-label">Your Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="name" name="name"
-                       value="{{ current_user.username }}" required>
+      {% if current_user.is_authenticated %}
+        <div class="card shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h5 class="mb-3"><i class="bi bi-pencil-square text-primary me-2"></i>Submit Your Feedback</h5>
+            <form method="POST" action="{{ url_for('feedback') }}">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="name" class="form-label">Your Name <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="name" name="name"
+                         value="{{ current_user.username }}" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                  <input type="email" class="form-control" id="email" name="email"
+                         value="{{ current_user.email }}" required>
+                </div>
+                <div class="col-12">
+                  <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                  <select class="form-select" id="category" name="category" required>
+                    <option value="general">General Feedback</option>
+                    <option value="bug">Bug Report</option>
+                    <option value="feature">Feature Request</option>
+                    <option value="lesson">Lesson Content</option>
+                    <option value="quiz">Quiz Issue</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label for="message" class="form-label">Your Message <span class="text-danger">*</span></label>
+                  <textarea class="form-control" id="message" name="message" rows="4"
+                            placeholder="Tell us what's on your mind..." required></textarea>
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-send me-2"></i>Submit Feedback
+                  </button>
+                </div>
               </div>
-              <div class="col-md-6">
-                <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
-                <input type="email" class="form-control" id="email" name="email"
-                       value="{{ current_user.email }}" required>
-              </div>
-              <div class="col-12">
-                <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
-                <select class="form-select" id="category" name="category" required>
-                  <option value="general">General Feedback</option>
-                  <option value="bug">Bug Report</option>
-                  <option value="feature">Feature Request</option>
-                  <option value="lesson">Lesson Content</option>
-                  <option value="quiz">Quiz Issue</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div class="col-12">
-                <label for="message" class="form-label">Your Message <span class="text-danger">*</span></label>
-                <textarea class="form-control" id="message" name="message" rows="4"
-                          placeholder="Tell us what's on your mind..." required></textarea>
-              </div>
-              <div class="col-12">
-                <button type="submit" class="btn btn-primary">
-                  <i class="bi bi-send me-2"></i>Submit Feedback
-                </button>
-              </div>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
-      </div>
+      {% else %}
+        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+          <i class="bi bi-info-circle me-2 fs-5"></i>
+          <div>
+            <a href="{{ url_for('login') }}" class="alert-link fw-semibold">Log in</a> or
+            <a href="{{ url_for('register') }}" class="alert-link fw-semibold">create an account</a>
+            to submit your own feedback.
+          </div>
+        </div>
+      {% endif %}
 
       <h4 class="mb-3"><i class="bi bi-chat-dots text-primary me-2"></i>Recent Feedback</h4>
 
@@ -59,13 +71,22 @@
         <div class="card shadow-sm mb-3">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-2">
-              <div>
-                <h6 class="mb-1">
-                  <strong>{{ fb.name }}</strong>
-                </h6>
-                <div class="d-flex gap-2 mb-2">
-                  <span class="badge bg-secondary">{{ fb.category }}</span>
-                  <span class="text-muted small">{{ fb.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+              <div class="d-flex align-items-center">
+                {% if fb.user and fb.user.avatar %}
+                  <img src="{{ avatar_src(fb.user) }}" alt="" class="avatar-circle-sm me-2">
+                {% elif fb.user %}
+                  <span class="avatar-circle-sm me-2">{{ fb.user.username[:2] | upper }}</span>
+                {% else %}
+                  <span class="avatar-circle-sm me-2">{{ fb.name[:2] | upper }}</span>
+                {% endif %}
+                <div>
+                  <h6 class="mb-1">
+                    <strong>{{ fb.name }}</strong>
+                  </h6>
+                  <div class="d-flex gap-2">
+                    <span class="badge bg-secondary">{{ fb.category }}</span>
+                    <span class="text-muted small">{{ fb.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                  </div>
                 </div>
               </div>
             </div>
