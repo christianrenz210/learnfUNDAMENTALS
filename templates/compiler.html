@@ -95,6 +95,19 @@
   const consoleEl = document.querySelector('.run-output');
   const inputEl = document.getElementById('compilerInput');
 
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('cfCompilerCode') || 'null');
+    if (saved && typeof saved.code === 'string' && saved.code.trim()) {
+      if (MODES[saved.lang]) {
+        lang = saved.lang;
+        langSelect.value = saved.lang;
+        editor.setOption('mode', MODES[lang]);
+      }
+      editor.setValue(saved.code);
+      sessionStorage.removeItem('cfCompilerCode');
+    }
+  } catch (e) {}
+
   function setStatus(cls, html) {
     statusEl.className = 'small ' + cls;
     statusEl.innerHTML = html;

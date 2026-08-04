@@ -754,7 +754,10 @@ def _gemini_model():
 EREN_SYSTEM_PROMPT = (
     "You are E.R.E.N (Educational Response Engine for Novices), the friendly AI assistant of "
     "CodeFundamentals, a free site where students learn Python, C++, and Java side by side, plus "
-    "Advanced Database Systems (SQL). Respond in the same language the student uses. Be concise, "
+    "Advanced Database System (SQL). ALWAYS respond only in English or Filipino (Tagalog) — "
+    "never in any other language. If the student writes in English or Filipino, answer in that "
+    "same language. If the student writes in any other language (for example Spanish, French, "
+    "German, or Cebuano), still answer in English or Filipino — default to English. Be concise, "
     "patient, and beginner-friendly. Answer questions about the course, its lessons, quizzes, "
     "leaderboard, and coding concepts. If a question is off-topic, answer briefly and gently steer "
     "back to programming.\n\n"
@@ -803,6 +806,172 @@ def gemini_reply(message):
         return None
 
 
+GENERAL_KNOWLEDGE = [
+    (
+        ["research", "pananaliksik"],
+        "Research is the systematic process of gathering, analyzing, and interpreting "
+        "information to answer a question or solve a problem. The usual steps are: identify "
+        "the problem, review what is already known, collect data, analyze it, and draw "
+        "conclusions.",
+    ),
+    (
+        ["algorithm", "algorithms", "algoritmo"],
+        "An algorithm is a step-by-step set of instructions for solving a problem, like a "
+        "recipe. Planning with pseudocode is designing an algorithm before you translate it "
+        "into Python, C++, or Java.",
+    ),
+    (
+        ["data structure", "data structures"],
+        "A data structure is a way of organizing and storing data so your program can use it "
+        "efficiently. Arrays, lists, stacks, and queues are examples — choosing the right one "
+        "makes your code faster and cleaner.",
+    ),
+    (
+        ["artificial intelligence", "ai", "a.i."],
+        "Artificial Intelligence (AI) is the field that builds programs that can learn, "
+        "reason, and make decisions. Chatbots, face unlock, and recommendation engines all "
+        "use AI — even E.R.E.N has a little AI brain!",
+    ),
+    (
+        ["machine learning"],
+        "Machine learning is a branch of AI where a program learns patterns from data instead "
+        "of following fixed rules. Spam filters, voice assistants, and Netflix suggestions "
+        "are everyday examples.",
+    ),
+    (
+        ["computer science"],
+        "Computer science is the study of computers and computation: how data is represented, "
+        "how algorithms work, and how software is built. Writing code is one important part, "
+        "but not the only one.",
+    ),
+    (
+        ["software"],
+        "Software is the set of instructions that tells a computer what to do — the programs "
+        "themselves. Your operating system, your web browser, and CodeFundamentals are all "
+        "software.",
+    ),
+    (
+        ["hardware"],
+        "Hardware is the physical parts of a computer you can touch: the CPU, RAM, hard "
+        "drive, keyboard, and monitor. Software runs on top of hardware.",
+    ),
+    (
+        ["operating system", "os"],
+        "An operating system (OS) is the core software that manages your computer's hardware "
+        "and runs other programs. Windows, macOS, and Linux are operating systems.",
+    ),
+    (
+        ["browser", "browsers"],
+        "A web browser is the program you use to view websites. Chrome, Firefox, Edge, and "
+        "Safari are browsers — you are using one right now to reach CodeFundamentals.",
+    ),
+    (
+        ["internet"],
+        "The internet is a global network of connected computers that share information. "
+        "Websites, email, online games, and video calls all travel over the internet.",
+    ),
+    (
+        ["network", "networks", "networking"],
+        "A network is a group of connected computers that can share data and resources. The "
+        "internet is the largest network in the world.",
+    ),
+    (
+        ["server", "servers"],
+        "A server is a computer that stores websites and data and sends them to other "
+        "computers (clients) when requested. When you open a webpage, your browser asks a "
+        "server for it.",
+    ),
+    (
+        ["website", "websites", "web page", "web pages", "webpage", "webpages", "web"],
+        "A website is a collection of connected pages available on the internet. It is "
+        "usually built with HTML, CSS, and JavaScript on the front end, and something like "
+        "Python or SQL on the back end — just like this site.",
+    ),
+    (
+        ["application", "applications", "app", "apps"],
+        "An application (app) is a program built for a specific task, like a calculator, a "
+        "messaging app, or a browser. Mobile apps and desktop apps are both applications.",
+    ),
+    (
+        ["git", "github", "version control"],
+        "Git is a tool that tracks changes to your code over time — that is version control. "
+        "GitHub is a website that stores Git repositories online so you can share and "
+        "collaborate on code with others.",
+    ),
+    (
+        ["ide", "editor"],
+        "An IDE (Integrated Development Environment) is a program that helps you write code "
+        "with features like syntax highlighting, auto-complete, and a built-in run button — "
+        "for example VS Code, PyCharm, and IntelliJ.",
+    ),
+    (
+        ["career", "job", "trabaho"],
+        "A programming career can mean many things: web developer, game developer, data "
+        "scientist, or systems engineer. They all start with the same basics you are learning "
+        "here — variables, loops, functions, and arrays.",
+    ),
+    (
+        ["study", "studying", "review", "revising", "mag-aral", "aral", "tips"],
+        "Study tips: code a little every day, explain concepts out loud (or to E.R.E.N!), "
+        "practice with the code editor, and retake quizzes until the ideas stick. Ten focused "
+        "minutes beats an hour of distraction.",
+    ),
+    (
+        ["motivation", "motivated", "motivate", "give up", "too hard", "struggling"],
+        "Everyone struggles with programming sometimes — even professionals! Break the problem "
+        "into tiny pieces, fix one bug at a time, and remember why you started. Slow progress "
+        "is still progress.",
+    ),
+    (
+        ["time management", "procrastinate", "procrastination", "distracted", "focus"],
+        "To beat procrastination: pick one small task, set a 25-minute timer, and silence "
+        "your phone. Studying in short focused bursts with short breaks works better than "
+        "long, distracted sessions.",
+    ),
+    (
+        ["mathematics", "math", "matematika"],
+        "Math is the study of numbers, patterns, and relationships. Programming leans on "
+        "logic and arithmetic — operators like +, -, *, /, and % are math you already use in "
+        "the lessons.",
+    ),
+    (
+        ["science", "agham"],
+        "Science is the study of the natural world through observation, testing, and evidence "
+        "— the scientific method. Computer science is the branch that studies computation and "
+        "software.",
+    ),
+    (
+        ["technology", "tech"],
+        "Technology is the use of scientific knowledge to build tools that make life easier — "
+        "from the smartphone in your pocket to the servers that run this website.",
+    ),
+    (
+        ["history", "kasaysayan"],
+        "The history of programming is a whole lesson in the Fundamentals section! It traces "
+        "how computers and languages like Python, C++, and Java evolved, and even includes "
+        "documentaries you can watch right in the lesson.",
+    ),
+]
+
+
+def general_knowledge_reply(text):
+    for keywords, answer in GENERAL_KNOWLEDGE:
+        if any(re.search(r"(?<!\w)" + re.escape(k) + r"(?!\w)", text) for k in keywords):
+            return answer
+    return None
+
+
+def is_definition_question(text):
+    return bool(
+        re.search(
+            r"^(?:what\s+is\s+(?:a|an|the)\s+|what\s+is\s+|what\s+are\s+|"
+            r"what's\s+|whats\s+|define\s+|meaning\s+of\s+|explain\s+|"
+            r"ano\s+ba\s+ang\s+|ano\s+ang\s+|ano\s+yung\s+|ano\s+yang\s+|ano\s+)",
+            text,
+        )
+    )
+
+
 def assistant_reply(message):
     text = message.lower().strip()
 
@@ -821,6 +990,233 @@ def assistant_reply(message):
     def has(*keywords):
         return any(re.search(r"(?<!\w)" + re.escape(k) + r"(?!\w)", text) for k in keywords)
 
+    def is_topic(*words):
+        return any(re.search(r"(?<!\w)" + re.escape(w) + r"(?!\w)", text) for w in words)
+
+    def code_example(message):
+        def blocks(entries):
+            return "\n\n".join(
+                "```%s\n%s\n```" % (lang, code.rstrip()) for lang, code in entries
+            )
+
+        if is_topic("loop", "loops", "for loop", "while loop", "iteration"):
+            return (
+                "Here is a loop that prints the numbers 1 to 5 in all three languages — "
+                "press Run on any block to execute it right here:\n\n"
+                + blocks(
+                    [
+                        (
+                            "python",
+                            "for i in range(1, 6):\n    print(i)",
+                        ),
+                        (
+                            "cpp",
+                            "#include <iostream>\nusing namespace std;\n\n"
+                            "int main() {\n"
+                            "    for (int i = 1; i <= 5; i++) {\n"
+                            "        cout << i << endl;\n"
+                            "    }\n"
+                            "    return 0;\n"
+                            "}",
+                        ),
+                        (
+                            "java",
+                            "public class Main {\n"
+                            "    public static void main(String[] args) {\n"
+                            "        for (int i = 1; i <= 5; i++) {\n"
+                            "            System.out.println(i);\n"
+                            "        }\n"
+                            "    }\n"
+                            "}",
+                        ),
+                    ]
+                )
+            )
+        if is_topic("function", "functions", "method", "def"):
+            return (
+                "Here is a function that adds two numbers and prints the result — "
+                "press Run on any block:\n\n"
+                + blocks(
+                    [
+                        (
+                            "python",
+                            "def add(a, b):\n"
+                            "    return a + b\n\n"
+                            "print(add(3, 4))",
+                        ),
+                        (
+                            "cpp",
+                            "#include <iostream>\nusing namespace std;\n\n"
+                            "int add(int a, int b) {\n"
+                            "    return a + b;\n"
+                            "}\n\n"
+                            "int main() {\n"
+                            "    cout << add(3, 4) << endl;\n"
+                            "    return 0;\n"
+                            "}",
+                        ),
+                        (
+                            "java",
+                            "public class Main {\n"
+                            "    static int add(int a, int b) {\n"
+                            "        return a + b;\n"
+                            "    }\n\n"
+                            "    public static void main(String[] args) {\n"
+                            "        System.out.println(add(3, 4));\n"
+                            "    }\n"
+                            "}",
+                        ),
+                    ]
+                )
+            )
+        if is_topic("array", "arrays", "list", "lists", "vector", "collection"):
+            return (
+                "Here is a program that stores three colors in a collection and prints "
+                "them — press Run on any block:\n\n"
+                + blocks(
+                    [
+                        (
+                            "python",
+                            "colors = ['red', 'green', 'blue']\n"
+                            "for c in colors:\n"
+                            "    print(c)",
+                        ),
+                        (
+                            "cpp",
+                            "#include <iostream>\n#include <vector>\nusing namespace std;\n\n"
+                            "int main() {\n"
+                            "    vector<string> colors = {\"red\", \"green\", \"blue\"};\n"
+                            "    for (string c : colors) {\n"
+                            "        cout << c << endl;\n"
+                            "    }\n"
+                            "    return 0;\n"
+                            "}",
+                        ),
+                        (
+                            "java",
+                            "import java.util.ArrayList;\n\n"
+                            "public class Main {\n"
+                            "    public static void main(String[] args) {\n"
+                            "        ArrayList<String> colors = new ArrayList<>();\n"
+                            "        colors.add(\"red\");\n"
+                            "        colors.add(\"green\");\n"
+                            "        colors.add(\"blue\");\n"
+                            "        for (String c : colors) {\n"
+                            "            System.out.println(c);\n"
+                            "        }\n"
+                            "    }\n"
+                            "}",
+                        ),
+                    ]
+                )
+            )
+        if is_topic("conditional", "if else", "if-else", "elif", "else if", "decision"):
+            return (
+                "Here is an if/else that checks if a number is even or odd — "
+                "press Run on any block:\n\n"
+                + blocks(
+                    [
+                        (
+                            "python",
+                            "n = 7\n"
+                            "if n % 2 == 0:\n"
+                            "    print('even')\n"
+                            "else:\n"
+                            "    print('odd')",
+                        ),
+                        (
+                            "cpp",
+                            "#include <iostream>\nusing namespace std;\n\n"
+                            "int main() {\n"
+                            "    int n = 7;\n"
+                            "    if (n % 2 == 0) {\n"
+                            "        cout << \"even\" << endl;\n"
+                            "    } else {\n"
+                            "        cout << \"odd\" << endl;\n"
+                            "    }\n"
+                            "    return 0;\n"
+                            "}",
+                        ),
+                        (
+                            "java",
+                            "public class Main {\n"
+                            "    public static void main(String[] args) {\n"
+                            "        int n = 7;\n"
+                            "        if (n % 2 == 0) {\n"
+                            "            System.out.println(\"even\");\n"
+                            "        } else {\n"
+                            "            System.out.println(\"odd\");\n"
+                            "        }\n"
+                            "    }\n"
+                            "}",
+                        ),
+                    ]
+                )
+            )
+        if is_topic("variable", "variables", "data type", "datatype", "integer", "boolean", "float", "string", "char"):
+            return (
+                "Here is a program that stores a name and an age in variables and prints "
+                "them — press Run on any block:\n\n"
+                + blocks(
+                    [
+                        (
+                            "python",
+                            "name = 'Ana'\n"
+                            "age = 20\n"
+                            "print(name, age)",
+                        ),
+                        (
+                            "cpp",
+                            "#include <iostream>\nusing namespace std;\n\n"
+                            "int main() {\n"
+                            "    string name = \"Ana\";\n"
+                            "    int age = 20;\n"
+                            "    cout << name << \" \" << age << endl;\n"
+                            "    return 0;\n"
+                            "}",
+                        ),
+                        (
+                            "java",
+                            "public class Main {\n"
+                            "    public static void main(String[] args) {\n"
+                            "        String name = \"Ana\";\n"
+                            "        int age = 20;\n"
+                            "        System.out.println(name + \" \" + age);\n"
+                            "    }\n"
+                            "}",
+                        ),
+                    ]
+                )
+            )
+        return (
+            "Here is a starter program that prints a friendly message — "
+            "press Run on any block to see it work:\n\n"
+            + blocks(
+                [
+                    (
+                        "python",
+                        "print('Hello from CodeFundamentals!')",
+                    ),
+                    (
+                        "cpp",
+                        "#include <iostream>\nusing namespace std;\n\n"
+                        "int main() {\n"
+                        "    cout << \"Hello from CodeFundamentals!\" << endl;\n"
+                        "    return 0;\n"
+                        "}",
+                    ),
+                    (
+                        "java",
+                        "public class Main {\n"
+                        "    public static void main(String[] args) {\n"
+                        "        System.out.println(\"Hello from CodeFundamentals!\");\n"
+                        "    }\n"
+                        "}",
+                    ),
+                ]
+            )
+        )
+
     rules = [
         (lambda: has("long quiz", "section quiz"), "Each section ends with a Long Quiz: 15 questions with 20 seconds per question, and you get 2 attempts total. Your best score is saved on the dashboard. Unlock it by completing every lesson in the section, then find it on your dashboard under By Section, or use the Proceed to Long Quiz button after the last lesson. After taking it you can view the answer review to see which questions you got right or wrong."),
         (lambda: has("quiz", "quizzes", "attempt"), "Each lesson ends with a quiz. You get one attempt per quiz, so answer carefully! Your score is saved on your dashboard and added to the lesson and global leaderboards."),
@@ -835,6 +1231,7 @@ def assistant_reply(message):
         (lambda: has("error", "debug", "compile", "bug"), "Debugging tips: read the error message first, check semicolons and braces in C++/Java, check indentation in Python, and add print statements to see what your code is doing. The code editor lets you test changes instantly."),
         (lambda: has("register", "sign up", "account", "free"), "Creating an account is free and takes seconds. It saves your progress, quiz scores, profile picture, and leaderboard standing."),
         (lambda: has("how it works", "how does this work", "site work"), "It is simple: create an account, read the lessons, run code live in the browser, take the quiz after each lesson, and climb the leaderboard. The Fundamentals section covers programming basics, while the Advanced Database System section teaches databases and SQL."),
+        (lambda: has("example code", "code example", "sample code", "show me code", "give me code", "write code", "code for", "snippet", "kodigo", "sample"), code_example(text)),
         (lambda: has("variable", "variables", "data type", "datatype", "integer", "boolean", "float", "string", "char"), brief(2, "Variables store values in memory. Python infers the type automatically; C++ and Java require you to declare it before the name.")),
         (lambda: has("logical"), brief(5, "Logical operators combine true/false values. Python: and, or, not. C++/Java: &&, ||, !. Both conditions are checked to build bigger conditions.")),
         (lambda: has("operator", "operators", "arithmetic", "modulo", "remainder"), brief(4, "Operators do math and comparisons. Arithmetic: + - * / %. Relational: == != < > <= >=. Comparison always produces true or false.")),
@@ -852,7 +1249,23 @@ def assistant_reply(message):
     for condition, reply in rules:
         if condition():
             return reply
-    return "I am not sure about that one yet. Try asking about variables, operators, logical operators, conditionals, loops, functions, arrays, quizzes, the long quiz, or the leaderboard."
+    knowledge_reply = general_knowledge_reply(text)
+    if knowledge_reply:
+        return knowledge_reply
+    if is_definition_question(text):
+        return (
+            "Good question, but that one is outside my built-in course notes so I cannot "
+            "explain it well yet. Ask me about variables, operators, logical operators, "
+            "conditionals, loops, functions, arrays, quizzes, the long quiz, or the "
+            "leaderboard — or when my online AI brain is connected I can answer general "
+            "questions like 'what is research?'."
+        )
+    return (
+        "I am not sure about that one yet. Try asking about variables, operators, logical "
+        "operators, conditionals, loops, functions, arrays, quizzes, the long quiz, or the "
+        "leaderboard — and if it is a general question like 'what is research?', I will do my "
+        "best to answer it."
+    )
 
 
 @app.route("/assistant", methods=["POST"])

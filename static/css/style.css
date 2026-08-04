@@ -508,6 +508,7 @@ body {
 
 .assist-form {
   display: flex;
+  align-items: flex-end;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
   background: #fff;
@@ -515,6 +516,112 @@ body {
 }
 .assist-form .form-control:focus {
   box-shadow: 0 0 0 0.2rem rgba(86, 182, 198, 0.25);
+}
+.assist-form textarea.form-control {
+  resize: vertical;
+  min-height: 2.4rem;
+  max-height: 8rem;
+}
+.assist-form .btn {
+  flex-shrink: 0;
+}
+
+.assist-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+.assist-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.assist-text strong {
+  color: var(--brand-primary);
+}
+.assist-text code {
+  background: rgba(86, 182, 198, 0.15);
+  color: var(--brand-primary);
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.3rem;
+  font-size: 0.8em;
+}
+.assist-code-card {
+  border: 1px solid #1e293b;
+  border-radius: 0.6rem;
+  overflow: hidden;
+  background: #0f172a;
+}
+.assist-code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  background: #1e293b;
+}
+.assist-code-lang {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+.assist-code-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.assist-code-btn {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: #e2e8f0;
+  border-radius: 0.35rem;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.55rem;
+}
+.assist-code-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.assist-code-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.assist-code-btn.assist-code-run {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: #fff;
+}
+.assist-code-btn.assist-code-run .spinner-border {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-width: 0.15rem;
+}
+.assist-code {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  overflow-x: auto;
+  white-space: pre;
+}
+.assist-terminal {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  background: #020617;
+  color: #a7f3d0;
+  font-size: 0.75rem;
+  border-top: 1px solid #1e293b;
+  max-height: 10rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.assist-code-status {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  padding: 0.2rem 0.6rem 0.35rem;
+  background: #0f172a;
 }
 
 .avatar-circle-img {

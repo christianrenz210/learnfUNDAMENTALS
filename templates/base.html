@@ -305,8 +305,8 @@
     <button type="button" class="assist-chip" data-q="How is the leaderboard ranked?">Leaderboard</button>
   </div>
   <form id="assistForm" class="assist-form">
-    <input type="text" id="assistInput" class="form-control" placeholder="Type your question..."
-           autocomplete="off" maxlength="300">
+    <textarea id="assistInput" class="form-control" rows="2" maxlength="500"
+              placeholder="Type your question..." autocomplete="off"></textarea>
     <button type="submit" class="btn btn-primary" aria-label="Send">
       <i class="bi bi-send"></i>
     </button>
@@ -438,6 +438,11 @@ function togglePassword(inputId, iconId) {
   function finishTypingBubble(bubble, text) {
     bubble.classList.remove('assist-typing');
     bubble.textContent = '';
+    if (/```/.test(text)) {
+      bubble.appendChild(buildReply(text));
+      assistMessages.scrollTop = assistMessages.scrollHeight;
+      return;
+    }
     let i = 0;
     const timer = setInterval(function () {
       i += 3;
@@ -449,6 +454,194 @@ function togglePassword(inputId, iconId) {
       }
       assistMessages.scrollTop = assistMessages.scrollHeight;
     }, 20);
+  }
+
+  const RUN_LANGS = {
+    python: 'python', py: 'python', python3: 'python',
+    cpp: 'cpp', c: 'cpp', 'c++': 'cpp', cplusplus: 'cpp',
+    java: 'java'
+  };
+
+  function appendAssistText(wrapper, txt) {
+    const el = document.createElement('div');
+    el.className = 'assist-text';
+    let html = txt
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    el.innerHTML = html;
+    wrapper.appendChild(el);
+  }
+
+  function appendAssistTerm(card, text) {
+    const out = card.querySelector('.assist-terminal-out');
+    out.textContent = out.textContent ? out.textContent + '\n' + text : text;
+    const term = card.querySelector('.assist-terminal');
+    term.scrollTop = term.scrollHeight;
+  }
+
+  function runAssistCode(card, lang, code) {
+    const runBtn = card.querySelector('.assist-code-run');
+    const term = card.querySelector('.assist-terminal');
+    const status = card.querySelector('.assist-code-status');
+    if (runBtn.dataset.running === '1') return;
+    runBtn.dataset.running = '1';
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    term.classList.remove('d-none');
+    card.querySelector('.assist-terminal-out').textContent = '';
+    status.textContent = '';
+    let sessionId = null;
+    let pollTimer = null;
+
+    function finish(exitCode) {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      runBtn.dataset.running = '';
+      runBtn.disabled = false;
+      runBtn.textContent = 'Run';
+      status.textContent = 'Finished (exit ' + exitCode + ')';
+    }
+
+    function renderEvents(events) {
+      (events || []).forEach(function (item) {
+        if (item.type === 'out' || item.type === 'err' || item.type === 'error') {
+          appendAssistTerm(card, item.data);
+        }
+      });
+    }
+
+    function poll() {
+      pollTimer = setInterval(function () {
+        fetch('{{ url_for("run_poll", session_id="SID") }}'.replace('SID', sessionId), {
+          method: 'POST',
+          cache: 'no-store'
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (!data.ok) {
+              appendAssistTerm(card, data.error || 'Session lost.');
+              finish(-1);
+              return;
+            }
+            renderEvents(data.events);
+            if (data.finished) {
+              finish(data.exit_code);
+            }
+          })
+          .catch(function () {});
+      }, 400);
+    }
+
+    fetch('{{ url_for("run_start") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: lang, code: code, stdin: '' })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.ok) {
+          appendAssistTerm(card, data.compile_error || data.error || 'Could not start the program.');
+          finish(-1);
+          return;
+        }
+        if (data.finished) {
+          renderEvents(data.events);
+          finish(data.exit_code);
+          return;
+        }
+        sessionId = data.session_id;
+        poll();
+      })
+      .catch(function () {
+        appendAssistTerm(card, 'Could not reach the server. Try again.');
+        finish(-1);
+      });
+  }
+
+  function appendAssistCode(wrapper, lang, code) {
+    const langKey = (lang || '').toLowerCase().trim();
+    const runLang = RUN_LANGS[langKey] || null;
+
+    const card = document.createElement('div');
+    card.className = 'assist-code-card';
+
+    const head = document.createElement('div');
+    head.className = 'assist-code-head';
+    const label = document.createElement('span');
+    label.className = 'assist-code-lang';
+    label.textContent = runLang || langKey || 'code';
+    head.appendChild(label);
+
+    const actions = document.createElement('div');
+    actions.className = 'assist-code-actions';
+    if (runLang) {
+      const openBtn = document.createElement('button');
+      openBtn.type = 'button';
+      openBtn.className = 'assist-code-btn';
+      openBtn.textContent = 'Open in Compiler';
+      openBtn.addEventListener('click', function () {
+        try {
+          sessionStorage.setItem('cfCompilerCode', JSON.stringify({ lang: runLang, code: code }));
+        } catch (e) {}
+        window.location.href = '{{ url_for("compiler") }}';
+      });
+      actions.appendChild(openBtn);
+
+      const runBtn = document.createElement('button');
+      runBtn.type = 'button';
+      runBtn.className = 'assist-code-btn assist-code-run';
+      runBtn.textContent = 'Run';
+      runBtn.addEventListener('click', function () {
+        runAssistCode(card, runLang, code);
+      });
+      actions.appendChild(runBtn);
+    }
+    head.appendChild(actions);
+    card.appendChild(head);
+
+    const pre = document.createElement('pre');
+    pre.className = 'assist-code';
+    const codeEl = document.createElement('code');
+    codeEl.textContent = code.replace(/\n$/, '');
+    pre.appendChild(codeEl);
+    card.appendChild(pre);
+
+    const term = document.createElement('pre');
+    term.className = 'assist-terminal d-none';
+    const termOut = document.createElement('code');
+    termOut.className = 'assist-terminal-out';
+    term.appendChild(termOut);
+    card.appendChild(term);
+
+    const status = document.createElement('div');
+    status.className = 'assist-code-status';
+    card.appendChild(status);
+
+    wrapper.appendChild(card);
+  }
+
+  function buildReply(text) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'assist-reply';
+    const regex = /```([\w-+]*)\s*\n?([\s\S]*?)```/g;
+    let last = 0;
+    let m;
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) {
+        appendAssistText(wrapper, text.slice(last, m.index));
+      }
+      appendAssistCode(wrapper, m[1], m[2]);
+      last = regex.lastIndex;
+    }
+    if (last < text.length) {
+      appendAssistText(wrapper, text.slice(last));
+    }
+    return wrapper;
   }
 
   function wait(ms) {
@@ -485,6 +678,12 @@ function togglePassword(inputId, iconId) {
     addAssistBubble(message, true);
     assistInput.value = '';
     askAssistant(message);
+  });
+  assistInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      assistForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    }
   });
   document.querySelectorAll('.assist-chip').forEach(function (chip) {
     chip.addEventListener('click', function () {
