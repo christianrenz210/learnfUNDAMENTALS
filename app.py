@@ -2712,25 +2712,28 @@ with app.app_context():
             except Exception:
                 time.sleep(0.5)
     admin_username = os.environ.get("ADMIN_USERNAME", "").strip()
-    if admin_username:
-        admin_user = User.query.filter_by(username=admin_username).first()
-        if admin_user and not admin_user.is_admin:
-            admin_user.is_admin = True
-            db.session.commit()
-    admin_acct = User.query.filter_by(username="admin").first()
-    if admin_acct is None:
-        db.session.add(
-            User(
-                username="admin",
-                email="admin@codefundamentals.local",
-                password_hash=generate_password_hash("admin123"),
-                is_admin=True,
+    try:
+        if admin_username:
+            admin_user = User.query.filter_by(username=admin_username).first()
+            if admin_user and not admin_user.is_admin:
+                admin_user.is_admin = True
+                db.session.commit()
+        admin_acct = User.query.filter_by(username="admin").first()
+        if admin_acct is None:
+            db.session.add(
+                User(
+                    username="admin",
+                    email="admin@codefundamentals.local",
+                    password_hash=generate_password_hash("admin123"),
+                    is_admin=True,
+                )
             )
-        )
-        db.session.commit()
-    elif not admin_acct.is_admin:
-        admin_acct.is_admin = True
-        db.session.commit()
+            db.session.commit()
+        elif not admin_acct.is_admin:
+            admin_acct.is_admin = True
+            db.session.commit()
+    except Exception:
+        pass
     try:
         has_lesson_10 = db.session.execute(
             sa_text("SELECT COUNT(*) FROM quiz_score WHERE lesson_id = 10")
