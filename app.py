@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 import uuid
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from flask import (
     Flask,
@@ -65,6 +66,17 @@ LAB_ROUTES = {19: "sql_lab", 20: "sql_lab_2"}
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key-in-production")
+
+LOCAL_TZ = ZoneInfo("Asia/Manila")
+
+
+@app.template_filter("localtime")
+def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
+    if dt is None:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+    return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///students.db")
 if DATABASE_URL.startswith("postgres://"):

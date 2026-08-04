@@ -89,7 +89,7 @@
                     {{ u.username }}
                   </td>
                   <td class="text-muted small">{{ u.email }}</td>
-                  <td class="small">{{ u.created_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                  <td class="small">{{ u.created_at|localtime('%b %d, %Y %I:%M %p') }}</td>
                   <td>
                     {% if u.is_admin %}
                       <span class="badge bg-danger">Admin</span>
@@ -131,7 +131,7 @@
                   <td class="fw-semibold">{{ log.user.username if log.user else 'Deleted user' }}</td>
                   <td>{{ log.action }}</td>
                   <td class="small text-muted">{{ log.details or '-' }}</td>
-                  <td class="small text-muted">{{ log.created_at.strftime('%b %d, %I:%M %p') }}</td>
+                  <td class="small text-muted">{{ log.created_at|localtime('%b %d, %I:%M %p') }}</td>
                 </tr>
               {% else %}
                 <tr><td colspan="4" class="text-center text-muted py-4">No activity yet.</td></tr>
