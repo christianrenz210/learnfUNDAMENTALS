@@ -1,0 +1,43 @@
+<div id="assistPanel" class="assist-panel">
+  <div class="assist-header d-flex align-items-center">
+    <i class="bi bi-robot me-2"></i>
+    <div class="flex-grow-1">
+      <strong>E.R.E.N</strong>
+      <div class="assist-status">Educational Response Engine for Novices</div>
+    </div>
+    <a href="/aiassist" class="assist-header-btn" aria-label="Open full assistant" title="Open full screen">
+      <i class="bi bi-arrows-fullscreen"></i>
+    </a>
+    <button type="button" id="assistHistoryBtn" class="assist-header-btn" aria-label="History" title="History">
+      <i class="bi bi-clock-history"></i>
+    </button>
+    <button type="button" id="assistNewChat" class="assist-header-btn" aria-label="New chat" title="New chat">
+      <i class="bi bi-plus-square"></i>
+    </button>
+    <button type="button" id="assistAbout" class="assist-about" aria-label="E.R.E.N story">
+      <i class="bi bi-info-circle"></i>
+    </button>
+    <button type="button" id="assistClose" class="btn-close btn-close-white" aria-label="Close assistant"></button>
+  </div>
+  <div id="assistHistoryPanel" class="assist-history d-none">
+    <div class="assist-history-head">
+      <span>History</span>
+      <button type="button" id="assistClearHistory" class="assist-history-clear">Clear all</button>
+    </div>
+    <div id="assistHistoryList" class="assist-history-list"><div class="assist-history-item assist-history-active"><button type="button" class="assist-history-main"><div class="assist-history-title">New chat</div><div class="assist-history-meta">0 message(s) · 10:03 PM</div></button><button type="button" class="assist-history-del" aria-label="Delete conversation"><i class="bi bi-trash"></i></button></div></div>
+  </div>
+  <div id="assistMessages" class="assist-messages"><div class="assist-bubble assist-bot">Hi Renz2! I'm E.R.E.N — Educational Response Engine for Novices. A long time ago, a frustrated student stayed up until 2 AM to build me so no one would get stuck on the same lessons. You've completed 0 of 21 lessons so far. Ask me anything!</div></div>
+  <div id="assistChips" class="assist-chips">
+    <button type="button" class="assist-chip" data-q="Tell me your story, E.R.E.N">E.R.E.N's story</button>
+    <button type="button" class="assist-chip" data-q="What are variables?">Variables</button>
+    <button type="button" class="assist-chip" data-q="Explain loops">Loops</button>
+    <button type="button" class="assist-chip" data-q="How does the quiz work?">Quiz</button>
+    <button type="button" class="assist-chip" data-q="How is the leaderboard ranked?">Leaderboard</button>
+  </div>
+  <form id="assistForm" class="assist-form">
+    <textarea id="assistInput" class="form-control" rows="2" maxlength="500" placeholder="Type your question..." autocomplete="off"></textarea>
+    <button type="submit" class="btn btn-primary" aria-label="Send">
+      <i class="bi bi-send"></i>
+    </button>
+  </form>
+</div>

@@ -7,6 +7,8 @@
   var inputEl = document.getElementById('assistInput');
   if (!msgsEl || !formEl || !inputEl) return;
 
+  var isFullPage = msgsEl.classList.contains('assist-page-messages');
+
   var urls = cfg.urls || {};
   var RUN_LANGS = {
     python: 'python', py: 'python', python3: 'python',
@@ -316,7 +318,7 @@
   function newChat() {
     createConvo();
     renderMessages(activeConvo());
-    hideHistory();
+    closeSidebarMobile();
     if (inputEl) inputEl.focus();
   }
 
@@ -329,7 +331,7 @@
         break;
       }
     }
-    hideHistory();
+    closeSidebarMobile();
   }
 
   function deleteConvo(id, evt) {
@@ -395,21 +397,33 @@
     });
   }
 
-  function toggleHistory() {
-    var panel = document.getElementById('assistHistoryPanel');
-    if (!panel) return;
-    var willShow = panel.classList.contains('d-none');
-    if (willShow) renderHistoryList();
-    panel.classList.toggle('d-none', !willShow);
+  var sidebarEl = document.getElementById('assistSidebar');
+  var sidebarBackdrop = null;
+
+  function openSidebarMobile() {
+    if (!sidebarEl) return;
+    renderHistoryList();
+    sidebarEl.classList.add('open');
+    if (!sidebarBackdrop) {
+      sidebarBackdrop = document.createElement('div');
+      sidebarBackdrop.className = 'assist-sidebar-backdrop';
+      sidebarBackdrop.addEventListener('click', closeSidebarMobile);
+      sidebarEl.parentNode.insertBefore(sidebarBackdrop, sidebarEl.nextSibling);
+    }
+    sidebarBackdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
   }
 
-  function hideHistory() {
-    var panel = document.getElementById('assistHistoryPanel');
-    if (panel) panel.classList.add('d-none');
+  function closeSidebarMobile() {
+    if (!sidebarEl) return;
+    sidebarEl.classList.remove('open');
+    if (sidebarBackdrop) sidebarBackdrop.classList.remove('open');
+    document.body.style.overflow = '';
   }
 
   function sendMessage(message) {
     pushMsg('user', message);
+    renderHistoryList();
     if (inputEl) inputEl.value = '';
     addBubble(message, true);
 
@@ -428,6 +442,7 @@
       .then(function (data) {
         var reply = data.ok ? data.reply : (data.error || 'Something went wrong.');
         pushMsg('assistant', reply);
+        renderHistoryList();
         var elapsed = Date.now() - started;
         setTimeout(function () {
           var typing = addTypingBubble();
@@ -437,6 +452,7 @@
       .catch(function () {
         var reply = 'I could not reach the server. Please try again.';
         pushMsg('assistant', reply);
+        renderHistoryList();
         var typing = addTypingBubble();
         setTimeout(function () { finishTypingBubble(typing, reply); }, 900);
       });
@@ -459,11 +475,23 @@
     });
   }
 
-  var historyBtn = document.getElementById('assistHistoryBtn');
-  if (historyBtn) historyBtn.addEventListener('click', toggleHistory);
-
   var newChatBtn = document.getElementById('assistNewChat');
   if (newChatBtn) newChatBtn.addEventListener('click', newChat);
+
+  var sidebarOpenBtn = document.getElementById('assistSidebarOpen');
+  if (sidebarOpenBtn) sidebarOpenBtn.addEventListener('click', openSidebarMobile);
+
+  var sidebarCloseBtn = document.getElementById('assistSidebarClose');
+  if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebarMobile);
+
+  var historyBtn = document.getElementById('assistHistoryBtn');
+  var historyPanel = document.getElementById('assistHistoryPanel');
+  if (historyBtn && historyPanel) {
+    historyBtn.addEventListener('click', function () {
+      renderHistoryList();
+      historyPanel.classList.toggle('d-none');
+    });
+  }
 
   var clearBtn = document.getElementById('assistClearHistory');
   if (clearBtn) {
@@ -473,6 +501,7 @@
       saveStore();
       renderHistoryList();
       renderMessages(activeConvo());
+      closeSidebarMobile();
     });
   }
 
@@ -492,18 +521,20 @@
     });
   }
 
-  var closeBtn = document.getElementById('assistClose');
-  var panelEl = document.getElementById('assistPanel');
-  if (closeBtn && panelEl) {
-    closeBtn.addEventListener('click', function () { panelEl.classList.add('d-none'); });
-  }
+  if (!isFullPage) {
+    var closeBtn = document.getElementById('assistClose');
+    var panelEl = document.getElementById('assistPanel');
+    if (closeBtn && panelEl) {
+      closeBtn.addEventListener('click', function () { panelEl.classList.add('d-none'); });
+    }
 
-  var toggleBtn = document.getElementById('assistToggle');
-  if (toggleBtn && panelEl) {
-    toggleBtn.addEventListener('click', function () {
-      panelEl.classList.toggle('d-none');
-      if (!panelEl.classList.contains('d-none')) inputEl.focus();
-    });
+    var toggleBtn = document.getElementById('assistToggle');
+    if (toggleBtn && panelEl) {
+      toggleBtn.addEventListener('click', function () {
+        panelEl.classList.toggle('d-none');
+        if (!panelEl.classList.contains('d-none')) inputEl.focus();
+      });
+    }
   }
 
   renderMessages(activeConvo());

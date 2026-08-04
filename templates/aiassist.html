@@ -1,48 +1,85 @@
 {% extends "base.html" %}
 {% set hide_assist_widget = True %}
+{% set hide_nav = True %}
+{% set hide_footer = True %}
+{% set body_class = 'assist-fullscreen-body' %}
 
 {% block title %}E.R.E.N Assistant - CodeFundamentals{% endblock %}
 
 {% block content %}
-<div class="assist-page">
-  <div class="assist-page-header">
-    <i class="bi bi-robot me-2"></i>
-    <div class="flex-grow-1">
-      <strong>E.R.E.N</strong>
-      <span class="assist-status">Educational Response Engine for Novices</span>
+<div class="assist-layout">
+  <!-- Sidebar -->
+  <aside class="assist-sidebar" id="assistSidebar">
+    <div class="assist-sidebar-head">
+      <a href="{{ url_for('dashboard') }}" class="assist-sidebar-logo" aria-label="Back to dashboard" title="Back to dashboard">
+        <i class="bi bi-code-slash"></i>
+        <span>CodeFundamentals</span>
+      </a>
+      <button type="button" id="assistSidebarClose" class="assist-sidebar-close d-lg-none" aria-label="Close sidebar">
+        <i class="bi bi-x-lg"></i>
+      </button>
     </div>
-    <a href="{{ url_for('dashboard') }}" class="assist-header-btn" aria-label="Back to dashboard" title="Back to dashboard">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <button type="button" id="assistHistoryBtn" class="assist-header-btn" aria-label="History" title="History">
-      <i class="bi bi-clock-history"></i>
+
+    <button type="button" id="assistNewChat" class="assist-new-chat">
+      <i class="bi bi-plus-lg"></i>
+      New chat
     </button>
-    <button type="button" id="assistNewChat" class="assist-header-btn" aria-label="New chat" title="New chat">
-      <i class="bi bi-plus-square"></i>
-    </button>
-  </div>
-  <div id="assistHistoryPanel" class="assist-history d-none">
-    <div class="assist-history-head">
-      <span>History</span>
-      <button type="button" id="assistClearHistory" class="assist-history-clear">Clear all</button>
+
+    <div class="assist-sidebar-section">
+      <div class="assist-sidebar-label">History</div>
+      <div id="assistHistoryList" class="assist-sidebar-list"></div>
     </div>
-    <div id="assistHistoryList" class="assist-history-list"></div>
-  </div>
-  <div id="assistMessages" class="assist-page-messages"></div>
-  <div id="assistChips" class="assist-chips">
-    <button type="button" class="assist-chip" data-q="Tell me your story, E.R.E.N">E.R.E.N's story</button>
-    <button type="button" class="assist-chip" data-q="What are variables?">Variables</button>
-    <button type="button" class="assist-chip" data-q="Explain loops">Loops</button>
-    <button type="button" class="assist-chip" data-q="Show me code for a function">Code sample</button>
-    <button type="button" class="assist-chip" data-q="How does the long quiz work?">Long quiz</button>
-    <button type="button" class="assist-chip" data-q="How is the leaderboard ranked?">Leaderboard</button>
-  </div>
-  <form id="assistForm" class="assist-form">
-    <textarea id="assistInput" class="form-control" rows="3" maxlength="500"
-              placeholder="Type your question..." autocomplete="off"></textarea>
-    <button type="submit" class="btn btn-primary" aria-label="Send">
-      <i class="bi bi-send"></i>
-    </button>
-  </form>
+
+    <div class="assist-sidebar-foot">
+      <a href="{{ url_for('dashboard') }}">
+        <i class="bi bi-arrow-left"></i>
+        Back to dashboard
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main chat area -->
+  <main class="assist-main">
+    <header class="assist-topbar">
+      <button type="button" id="assistSidebarOpen" class="assist-topbar-btn d-lg-none" aria-label="Open sidebar">
+        <i class="bi bi-list"></i>
+      </button>
+
+      <div class="assist-topbar-title">
+        <i class="bi bi-robot"></i>
+        <div>
+          <strong>E.R.E.N</strong>
+          <span>Educational Response Engine for Novices</span>
+        </div>
+      </div>
+
+      <div class="assist-topbar-actions">
+        <button type="button" id="assistClearHistory" class="assist-topbar-btn" title="Clear all chats" aria-label="Clear all chats">
+          <i class="bi bi-trash3"></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="assist-chat">
+      <div id="assistMessages" class="assist-messages assist-page-messages"></div>
+
+      <div id="assistChips" class="assist-chips">
+        <button type="button" class="assist-chip" data-q="Tell me your story, E.R.E.N">E.R.E.N's story</button>
+        <button type="button" class="assist-chip" data-q="What are variables?">Variables</button>
+        <button type="button" class="assist-chip" data-q="Explain loops">Loops</button>
+        <button type="button" class="assist-chip" data-q="Show me code for a function">Code sample</button>
+        <button type="button" class="assist-chip" data-q="How does the long quiz work?">Long quiz</button>
+        <button type="button" class="assist-chip" data-q="How is the leaderboard ranked?">Leaderboard</button>
+      </div>
+
+      <form id="assistForm" class="assist-form">
+        <textarea id="assistInput" class="form-control" rows="1" maxlength="500"
+                  placeholder="Message E.R.E.N..." autocomplete="off"></textarea>
+        <button type="submit" class="btn btn-primary" aria-label="Send">
+          <i class="bi bi-send"></i>
+        </button>
+      </form>
+    </div>
+  </main>
 </div>
 {% endblock %}
