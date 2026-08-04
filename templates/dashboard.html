@@ -297,7 +297,7 @@
                         </span>
                         <span class="d-flex gap-1 align-items-center">
                           <span class="badge bg-secondary bg-opacity-10 text-secondary">
-                            <i class="bi bi-clock me-1"></i>~{{ lesson.minutes|default(section_minutes.get(section, 45)) }} min
+                            <i class="bi bi-clock me-1"></i>~{{ lesson_estimate_minutes(lesson) }} min
                           </span>
                         {% if lesson.coming_soon %}
                           <span class="badge bg-info text-dark">

@@ -42,6 +42,23 @@ SECTION_ORDER = ["Fundamentals", "Advanced Database System", "SQL Injection"]
 SECTION_LESSON_MINUTES = {"Fundamentals": 40, "Advanced Database System": 45}
 AVAILABLE_LESSONS = [l for l in LESSONS if not l.get("coming_soon")]
 
+
+def lesson_estimate_minutes(lesson):
+    base = lesson.get(
+        "minutes",
+        SECTION_LESSON_MINUTES.get(lesson.get("section", "Fundamentals"), 45),
+    )
+    videos = lesson.get("videos") or []
+    video_minutes = 0
+    if isinstance(videos, dict):
+        for items in videos.values():
+            for v in items:
+                video_minutes += v.get("duration", 0)
+    else:
+        for v in videos:
+            video_minutes += v.get("duration", 0)
+    return base + video_minutes
+
 LAB_POINTS_PER_LAB = 2
 LAB_LESSON_IDS = {19, 20}
 LAB_ROUTES = {19: "sql_lab", 20: "sql_lab_2"}
@@ -527,7 +544,7 @@ def dashboard():
             continue
         sec_done = len([l for l in sec_lessons if l["id"] in completed])
         quiz_row = section_quiz_map.get(name)
-        est_minutes = sum(l.get("minutes", SECTION_LESSON_MINUTES.get(name, 45)) for l in sec_lessons)
+        est_minutes = sum(lesson_estimate_minutes(l) for l in sec_lessons)
         section_stats.append(
             {
                 "name": name,
@@ -559,6 +576,7 @@ def dashboard():
         lab_count=lab_count,
         all_lessons=AVAILABLE_LESSONS,
         section_minutes=SECTION_LESSON_MINUTES,
+        lesson_estimate_minutes=lesson_estimate_minutes,
         lab_completed=bool(lab_count),
         completed_lab_ids=lab_ids,
     )
@@ -776,6 +794,7 @@ def lesson(lesson_id):
     return render_template(
         "lesson.html",
         lesson=lesson,
+        est_minutes=lesson_estimate_minutes(lesson),
         lesson_num=idx + 1,
         section_total=len(section_lessons),
         completed=completed,

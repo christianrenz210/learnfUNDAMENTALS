@@ -56,16 +56,16 @@ LESSONS = [
         "description": "Every programming language has a creator and a story. In this lesson you will learn how C++, Java, and Python were invented — who built them, when, and why each language was designed.",
         "videos": {
             "general": [
-                {"id": "RU1u-js7db8", "channel": "CrashCourse", "title": "The First Programming Languages: Crash Course Computer Science #11"},
+                {"id": "RU1u-js7db8", "channel": "CrashCourse", "title": "The First Programming Languages: Crash Course Computer Science #11", "duration": 12},
             ],
             "python": [
-                {"id": "GfH4QL4VqJ0", "channel": "CultRepo", "title": "The Story of Python and how it took over the world | Python: The Documentary"},
+                {"id": "GfH4QL4VqJ0", "channel": "CultRepo", "title": "The Story of Python and how it took over the world | Python: The Documentary", "duration": 84},
             ],
             "cpp": [
-                {"id": "lI7tMxzSJ7w", "channel": "CultRepo", "title": "The Story of C++: The World's Most Consequential Programming Language"},
+                {"id": "lI7tMxzSJ7w", "channel": "CultRepo", "title": "The Story of C++: The World's Most Consequential Programming Language", "duration": 72},
             ],
             "java": [
-                {"id": "ZqGSg4b_cZA", "channel": "CultRepo", "title": "The Java Story | The Official Documentary"},
+                {"id": "ZqGSg4b_cZA", "channel": "CultRepo", "title": "The Java Story | The Official Documentary", "duration": 74},
             ],
         },
         "key_points": [

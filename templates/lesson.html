@@ -72,7 +72,7 @@
               <span class="text-muted small">
                 Lesson {{ lesson_num }} of {{ section_total }}
                 <span class="mx-1">|</span>
-                <i class="bi bi-clock me-1"></i>Estimated: ~{{ lesson.minutes|default(section_minutes.get(lesson.section, 45)) }} min
+                <i class="bi bi-clock me-1"></i>Estimated: ~{{ est_minutes }} min
               </span>
             </div>
             {% if lesson.id == 19 %}
