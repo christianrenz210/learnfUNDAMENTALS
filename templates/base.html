@@ -403,6 +403,7 @@ function togglePassword(inputId, iconId) {
   const assistMessages = document.getElementById('assistMessages');
   const assistForm = document.getElementById('assistForm');
   const assistInput = document.getElementById('assistInput');
+  let chatHistory = loadChatHistory();
 
   assistToggle.addEventListener('click', function () {
     assistPanel.classList.toggle('d-none');
@@ -435,12 +436,20 @@ function togglePassword(inputId, iconId) {
     return bubble;
   }
 
-  function finishTypingBubble(bubble, text) {
-    bubble.classList.remove('assist-typing');
+  function renderBotContent(bubble, text) {
     bubble.textContent = '';
     if (/```/.test(text)) {
       bubble.appendChild(buildReply(text));
-      assistMessages.scrollTop = assistMessages.scrollHeight;
+    } else {
+      bubble.textContent = text;
+    }
+    assistMessages.scrollTop = assistMessages.scrollHeight;
+  }
+
+  function finishTypingBubble(bubble, text) {
+    bubble.classList.remove('assist-typing');
+    if (/```/.test(text)) {
+      renderBotContent(bubble, text);
       return;
     }
     let i = 0;
@@ -454,6 +463,21 @@ function togglePassword(inputId, iconId) {
       }
       assistMessages.scrollTop = assistMessages.scrollHeight;
     }, 20);
+  }
+
+  function loadChatHistory() {
+    try {
+      const h = JSON.parse(sessionStorage.getItem('cfChatHistory') || '[]');
+      return Array.isArray(h) ? h.slice(-20) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveChatHistory() {
+    try {
+      sessionStorage.setItem('cfChatHistory', JSON.stringify(chatHistory.slice(-20)));
+    } catch (e) {}
   }
 
   const RUN_LANGS = {
@@ -657,19 +681,33 @@ function togglePassword(inputId, iconId) {
       const res = await fetch('{{ url_for("assistant") }}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: message }),
+        body: JSON.stringify({ message: message, history: chatHistory }),
       });
       const data = await res.json();
       reply = data.ok ? data.reply : (data.error || 'Something went wrong.');
     } catch (e) {
       reply = 'I could not reach the server. Please try again.';
     }
+    chatHistory.push({ role: 'user', content: message });
+    chatHistory.push({ role: 'assistant', content: reply });
+    saveChatHistory();
     const elapsed = Date.now() - started;
     await wait(Math.max(0, 450 - elapsed));
     const typing = addTypingBubble();
     await wait(900);
     finishTypingBubble(typing, reply);
   }
+
+  chatHistory.forEach(function (item) {
+    if (item.role === 'user') {
+      addAssistBubble(item.content || '', true);
+    } else if (item.role === 'assistant') {
+      const b = document.createElement('div');
+      b.className = 'assist-bubble assist-bot';
+      assistMessages.appendChild(b);
+      renderBotContent(b, item.content || '');
+    }
+  });
 
   assistForm.addEventListener('submit', function (e) {
     e.preventDefault();

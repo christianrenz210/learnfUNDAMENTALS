@@ -774,19 +774,40 @@ EREN_SYSTEM_PROMPT = (
 )
 
 
-def gemini_reply(message):
+def gemini_reply(message, history=None):
     api_key = _gemini_api_key()
     if not api_key:
         print("[E.R.E.N] No GEMINI_API_KEY set, using offline rules.", file=sys.stderr)
         return None
     model = _gemini_model()
+    contents = []
+    for item in (history or [])[-14:]:
+        role = item.get("role")
+        content = (item.get("content") or "").strip()
+        if role not in ("user", "assistant") or not content:
+            continue
+        contents.append(
+            {
+                "role": "user" if role == "user" else "model",
+                "parts": [{"text": content}],
+            }
+        )
+    contents.append({"role": "user", "parts": [{"text": message}]})
+    cleaned = []
+    for entry in contents:
+        if cleaned and cleaned[-1]["role"] == entry["role"]:
+            cleaned[-1]["parts"][0]["text"] += "\n\n" + entry["parts"][0]["text"]
+        else:
+            cleaned.append(entry)
+    while cleaned and cleaned[0]["role"] != "user":
+        cleaned.pop(0)
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"{model}:generateContent?key={api_key}"
     )
     payload = {
         "system_instruction": {"parts": [{"text": EREN_SYSTEM_PROMPT}]},
-        "contents": [{"role": "user", "parts": [{"text": message}]}],
+        "contents": cleaned,
         "generationConfig": {"temperature": 0.7, "maxOutputTokens": 1024},
     }
     req = urllib.request.Request(
@@ -1275,7 +1296,8 @@ def assistant():
     message = (data.get("message") or "").strip()
     if not message:
         return jsonify({"ok": False, "error": "Please type a message."}), 400
-    reply = gemini_reply(message)
+    history = data.get("history") if isinstance(data.get("history"), list) else None
+    reply = gemini_reply(message, history)
     if reply is None:
         reply = assistant_reply(message)
     return jsonify({"ok": True, "reply": reply})
