@@ -21,38 +21,38 @@
   <div class="row g-3 mb-4">
     <div class="col-6 col-lg-2">
       <div class="card card-body text-center shadow-sm h-100">
-        <div class="display-6 fw-bold text-primary">{{ total_users }}</div>
+        <div class="display-6 fw-bold text-primary" id="stat-total">{{ total_users }}</div>
         <div class="small text-muted">Total Users</div>
       </div>
     </div>
     <div class="col-6 col-lg-2">
       <div class="card card-body text-center shadow-sm h-100">
-        <div class="display-6 fw-bold text-success">{{ new_users_7d }}</div>
+        <div class="display-6 fw-bold text-success" id="stat-online">{{ online_users }}</div>
+        <div class="small text-muted">Online Now</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-2">
+      <div class="card card-body text-center shadow-sm h-100">
+        <div class="display-6 fw-bold text-info" id="stat-new">{{ new_users_7d }}</div>
         <div class="small text-muted">New Users (7d)</div>
       </div>
     </div>
     <div class="col-6 col-lg-2">
       <div class="card card-body text-center shadow-sm h-100">
-        <div class="display-6 fw-bold text-info">{{ total_lessons_done }}</div>
+        <div class="display-6 fw-bold text-warning" id="stat-lessons">{{ total_lessons_done }}</div>
         <div class="small text-muted">Lessons Completed</div>
       </div>
     </div>
     <div class="col-6 col-lg-2">
       <div class="card card-body text-center shadow-sm h-100">
-        <div class="display-6 fw-bold text-warning">{{ total_quizzes }}</div>
+        <div class="display-6 fw-bold text-danger" id="stat-quizzes">{{ total_quizzes }}</div>
         <div class="small text-muted">Quizzes Taken</div>
       </div>
     </div>
     <div class="col-6 col-lg-2">
       <div class="card card-body text-center shadow-sm h-100">
-        <div class="display-6 fw-bold text-danger">{{ total_labs }}</div>
+        <div class="display-6 fw-bold text-secondary" id="stat-labs">{{ total_labs }}</div>
         <div class="small text-muted">Labs Done</div>
-      </div>
-    </div>
-    <div class="col-6 col-lg-2">
-      <div class="card card-body text-center shadow-sm h-100">
-        <div class="display-6 fw-bold text-secondary">{{ total_logs }}</div>
-        <div class="small text-muted">Activity Events</div>
       </div>
     </div>
   </div>
@@ -142,4 +142,29 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const API_URL = "{{ url_for('api_admin_stats') }}";
+  const REFRESH_INTERVAL = 30000;
+
+  function refreshStats() {
+    fetch(API_URL)
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('stat-total').textContent = data.total_users;
+        document.getElementById('stat-online').textContent = data.online_users;
+        document.getElementById('stat-new').textContent = data.new_users_7d;
+        document.getElementById('stat-lessons').textContent = data.total_lessons_done;
+        document.getElementById('stat-quizzes').textContent = data.total_quizzes;
+        document.getElementById('stat-labs').textContent = data.total_labs;
+      })
+      .catch(err => console.error('Failed to refresh stats:', err));
+  }
+
+  setInterval(refreshStats, REFRESH_INTERVAL);
+})();
+</script>
 {% endblock %}

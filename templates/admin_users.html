@@ -9,7 +9,11 @@
       <h2 class="mb-1">
         <i class="bi bi-people text-primary me-2"></i>Users
       </h2>
-      <p class="text-muted mb-0">{{ total }} registered user{{ '' if total == 1 else 's' }}.</p>
+      <p class="text-muted mb-0">
+        {{ total }} registered user{{ '' if total == 1 else 's' }}.
+        <span class="ms-2" id="online-badge"><i class="bi bi-circle-fill text-success me-1" style="font-size: 0.5rem;"></i><span id="online-count">{{ online_count }}</span> online</span>
+        <span class="ms-2" id="offline-badge"><i class="bi bi-circle-fill text-secondary me-1" style="font-size: 0.5rem;"></i><span id="offline-count">{{ total - online_count }}</span> offline</span>
+      </p>
     </div>
     <ul class="nav nav-pills">
       <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
@@ -20,21 +24,31 @@
 
   <div class="card shadow-sm">
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+      <table class="table table-hover align-middle mb-0" id="users-table">
         <thead>
           <tr>
+            <th>Status</th>
             <th>User</th>
             <th>Email</th>
             <th>Joined</th>
+            <th>Last Active</th>
             <th>Lessons Done</th>
             <th>Quizzes</th>
             <th>Labs</th>
             <th>Role</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for row in rows %}
-            <tr>
+            <tr data-user-id="{{ row.user.id }}">
+              <td>
+                {% if row.is_online %}
+                  <span class="badge bg-success status-badge"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem;"></i>Online</span>
+                {% else %}
+                  <span class="badge bg-secondary status-badge">Offline</span>
+                {% endif %}
+              </td>
               <td class="fw-semibold">
                 {% if row.user.avatar %}
                   <img src="{{ avatar_src(row.user) }}" alt="" class="avatar-circle-sm me-2">
@@ -45,6 +59,13 @@
               </td>
               <td class="text-muted small">{{ row.user.email }}</td>
               <td class="small">{{ row.user.created_at|localtime('%Y-%m-%d') }}</td>
+              <td class="small text-muted last-seen">
+                {% if row.last_seen %}
+                  {{ row.last_seen|localtime('%b %d, %I:%M %p') }}
+                {% else %}
+                  Never
+                {% endif %}
+              </td>
               <td>
                 <span class="badge bg-info bg-opacity-10 text-info">{{ row.lessons_done }} / {{ total_lessons }}</span>
               </td>
@@ -61,13 +82,65 @@
                   <span class="badge bg-secondary">Member</span>
                 {% endif %}
               </td>
+              <td>
+                <a href="{{ url_for('admin_user_progress', uid=row.user.id) }}" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-list-check me-1"></i>Progress
+                </a>
+              </td>
             </tr>
           {% else %}
-            <tr><td colspan="7" class="text-center text-muted py-4">No users yet.</td></tr>
+            <tr><td colspan="10" class="text-center text-muted py-4">No users yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const API_URL = "{{ url_for('api_online_users') }}";
+  const REFRESH_INTERVAL = 30000; // 30 seconds
+
+  function refreshUsers() {
+    fetch(API_URL)
+      .then(r => r.json())
+      .then(data => {
+        // Update online/offline counts
+        document.getElementById('online-count').textContent = data.online_count;
+        document.getElementById('offline-count').textContent = data.total - data.online_count;
+
+        // Update each user row
+        data.rows.forEach(function(row) {
+          const tr = document.querySelector('tr[data-user-id="' + row.id + '"]');
+          if (!tr) return;
+
+          // Update status badge
+          const statusTd = tr.querySelector('td:first-child .status-badge');
+          if (statusTd) {
+            if (row.is_online) {
+              statusTd.className = 'badge bg-success status-badge';
+              statusTd.innerHTML = '<i class="bi bi-circle-fill me-1" style="font-size: 0.4rem;"></i>Online';
+            } else {
+              statusTd.className = 'badge bg-secondary status-badge';
+              statusTd.textContent = 'Offline';
+            }
+          }
+
+          // Update last seen
+          const lastSeenTd = tr.querySelector('.last-seen');
+          if (lastSeenTd) {
+            lastSeenTd.textContent = row.last_seen;
+          }
+        });
+      })
+      .catch(err => console.error('Failed to refresh online status:', err));
+  }
+
+  // Initial refresh then interval
+  setInterval(refreshUsers, REFRESH_INTERVAL);
+})();
+</script>
 {% endblock %}

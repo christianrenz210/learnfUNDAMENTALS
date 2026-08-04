@@ -133,7 +133,7 @@
                 {{ video_block(video, loop.last) }}
               {% endfor %}
             {% endif %}
-            {% set video_langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("sql", "SQL")] %}
+            {% set video_langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("sql", "SQL"), ("laravel", "Laravel"), ("react", "React")] %}
             <ul class="nav nav-tabs" id="videoTabs" role="tablist">
               {% for key, label in video_langs if lesson.videos.get(key) %}
                 <li class="nav-item" role="presentation">
@@ -193,6 +193,12 @@
           <ul class="nav nav-tabs" id="langTabs" role="tablist">
             {% if lesson.code.get('sql') %}
               {% set langs = [("sql", "SQL")] %}
+            {% elif lesson.code.get('shell') %}
+              {% set langs = [("shell", "Shell")] %}
+            {% elif lesson.code.get('php') %}
+              {% set langs = [("php", "Laravel"), ("javascript", "React")] %}
+            {% elif lesson.code.get('javascript') and lesson.code.get('python') %}
+              {% set langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("sql", "SQL")] %}
             {% else %}
               {% set langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java")] %}
             {% endif %}
@@ -632,9 +638,12 @@
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/sql/sql.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/php/php.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/shell/shell.min.js"></script>
 <script>
 (function () {
-  const MODES = { python: 'python', cpp: 'text/x-c++src', java: 'text/x-java', sql: 'text/x-sql' };
+  const MODES = { python: 'python', cpp: 'text/x-c++src', java: 'text/x-java', sql: 'text/x-sql', php: 'text/x-php', javascript: 'javascript', shell: 'shell' };
   const editors = {};
   const sessions = {};
   const pollTimers = {};

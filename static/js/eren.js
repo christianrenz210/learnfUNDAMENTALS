@@ -66,15 +66,70 @@
     saveStore();
   }
 
+  function processVideoEmbeds(text) {
+    var tokens = [];
+
+    // 1. YouTube iframe elements
+    text = text.replace(/<iframe[^>]*src=["'](?:https?:)?\/\/(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]+)["'][^>]*>(?:<\/iframe>)?/gi, function(match, id) {
+      var token = '___VIDEO_EMBED_' + tokens.length + '___';
+      var titleMatch = match.match(/title=["']([^"']+)["']/i);
+      tokens.push({ id: id, title: titleMatch ? titleMatch[1] : 'Video Lesson' });
+      return token;
+    });
+
+    // 2. Custom [video:ID:TITLE] or [video:ID] markers
+    text = text.replace(/\[video:([a-zA-Z0-9_-]+)(?::([^\]]+))?\]/gi, function(match, id, title) {
+      var token = '___VIDEO_EMBED_' + tokens.length + '___';
+      tokens.push({ id: id, title: title || 'Video Lesson' });
+      return token;
+    });
+
+    // 3. YouTube Embed or Watch or Short URLs
+    text = text.replace(/https?:\/\/(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]+)[^\s<]*/gi, function(match, id) {
+      var token = '___VIDEO_EMBED_' + tokens.length + '___';
+      tokens.push({ id: id, title: 'Video Lesson' });
+      return token;
+    });
+
+    text = text.replace(/https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)[^\s<]*/gi, function(match, id) {
+      var token = '___VIDEO_EMBED_' + tokens.length + '___';
+      tokens.push({ id: id, title: 'Video Lesson' });
+      return token;
+    });
+
+    text = text.replace(/https?:\/\/youtu\.be\/([a-zA-Z0-9_-]+)[^\s<]*/gi, function(match, id) {
+      var token = '___VIDEO_EMBED_' + tokens.length + '___';
+      tokens.push({ id: id, title: 'Video Lesson' });
+      return token;
+    });
+
+    return { text: text, tokens: tokens };
+  }
+
   function appendAssistText(wrapper, txt) {
     var el = document.createElement('div');
     el.className = 'assist-text';
-    var html = txt
+
+    var res = processVideoEmbeds(txt);
+    var textWithTokens = res.text;
+    var tokens = res.tokens;
+
+    var html = textWithTokens
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
+
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    tokens.forEach(function(item, idx) {
+      var token = '___VIDEO_EMBED_' + idx + '___';
+      var embedHtml = '<div class="ratio ratio-16x9 my-2 rounded overflow-hidden shadow-sm">' +
+        '<iframe src="https://www.youtube.com/embed/' + item.id + '" title="' + (item.title || 'Video Lesson') + '" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>' +
+        '</div>';
+      html = html.replace(token, embedHtml);
+    });
+
     el.innerHTML = html;
     wrapper.appendChild(el);
   }
@@ -240,7 +295,7 @@
 
   function renderBotContent(bubble, text) {
     bubble.textContent = '';
-    if (/```/.test(text)) {
+    if (/```|<iframe|youtube\.com|youtu\.be|\[video:/.test(text)) {
       bubble.appendChild(buildReply(text));
     } else {
       bubble.textContent = text;
@@ -272,7 +327,7 @@
 
   function finishTypingBubble(bubble, text) {
     bubble.classList.remove('assist-typing');
-    if (/```/.test(text)) {
+    if (/```|<iframe|youtube\.com|youtu\.be|\[video:/.test(text)) {
       renderBotContent(bubble, text);
       return;
     }

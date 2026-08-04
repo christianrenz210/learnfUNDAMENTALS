@@ -56,7 +56,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from lessons_data import LESSONS, LONG_QUIZZES
 
-SECTION_ORDER = ["Fundamentals", "Advanced Database System", "SQL Injection"]
+SECTION_ORDER = ["Fundamentals", "Advanced Fundamentals", "Advanced Database System", "SQL Injection"]
 SECTION_LESSON_MINUTES = {"Fundamentals": 40, "Advanced Database System": 45}
 AVAILABLE_LESSONS = [l for l in LESSONS if not l.get("coming_soon")]
 
@@ -145,6 +145,7 @@ class User(UserMixin, db.Model):
     lab_completed = db.Column(db.Integer, default=0)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     progress = db.relationship("LessonProgress", backref="user", cascade="all, delete-orphan")
     quiz_scores = db.relationship("QuizScore", backref="user", cascade="all, delete-orphan")
     section_quiz_scores = db.relationship("SectionQuizScore", backref="user", cascade="all, delete-orphan")
@@ -229,6 +230,13 @@ def admin_required(view):
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+@app.before_request
+def update_last_seen():
+    if current_user.is_authenticated:
+        current_user.last_seen = datetime.utcnow()
+        db.session.commit()
 
 
 def is_lab_completed(user, lesson_id):
@@ -640,7 +648,9 @@ def dashboard():
 @admin_required
 def admin_dashboard():
     now = datetime.utcnow()
+    online_threshold = now - timedelta(minutes=5)
     total_users = User.query.count()
+    online_users = User.query.filter(User.last_seen >= online_threshold).count()
     new_users_7d = User.query.filter(
         User.created_at >= now - timedelta(days=7)
     ).count()
@@ -655,6 +665,7 @@ def admin_dashboard():
     return render_template(
         "admin.html",
         total_users=total_users,
+        online_users=online_users,
         new_users_7d=new_users_7d,
         total_lessons_done=total_lessons_done,
         total_quizzes=total_quizzes,
@@ -694,18 +705,175 @@ def admin_activity():
 @login_required
 @admin_required
 def admin_users():
+    now = datetime.utcnow()
+    online_threshold = now - timedelta(minutes=5)
     users = User.query.order_by(User.created_at.desc()).all()
     rows = []
+    online_count = 0
     for u in users:
+        is_online = u.last_seen and u.last_seen >= online_threshold
+        if is_online:
+            online_count += 1
         rows.append(
             {
                 "user": u,
                 "lessons_done": len(u.progress),
                 "quizzes": len(u.quiz_scores),
                 "labs": len(db.session.query(LabProgress).filter_by(user_id=u.id).all()),
+                "is_online": is_online,
+                "last_seen": u.last_seen,
             }
         )
-    return render_template("admin_users.html", rows=rows, total=len(rows), total_lessons=len(AVAILABLE_LESSONS))
+    return render_template("admin_users.html", rows=rows, total=len(rows), total_lessons=len(AVAILABLE_LESSONS), online_count=online_count)
+
+
+@app.route("/admin/api/online-users")
+@login_required
+@admin_required
+def api_online_users():
+    now = datetime.utcnow()
+    online_threshold = now - timedelta(minutes=5)
+    users = User.query.order_by(User.created_at.desc()).all()
+    rows = []
+    online_count = 0
+    for u in users:
+        is_online = u.last_seen and u.last_seen >= online_threshold
+        if is_online:
+            online_count += 1
+        rows.append({
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "avatar": u.avatar,
+            "is_admin": u.is_admin,
+            "is_online": is_online,
+            "last_seen": u.last_seen.strftime("%b %d, %I:%M %p") if u.last_seen else "Never",
+            "lessons_done": len(u.progress),
+            "quizzes": len(u.quiz_scores),
+            "labs": len(db.session.query(LabProgress).filter_by(user_id=u.id).all()),
+        })
+    return jsonify({"rows": rows, "total": len(rows), "online_count": online_count})
+
+
+@app.route("/admin/api/stats")
+@login_required
+@admin_required
+def api_admin_stats():
+    now = datetime.utcnow()
+    online_threshold = now - timedelta(minutes=5)
+    return jsonify({
+        "total_users": User.query.count(),
+        "online_users": User.query.filter(User.last_seen >= online_threshold).count(),
+        "new_users_7d": User.query.filter(User.created_at >= now - timedelta(days=7)).count(),
+        "total_lessons_done": LessonProgress.query.count(),
+        "total_quizzes": QuizScore.query.count(),
+        "total_labs": LabProgress.query.count(),
+    })
+
+
+@app.route("/admin/user/<int:uid>/progress")
+@login_required
+@admin_required
+def admin_user_progress(uid):
+    user = db.session.get(User, uid)
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin_users"))
+
+    completed = get_completed_ids(user)
+    scores = get_quiz_scores(user)
+    lab_ids = get_completed_lab_ids(user)
+
+    # Build lesson progress list
+    lessons_progress = []
+    for l in LESSONS:
+        if l.get("coming_soon"):
+            continue
+        lid = l["id"]
+        lessons_progress.append({
+            "lesson": l,
+            "completed": lid in completed,
+            "quiz_score": scores.get(lid),
+            "lab_completed": lid in lab_ids,
+        })
+
+    # Section quiz scores
+    section_scores = {}
+    for name in SECTION_ORDER:
+        sqs = SectionQuizScore.query.filter_by(user_id=user.id, section=name).first()
+        section_scores[name] = sqs
+
+    return render_template(
+        "admin_user_progress.html",
+        target_user=user,
+        lessons_progress=lessons_progress,
+        section_scores=section_scores,
+        total_lessons=len([l for l in LESSONS if not l.get("coming_soon")]),
+    )
+
+
+@app.route("/admin/user/<int:uid>/reset-lesson/<int:lid>", methods=["POST"])
+@login_required
+@admin_required
+def admin_reset_lesson(uid, lid):
+    user = db.session.get(User, uid)
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin_users"))
+
+    lesson = next((l for l in LESSONS if l["id"] == lid), None)
+    if not lesson:
+        flash("Lesson not found.", "danger")
+        return redirect(url_for("admin_user_progress", uid=uid))
+
+    # Remove lesson completion
+    deleted = LessonProgress.query.filter_by(user_id=uid, lesson_id=lid).delete()
+    # Remove quiz score
+    deleted_quiz = QuizScore.query.filter_by(user_id=uid, lesson_id=lid).delete()
+    # Remove lab completion if applicable
+    deleted_lab = LabProgress.query.filter_by(user_id=uid, lesson_id=lid).delete()
+    db.session.commit()
+
+    log_activity(user, "Admin reset lesson", f"Admin reset lesson '{lesson['title']}' (completed={deleted}, quiz={deleted_quiz}, lab={deleted_lab})")
+    flash(f"Reset lesson '{lesson['title']}' for {user.username}.", "success")
+    return redirect(url_for("admin_user_progress", uid=uid))
+
+
+@app.route("/admin/user/<int:uid>/reset-section-quiz/<section>", methods=["POST"])
+@login_required
+@admin_required
+def admin_reset_section_quiz(uid, section):
+    user = db.session.get(User, uid)
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin_users"))
+
+    deleted = SectionQuizScore.query.filter_by(user_id=uid, section=section).delete()
+    db.session.commit()
+
+    log_activity(user, "Admin reset section quiz", f"Admin reset section quiz for '{section}' (deleted={deleted})")
+    flash(f"Reset section quiz '{section}' for {user.username}.", "success")
+    return redirect(url_for("admin_user_progress", uid=uid))
+
+
+@app.route("/admin/user/<int:uid>/reset-all", methods=["POST"])
+@login_required
+@admin_required
+def admin_reset_all(uid):
+    user = db.session.get(User, uid)
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin_users"))
+
+    deleted_progress = LessonProgress.query.filter_by(user_id=uid).delete()
+    deleted_quizzes = QuizScore.query.filter_by(user_id=uid).delete()
+    deleted_section_quizzes = SectionQuizScore.query.filter_by(user_id=uid).delete()
+    deleted_labs = LabProgress.query.filter_by(user_id=uid).delete()
+    db.session.commit()
+
+    log_activity(user, "Admin reset all progress", f"Admin reset ALL progress (lessons={deleted_progress}, quizzes={deleted_quizzes}, section_quizzes={deleted_section_quizzes}, labs={deleted_labs})")
+    flash(f"Reset ALL progress for {user.username}.", "success")
+    return redirect(url_for("admin_user_progress", uid=uid))
 
 
 @app.route("/certificate/<path:name>")
@@ -771,12 +939,41 @@ EREN_SYSTEM_PROMPT = (
     "- Fundamentals: Introduction to Programming, Programming History, Variables and Data Types, "
     "Input and Output, Operators, Logical Operators, Conditionals (if/else), Loops, Functions, "
     "Arrays and Lists, Basic Problem Solving.\n"
+    "- Advanced Fundamentals: Introduction to GitHub, Web Deployment Fundamentals, Deploying with Render, Deploying with Netlify.\n"
     "- Advanced Database System: DBMS overview, ER model and keys, Normalization (1NF-3NF), "
     "SQL DDL, DML, SELECT and filtering, JOINs, Subqueries and Aggregates.\n"
     "- SQL Injection: introduction and how it works.\n\n"
     "Rules: each lesson ends with a quiz (one attempt). Each section ends with a Long Quiz "
     "(15 questions, 20 seconds each, 2 attempts). The leaderboard ranks users by total points: "
-    "quiz scores plus 2 points per SQL Injection lab."
+    "quiz scores plus 2 points per SQL Injection lab.\n\n"
+    "Video Lessons & Embedding:\n"
+    "When a student asks to watch, see, or receive a video lesson for a topic (e.g., 'papanood ng video', 'send video lesson', 'video on loops', etc.), you CAN and SHOULD embed the video using YouTube iframe format: `<iframe src=\"https://www.youtube.com/embed/VIDEO_ID\" title=\"TITLE\" allowfullscreen></iframe>` or `https://www.youtube.com/embed/VIDEO_ID`.\n"
+    "Available lesson video IDs:\n"
+    "- Introduction to Programming: Python (9QKe2RvjG-A), C++ (LApkQYRUru8), Java (Pyx9oLYpbi4)\n"
+    "- Programming History: General (RU1u-js7db8), Python (GfH4QL4VqJ0), C++ (lI7tMxzSJ7w), Java (ZqGSg4b_cZA)\n"
+    "- Variables & Data Types: Python (2SG133xkpMQ), C++ (E4yj6QX-TW8), Java (cD-6C39RPKs)\n"
+    "- Input & Output: Python (7iZOEoGWnuU), C++ (vkALQRM5NNU), Java (sk_TzAjZ3zs)\n"
+    "- Operators: Python (RYEDDygFNx8), C++ (ib-Qfx7-iIQ), Java (M0lnSma7qMw)\n"
+    "- Logical Operators: Python (srYNLwnEfeo), C++ (JrcSEPKn6uI), Java (h7pGky1QaJs)\n"
+    "- Conditionals: Python (aXWb4rDK8NE), C++ (ISLTa95qJJA), Java (GaAKcy9cEcU)\n"
+    "- Loops: Python (EX47v75YM1Y), C++ (-Qev7T2a_Lc), Java (Mt-gZKX3dq0)\n"
+    "- Functions: Python (89cGQjB5R4M), C++ (67I3ZEmyVKQ), Java (v5p_SUfi710)\n"
+    "- Arrays & Lists: Python (dpwp1NADaFU), C++ (dRyf8cLyKgA), Java (9dr2mHYYoug)\n"
+    "- Basic Problem Solving: (6XJ8294lC0c)\n"
+    "- Database Systems Overview: (wR0jg0eQsZA)\n"
+    "- ER Model & Keys: (xsg9BDiwiJE)\n"
+    "- Normalization: (GFQaEYEc8_8)\n"
+    "- SQL Basics & DDL: (3Qbq61A_sNs)\n"
+    "- SQL DML: (ku3vMAP0h0s)\n"
+    "- SQL SELECT & Filtering: (4Uv0o8IBqw0)\n"
+    "- SQL JOINs: (Yh4CrPHVBdE)\n"
+    "- Subqueries & Aggregates: (GpC0XyiJPEo)\n"
+    "- Web Deployment Fundamentals: Laravel (m-QO9Qp_wRQ), React (SuZBpX7Y7EA)\n"
+    "- Introduction to GitHub: (tRZGeaHPoaw)\n"
+    "- Deploying with Render: (srudWEWKPv0)\n"
+    "- Deploying with Netlify: (IH95RG9Y6L4, YUtNzwxOVYY)\n"
+    "- SQL Injection Intro: (wcaiKgQU6VE)\n"
+    "- How SQL Injection Works: (FwIUkAwKzG8)"
 )
 
 
@@ -978,6 +1175,60 @@ GENERAL_KNOWLEDGE = [
         "how computers and languages like Python, C++, and Java evolved, and even includes "
         "documentaries you can watch right in the lesson.",
     ),
+    (
+        ["deploy", "deployment", "deploying", "hosting", "production"],
+        "Deployment is the process of moving your app from your local machine to a server "
+        "so anyone on the internet can use it. The Fundamentals section has a full lesson on "
+        "Web Deployment Fundamentals covering Laravel, React, hosting platforms, and CI/CD. "
+        "Ask me for a video lesson on deployment!",
+    ),
+    (
+        ["domain", "domain name", "dns"],
+        "A domain name (like example.com) is a human-readable address that points to your "
+        "server's IP address. DNS (Domain Name System) translates the domain into the actual "
+        "IP. You can buy domains from registrars like Namecheap or Cloudflare and point them "
+        "to your hosting provider.",
+    ),
+    (
+        ["ci/cd", "ci cd", "continuous integration", "continuous deployment"],
+        "CI/CD (Continuous Integration / Continuous Deployment) is a practice where code "
+        "changes are automatically tested and deployed. GitHub Actions is a popular tool "
+        "that runs your tests and deploys your app every time you push to GitHub.",
+    ),
+    (
+        ["vercel", "netlify", "github pages", "cloudflare pages"],
+        "Vercel, Netlify, GitHub Pages, and Cloudflare Pages are free hosting platforms "
+        "perfect for deploying React apps and static sites. They connect to your GitHub "
+        "repo and auto-deploy on every push. The Web Deployment Fundamentals lesson covers this!",
+    ),
+    (
+        ["github", "git", "repository", "repo", "commit", "branch", "merge", "pull request"],
+        "GitHub is the world's largest code hosting platform. Git is the version control "
+        "tool that tracks changes. The Fundamentals section has a full lesson on "
+        "Introduction to GitHub covering repos, commits, branches, and pull requests. "
+        "Ask me for a video lesson on GitHub!",
+    ),
+    (
+        ["render", "render.com", "render deploy", "deploy on render"],
+        "Render is a cloud platform (PaaS) that makes deploying web apps effortless. "
+        "Connect your GitHub repo, set your build/start commands, and Render handles SSL, "
+        "auto-deploys, and scaling. The Deploying with Render lesson covers Laravel, React, "
+        "and Node.js deployments with free tier support. Ask me for a video lesson!",
+    ),
+    (
+        ["netlify", "netlify.com", "netlify deploy", "deploy on netlify"],
+        "Netlify is a web platform for building, deploying, and managing modern web projects. "
+        "Deploy static sites, SPAs, and JAMstack apps instantly from Git. Netlify offers free "
+        "SSL, drag-and-drop deployment, serverless functions, and form handling. The Deploying "
+        "with Netlify lesson covers React, Vue, and HTML/CSS/JS deployments. Ask me for a video lesson!",
+    ),
+    (
+        ["version control", "version control system"],
+        "Version control tracks every change to your code over time. Git is the most "
+        "popular version control system, and GitHub is where you store Git repositories "
+        "online. This lets you undo mistakes, collaborate with teammates, and deploy with "
+        "CI/CD. Check out the Introduction to GitHub lesson!",
+    ),
 ]
 
 
@@ -999,8 +1250,105 @@ def is_definition_question(text):
     )
 
 
+def get_video_reply(text):
+    msg_lower = text.lower()
+    video_triggers = [
+        "video", "papanood", "panuorin", "panoorin", "papanuod", "panood",
+        "watch", "embed", "iframe", "papanoodin", "pasend ng video", "pa send ng video",
+        "patingin ng video", "tutorial video", "video lesson", "send video"
+    ]
+    is_asking_video = any(vt in msg_lower for vt in video_triggers)
+    if not is_asking_video:
+        return None
+
+    lang_filter = None
+    if "python" in msg_lower:
+        lang_filter = "python"
+    elif "c++" in msg_lower or "cpp" in msg_lower or "c plus plus" in msg_lower:
+        lang_filter = "cpp"
+    elif "java" in msg_lower:
+        lang_filter = "java"
+
+    topic_mappings = [
+        (["variable", "variables", "data type", "datatype", "integer", "boolean", "float", "string", "char"], 2),
+        (["input", "output", "io", "print", "scanner", "cin", "cout"], 3),
+        (["operator", "operators", "arithmetic", "modulo", "remainder"], 4),
+        (["logical", "logical operator", "and", "or", "not"], 5),
+        (["conditional", "conditionals", "if else", "if-else", "elif", "else if", "decision"], 6),
+        (["loop", "loops", "for loop", "while", "repeat", "iteration"], 7),
+        (["function", "functions", "method", "methods", "def", "return"], 8),
+        (["array", "arrays", "list", "lists", "vector", "collection"], 9),
+        (["problem solving", "pseudocode", "flowchart", "algorithm"], 10),
+        (["history", "kasaysayan", "creator", "story"], 29),
+        (["dbms", "database overview", "database system", "database"], 11),
+        (["er model", "erd", "entity", "key", "primary key", "foreign key"], 12),
+        (["normalization", "1nf", "2nf", "3nf"], 13),
+        (["ddl", "create table", "alter", "drop"], 14),
+        (["dml", "insert", "update", "delete"], 15),
+        (["select", "where", "filter", "dql"], 16),
+        (["join", "joins", "inner join", "left join"], 17),
+        (["subquery", "subqueries", "aggregate", "group by", "having"], 18),
+        (["deploy", "deployment", "deploying", "hosting", "host", "production", "ci/cd", "ci cd", "vercel", "github pages", "laravel deploy", "react deploy"], 30),
+        (["github", "git", "repository", "repo", "commit", "branch", "merge", "pull request", "clone"], 31),
+        (["render", "deploy render", "render deploy", "render.com", "render yaml"], 32),
+        (["netlify", "deploy netlify", "netlify deploy", "netlify.com", "netlify.toml", "netlify drop"], 33),
+        (["sql injection intro", "sqli intro", "what is sql injection"], 19),
+        (["sql injection", "sqli", "injection"], 20),
+        (["intro", "introduction", "basics", "programming"], 1),
+    ]
+
+    matched_lesson = None
+    for keywords, lid in topic_mappings:
+        if any(re.search(r"(?<!\w)" + re.escape(k) + r"(?!\w)", msg_lower) for k in keywords):
+            matched_lesson = next((l for l in LESSONS if l["id"] == lid), None)
+            if matched_lesson:
+                break
+
+    if not matched_lesson:
+        matched_lesson = next((l for l in LESSONS if l["id"] == 1), None)
+
+    if not matched_lesson:
+        return "I couldn't find a video lesson for that topic yet. Try asking for a video lesson on **Variables**, **Operators**, **Conditionals**, **Loops**, **Functions**, **Arrays**, or **SQL**!"
+
+    videos_data = matched_lesson.get("videos")
+    if not videos_data:
+        return f"No video lesson is currently available for **{matched_lesson['title']}**."
+
+    video_items = []
+    if isinstance(videos_data, dict):
+        if lang_filter and lang_filter in videos_data and videos_data[lang_filter]:
+            video_items = videos_data[lang_filter]
+        elif "general" in videos_data and videos_data["general"]:
+            video_items = videos_data["general"]
+        else:
+            for lk in ["python", "cpp", "java"]:
+                if lk in videos_data and videos_data[lk]:
+                    video_items.extend(videos_data[lk])
+                    break
+    elif isinstance(videos_data, list):
+        video_items = videos_data
+
+    if not video_items:
+        return f"No video lesson found for **{matched_lesson['title']}**."
+
+    reply_lines = [f"Here is the video lesson for **{matched_lesson['title']}**:\n"]
+    for v in video_items[:2]:
+        v_title = v.get("title", matched_lesson["title"])
+        v_id = v.get("id")
+        v_channel = v.get("channel", "")
+        channel_str = f" ({v_channel})" if v_channel else ""
+        reply_lines.append(f"**{v_title}**{channel_str}")
+        reply_lines.append(f'<iframe src="https://www.youtube.com/embed/{v_id}" title="{v_title}" allowfullscreen></iframe>\n')
+
+    reply_lines.append("You can play and watch the video lesson directly right here! Let me know if you need another video lesson or topic.")
+    return "\n".join(reply_lines)
+
+
 def assistant_reply(message):
     text = message.lower().strip()
+    v_reply = get_video_reply(text)
+    if v_reply:
+        return v_reply
 
     def brief(lesson_id, lead):
         lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
@@ -1257,8 +1605,12 @@ def assistant_reply(message):
         (lambda: has("sql", "database", "dbms", "normaliz", "er model", "entity", "foreign key", "primary key", "ddl", "dml", "dql", "join"), "The Advanced Database System section covers databases and SQL: DBMS overview, ER model and keys, normalization, DDL (CREATE/ALTER/DROP), DML (INSERT/UPDATE/DELETE), SELECT and filtering, JOINs, and subqueries with aggregates. The SQL examples in those lessons run right in your browser against a live database engine."),
         (lambda: has("error", "debug", "compile", "bug"), "Debugging tips: read the error message first, check semicolons and braces in C++/Java, check indentation in Python, and add print statements to see what your code is doing. The code editor lets you test changes instantly."),
         (lambda: has("register", "sign up", "account", "free"), "Creating an account is free and takes seconds. It saves your progress, quiz scores, profile picture, and leaderboard standing."),
-        (lambda: has("how it works", "how does this work", "site work"), "It is simple: create an account, read the lessons, run code live in the browser, take the quiz after each lesson, and climb the leaderboard. The Fundamentals section covers programming basics, while the Advanced Database System section teaches databases and SQL."),
+        (lambda: has("how it works", "how does this work", "site work"), "It is simple: create an account, read the lessons, run code live in the browser, take the quiz after each lesson, and climb the leaderboard. The Fundamentals section covers programming basics, the Advanced Fundamentals section teaches GitHub and deployment, and the Advanced Database System section covers databases and SQL."),
         (lambda: has("example code", "code example", "sample code", "show me code", "give me code", "write code", "code for", "snippet", "kodigo", "sample"), code_example(text)),
+        (lambda: has("netlify", "netlify.com", "deploy netlify", "netlify deploy", "netlify.toml"), brief(33, "Netlify is a web platform for building and deploying modern web projects. Deploy static sites, SPAs, and JAMstack apps instantly from Git. Use a netlify.toml file to define build settings. The Deploying with Netlify lesson covers forms, functions, and custom domains.")),
+        (lambda: has("render", "render.com", "deploy render", "render deploy"), brief(32, "Render is a cloud platform that deploys your app from GitHub in minutes. It handles SSL, auto-deploys, databases, and scaling. Use a render.yaml file to define your infrastructure. The Deploying with Render lesson covers the full setup.")),
+        (lambda: has("github", "git", "repository", "repo", "commit", "branch", "merge", "pull request", "clone"), brief(31, "GitHub is the world's largest code hosting platform. Git tracks changes to your code, GitHub hosts repos online, and pull requests let you collaborate safely. The Introduction to GitHub lesson covers everything from git init to branching strategies.")),
+        (lambda: has("deploy", "deployment", "deploying", "hosting", "production", "ci/cd", "ci cd", "vercel", "github pages"), brief(30, "Web Deployment Fundamentals covers deploying your app to the internet. Laravel needs a server with PHP and Nginx; React apps can be deployed to Vercel, Netlify, or Cloudflare Pages. Always use environment variables for secrets and set APP_DEBUG=false in production.")),
         (lambda: has("variable", "variables", "data type", "datatype", "integer", "boolean", "float", "string", "char"), brief(2, "Variables store values in memory. Python infers the type automatically; C++ and Java require you to declare it before the name.")),
         (lambda: has("logical"), brief(5, "Logical operators combine true/false values. Python: and, or, not. C++/Java: &&, ||, !. Both conditions are checked to build bigger conditions.")),
         (lambda: has("operator", "operators", "arithmetic", "modulo", "remainder"), brief(4, "Operators do math and comparisons. Arithmetic: + - * / %. Relational: == != < > <= >=. Comparison always produces true or false.")),
