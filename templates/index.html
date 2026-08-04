@@ -10,10 +10,10 @@
         <div class="col-lg-7">
           <h1 class="display-4 fw-bold">Learn the Fundamentals of Programming</h1>
           <p class="lead">
-            Free lessons in Python, C++, Java, and SQL — plus a hands-on
-            SQL injection security lab — designed for first-year
+            Free lessons in Python, C++, Java, SQL, and Web Deployment — plus a
+            hands-on SQL injection security lab — designed for first-year
             college students. Understand the core concepts that every
-            programming language shares.
+            programming language shares, and deploy your projects to the web.
           </p>
           <div class="d-flex gap-2 flex-wrap">
             {% if current_user.is_authenticated %}
@@ -101,6 +101,42 @@
           </div>
         </div>
       </div>
+      <div class="col-md-4">
+        <div class="card h-100 feature-card border-0 shadow-sm">
+          <div class="card-body text-center p-4">
+            <i class="bi bi-cloud-upload fs-1 text-primary"></i>
+            <h5 class="card-title mt-3">Learn to Deploy</h5>
+            <p class="card-text">
+              Deploy your projects to GitHub, Render, and Netlify — learn
+              real-world web deployment skills.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 feature-card border-0 shadow-sm">
+          <div class="card-body text-center p-4">
+            <i class="bi bi-robot fs-1 text-primary"></i>
+            <h5 class="card-title mt-3">AI Assistant (E.R.E.N)</h5>
+            <p class="card-text">
+              Get instant help from our AI assistant. Ask questions, get video
+              tutorials, and learn at your own pace.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 feature-card border-0 shadow-sm">
+          <div class="card-body text-center p-4">
+            <i class="bi bi-trophy fs-1 text-primary"></i>
+            <h5 class="card-title mt-3">Leaderboards & Certificates</h5>
+            <p class="card-text">
+              Compete with classmates, earn points, and earn certificates for
+              completing sections and the full course.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -109,8 +145,8 @@
   <div class="container">
     <h2 class="text-center mb-2">How It Works</h2>
     <p class="text-center text-muted mb-5">
-      Go from zero to your first running program — and beyond into databases
-      and security — in four simple steps.
+      Go from zero to your first running program — and beyond into databases,
+      security, and deployment — in four simple steps.
     </p>
     <div class="how-flow">
       <div class="how-flow-item">
@@ -135,9 +171,9 @@
             <i class="bi bi-book fs-2 text-primary"></i>
             <h5 class="card-title mt-3">Read the Lessons</h5>
             <p class="card-text">
-              Work through 21 lessons in three sections: programming fundamentals
-              (Python, C++, Java), advanced database systems, and SQL injection
-              security.
+              Work through 25+ lessons in four sections: programming fundamentals
+              (Python, C++, Java), advanced fundamentals (GitHub, deployment),
+              advanced database systems, and SQL injection security.
             </p>
           </div>
         </div>
@@ -181,10 +217,11 @@
     <h2 class="text-center mb-4">What You Will Learn</h2>
     <div class="row g-4">
       <div class="col-12">
-        <h5 class="mb-3"><i class="bi bi-mortarboard text-primary me-2"></i>Programming Fundamentals <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">10 lessons</span></h5>
+        <h5 class="mb-3"><i class="bi bi-mortarboard text-primary me-2"></i>Programming Fundamentals <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">11 lessons</span></h5>
       </div>
       {% for lesson in [
         {"icon": "bi-code-slash", "title": "Introduction to Programming", "desc": "How programs work and how code is structured."},
+        {"icon": "bi-clock-history", "title": "Programming History", "desc": "The evolution of programming languages."},
         {"icon": "bi-box-seam", "title": "Variables and Data Types", "desc": "Storing values: numbers, text, and booleans."},
         {"icon": "bi-input-cursor-text", "title": "Input and Output", "desc": "Reading from the keyboard and printing results."},
         {"icon": "bi-plus-square", "title": "Operators", "desc": "Math, comparisons, and calculations."},
@@ -207,6 +244,29 @@
           </div>
         </div>
       {% endfor %}
+
+      <div class="col-12">
+        <h5 class="mb-3 mt-2"><i class="bi bi-cloud-arrow-up text-primary me-2"></i>Advanced Fundamentals <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">4 lessons</span></h5>
+      </div>
+      {% for lesson in [
+        {"icon": "bi-github", "title": "Introduction to GitHub", "desc": "Version control and collaboration with Git."},
+        {"icon": "bi-globe", "title": "Web Deployment Fundamentals", "desc": "Deploying web apps to the internet."},
+        {"icon": "bi-cloud-arrow-up", "title": "Deploying with Render", "desc": "Deploy Laravel and React apps to Render."},
+        {"icon": "bi-cloud-arrow-up", "title": "Deploying with Netlify", "desc": "Deploy static sites and SPAs to Netlify."}
+      ] %}
+        <div class="col-md-4 col-sm-6">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex align-items-start">
+              <i class="bi {{ lesson['icon'] }} fs-3 text-primary me-3"></i>
+              <div>
+                <h6 class="mb-1">{{ lesson["title"] }}</h6>
+                <p class="text-muted small mb-0">{{ lesson["desc"] }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+
       <div class="col-12">
         <h5 class="mb-3 mt-2"><i class="bi bi-database text-primary me-2"></i>Advanced Database System <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">8 lessons</span></h5>
       </div>
@@ -232,20 +292,13 @@
           </div>
         </div>
       {% endfor %}
+
       <div class="col-12">
-        <h5 class="mb-3 mt-2"><i class="bi bi-shield-exclamation text-primary me-2"></i>SQL Injection <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">10 lessons</span></h5>
+        <h5 class="mb-3 mt-2"><i class="bi bi-shield-exclamation text-primary me-2"></i>SQL Injection <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">2 lessons</span></h5>
       </div>
       {% for lesson in [
         {"icon": "bi-shield-exclamation", "title": "Introduction to SQL Injection", "desc": "How attackers abuse user input."},
-        {"icon": "bi-terminal", "title": "How SQL Injection Works", "desc": "Injection points and string concatenation.", "soon": true},
-        {"icon": "bi-diagram-3", "title": "Types of SQL Injection", "desc": "In-band, blind, and out-of-band attacks.", "soon": true},
-        {"icon": "bi-collection", "title": "UNION-Based SQL Injection", "desc": "Stealing data from other tables.", "soon": true},
-        {"icon": "bi-eye-slash", "title": "Blind SQL Injection", "desc": "Extracting data with yes/no questions.", "soon": true},
-        {"icon": "bi-database", "title": "SQL Injection in Real-World Queries", "desc": "INSERT, UPDATE, DELETE, and second-order attacks.", "soon": true},
-        {"icon": "bi-shield-check", "title": "Parameterized Queries", "desc": "Prepared statements that stop injection.", "soon": true},
-        {"icon": "bi-shield-lock", "title": "Defense in Depth", "desc": "Layered protections for web apps.", "soon": true},
-        {"icon": "bi-search", "title": "SQL Injection Testing and Detection", "desc": "Testing safely and reviewing code.", "soon": true},
-        {"icon": "bi-exclamation-triangle", "title": "Real-World Attack Scenarios", "desc": "Famous breaches and lessons learned.", "soon": true}
+        {"icon": "bi-terminal", "title": "How SQL Injection Works", "desc": "Injection points and string concatenation."}
       ] %}
         <div class="col-md-4 col-sm-6">
           <div class="card h-100 shadow-sm">
@@ -254,9 +307,6 @@
               <div>
                 <h6 class="mb-1">
                   {{ lesson["title"] }}
-                  {% if lesson["soon"] %}
-                    <span class="badge bg-info text-dark align-middle ms-1"><i class="bi bi-hourglass-split"></i> Coming Soon</span>
-                  {% endif %}
                 </h6>
                 <p class="text-muted small mb-0">{{ lesson["desc"] }}</p>
               </div>
