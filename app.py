@@ -1,3 +1,4 @@
+import base64
 import glob
 import json
 import os
@@ -78,6 +79,18 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
         dt = dt.replace(tzinfo=ZoneInfo("UTC"))
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
+
+@app.context_processor
+def inject_avatar():
+    def avatar_src(user):
+        if not user or not user.avatar:
+            return ""
+        if user.avatar.startswith("data:"):
+            return user.avatar
+        return url_for("static", filename="uploads/" + user.avatar)
+
+    return {"avatar_src": avatar_src}
+
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///students.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -92,6 +105,13 @@ if DATABASE_URL.startswith("postgresql"):
 
 ALLOWED_AVATAR_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
 AVATAR_DIR = os.path.join(app.root_path, "static", "uploads")
+AVATAR_MIME = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "gif": "image/gif",
+    "webp": "image/webp",
+}
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -105,7 +125,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    avatar = db.Column(db.String(200), nullable=True)
+    avatar = db.Column(db.Text, nullable=True)
     lab_completed = db.Column(db.Integer, default=0)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -504,10 +524,9 @@ def update_profile():
         if avatar_data is not None:
             for old in glob.glob(os.path.join(AVATAR_DIR, f"avatar_{current_user.id}.*")):
                 os.remove(old)
-            fname = f"avatar_{current_user.id}.{avatar_ext}"
-            with open(os.path.join(AVATAR_DIR, fname), "wb") as f:
-                f.write(avatar_data)
-            current_user.avatar = fname
+            mime = AVATAR_MIME.get(avatar_ext, "image/png")
+            b64 = base64.b64encode(avatar_data).decode("ascii")
+            current_user.avatar = f"data:{mime};base64,{b64}"
         elif remove_avatar:
             for old in glob.glob(os.path.join(AVATAR_DIR, f"avatar_{current_user.id}.*")):
                 os.remove(old)
@@ -1688,6 +1707,14 @@ with app.app_context():
     from sqlalchemy import inspect as _inspect
 
     _cols = [c["name"] for c in _inspect(db.engine).get_columns("user")]
+    if "avatar" in _cols and not is_sqlite:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text('ALTER TABLE "user" ALTER COLUMN avatar TYPE TEXT'))
+                break
+            except Exception:
+                time.sleep(0.5)
     if "is_admin" not in _cols:
         for _ in range(10):
             try:

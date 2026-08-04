@@ -81,8 +81,7 @@
                 <tr>
                   <td class="fw-semibold">
                     {% if u.avatar %}
-                      <img src="{{ url_for('static', filename='uploads/' ~ u.avatar) }}?v={{ u.avatar }}"
-                           alt="" class="avatar-circle-sm me-2">
+                      <img src="{{ avatar_src(u) }}" alt="" class="avatar-circle-sm me-2">
                     {% else %}
                       <span class="avatar-circle-sm me-2">{{ u.username[:2] | upper }}</span>
                     {% endif %}

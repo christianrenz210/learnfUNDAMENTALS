@@ -29,8 +29,7 @@
       <div class="card shadow-sm mb-4">
         <div class="card-body text-center">
           {% if current_user.avatar %}
-            <img src="{{ url_for('static', filename='uploads/' ~ current_user.avatar) }}?v={{ current_user.avatar }}"
-                 alt="{{ current_user.username }}" class="avatar-circle-img mx-auto mb-3">
+            <img src="{{ avatar_src(current_user) }}" alt="{{ current_user.username }}" class="avatar-circle-img mx-auto mb-3">
           {% else %}
             <div class="avatar-circle mx-auto mb-3">{{ current_user.username[:2] | upper }}</div>
           {% endif %}
@@ -412,7 +411,7 @@
         </div>
         <div class="modal-body">
           <div class="text-center mb-3">
-            <img id="pAvatarPreview" src="{{ url_for('static', filename='uploads/' ~ current_user.avatar) if current_user.avatar }}"
+            <img id="pAvatarPreview" src="{{ avatar_src(current_user) }}"
                  alt="" class="avatar-circle-img d-none">
             <div id="pAvatarInitials" class="avatar-circle mx-auto {{ 'd-none' if current_user.avatar }}">
               {{ current_user.username[:2] | upper }}
