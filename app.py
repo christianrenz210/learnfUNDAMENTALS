@@ -2597,6 +2597,17 @@ with app.app_context():
                 break
             except Exception:
                 time.sleep(0.5)
+    if "last_seen" not in _cols:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    if is_sqlite:
+                        conn.execute(sa_text("ALTER TABLE user ADD COLUMN last_seen DATETIME"))
+                    else:
+                        conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN last_seen TIMESTAMP'))
+                break
+            except Exception:
+                time.sleep(0.5)
     admin_username = os.environ.get("ADMIN_USERNAME", "").strip()
     if admin_username:
         admin_user = User.query.filter_by(username=admin_username).first()
