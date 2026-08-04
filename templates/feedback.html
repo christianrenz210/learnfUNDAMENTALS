@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Feedback - CodeFundamentals{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h2 class="mb-1">
+        <i class="bi bi-chat-heart text-primary me-2"></i>Feedback
+      </h2>
+      <p class="text-muted mb-4">
+        Have a suggestion, found a bug, or want to request a feature? Let us know!
+      </p>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <form method="POST" action="{{ url_for('feedback') }}">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="name" class="form-label">Your Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="name" name="name"
+                       value="{{ current_user.username }}" required>
+              </div>
+              <div class="col-md-6">
+                <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" id="email" name="email"
+                       value="{{ current_user.email }}" required>
+              </div>
+              <div class="col-12">
+                <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                <select class="form-select" id="category" name="category" required>
+                  <option value="general">General Feedback</option>
+                  <option value="bug">Bug Report</option>
+                  <option value="feature">Feature Request</option>
+                  <option value="lesson">Lesson Content</option>
+                  <option value="quiz">Quiz Issue</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label for="message" class="form-label">Your Message <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="message" name="message" rows="4"
+                          placeholder="Tell us what's on your mind..." required></textarea>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-send me-2"></i>Submit Feedback
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <h4 class="mb-3"><i class="bi bi-chat-dots text-primary me-2"></i>Recent Feedback</h4>
+
+      {% for fb in feedbacks %}
+        <div class="card shadow-sm mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h6 class="mb-1">
+                  <strong>{{ fb.name }}</strong>
+                </h6>
+                <div class="d-flex gap-2 mb-2">
+                  <span class="badge bg-secondary">{{ fb.category }}</span>
+                  <span class="text-muted small">{{ fb.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                </div>
+              </div>
+            </div>
+            <p class="mb-3">{{ fb.message }}</p>
+
+            {% if fb.admin_reply %}
+              <div class="bg-success bg-opacity-10 border-start border-success border-3 rounded p-3">
+                <div class="d-flex align-items-center mb-1">
+                  <i class="bi bi-shield-lock text-success me-2"></i>
+                  <strong class="text-success small">Admin Reply</strong>
+                  <span class="text-muted small ms-2">{{ fb.replied_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                </div>
+                <p class="mb-0">{{ fb.admin_reply }}</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-chat-heart fs-1 mb-3 d-block"></i>
+          <p>No feedback yet. Be the first to share your thoughts!</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

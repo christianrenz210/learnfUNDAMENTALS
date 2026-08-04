@@ -197,6 +197,21 @@ class ActivityLog(db.Model):
     user = db.relationship("User", backref=db.backref("activity_logs", lazy="dynamic"))
 
 
+class Feedback(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    category = db.Column(db.String(50), nullable=False, default="general")
+    message = db.Column(db.Text, nullable=False)
+    admin_reply = db.Column(db.Text, nullable=True)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    replied_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship("User", backref=db.backref("feedbacks", lazy="dynamic"))
+
+
 def log_activity(user, action, details=""):
     try:
         db.session.add(
@@ -418,6 +433,36 @@ def index():
 @app.route("/faq")
 def faq():
     return render_template("faq.html")
+
+
+@app.route("/feedback", methods=["GET", "POST"])
+@login_required
+def feedback():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        category = request.form.get("category", "general").strip()
+        message = request.form.get("message", "").strip()
+
+        if not name or not email or not message:
+            flash("Please fill in all required fields.", "warning")
+            return redirect(url_for("feedback"))
+
+        fb = Feedback(
+            user_id=current_user.id,
+            name=name,
+            email=email,
+            category=category,
+            message=message,
+        )
+        db.session.add(fb)
+        db.session.commit()
+        log_activity(current_user, "Submitted feedback", f"Category: {category}")
+        flash("Thank you for your feedback! We appreciate it.", "success")
+        return redirect(url_for("feedback"))
+
+    feedbacks = Feedback.query.order_by(Feedback.created_at.desc()).limit(50).all()
+    return render_template("feedback.html", feedbacks=feedbacks)
 
 
 @app.route("/about")
@@ -699,6 +744,58 @@ def admin_activity():
         current_action=action,
         log_count=len(logs),
     )
+
+
+@app.route("/admin/feedback")
+@login_required
+@admin_required
+def admin_feedback():
+    feedbacks = Feedback.query.order_by(Feedback.created_at.desc()).all()
+    unread_count = Feedback.query.filter_by(is_read=False).count()
+    return render_template("admin_feedback.html", feedbacks=feedbacks, unread_count=unread_count)
+
+
+@app.route("/admin/feedback/<int:fid>/read", methods=["POST"])
+@login_required
+@admin_required
+def admin_feedback_read(fid):
+    fb = db.session.get(Feedback, fid)
+    if fb:
+        fb.is_read = True
+        db.session.commit()
+    flash("Feedback marked as read.", "success")
+    return redirect(url_for("admin_feedback"))
+
+
+@app.route("/admin/feedback/<int:fid>/reply", methods=["POST"])
+@login_required
+@admin_required
+def admin_feedback_reply(fid):
+    fb = db.session.get(Feedback, fid)
+    if not fb:
+        flash("Feedback not found.", "danger")
+        return redirect(url_for("admin_feedback"))
+    reply = request.form.get("reply", "").strip()
+    if reply:
+        fb.admin_reply = reply
+        fb.replied_at = datetime.utcnow()
+        fb.is_read = True
+        db.session.commit()
+        log_activity(current_user, "Replied to feedback", f"Feedback #{fid} from {fb.name}")
+        flash("Reply sent successfully.", "success")
+    return redirect(url_for("admin_feedback"))
+
+
+@app.route("/admin/feedback/<int:fid>/delete", methods=["POST"])
+@login_required
+@admin_required
+def admin_feedback_delete(fid):
+    fb = db.session.get(Feedback, fid)
+    if fb:
+        db.session.delete(fb)
+        db.session.commit()
+    flash("Feedback deleted.", "success")
+    return redirect(url_for("admin_feedback"))
 
 
 @app.route("/admin/users")

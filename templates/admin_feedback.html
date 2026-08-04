@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Feedback - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+      <h2 class="mb-1">
+        <i class="bi bi-chat-heart text-primary me-2"></i>User Feedback
+      </h2>
+      <p class="text-muted mb-0">
+        {{ feedbacks | length }} feedback{{ '' if feedbacks | length == 1 else 's' }} received.
+        {% if unread_count > 0 %}
+          <span class="badge bg-danger ms-2">{{ unread_count }} unread</span>
+        {% endif %}
+      </p>
+    </div>
+    <ul class="nav nav-pills">
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_activity') }}">Activity Log</a></li>
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_users') }}">Users</a></li>
+      <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_feedback') }}">Feedback</a></li>
+    </ul>
+  </div>
+
+  {% for fb in feedbacks %}
+    <div class="card shadow-sm mb-3 {% if not fb.is_read %}border-primary{% endif %}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <h6 class="mb-1">
+              {% if not fb.is_read %}
+                <span class="badge bg-primary me-1">New</span>
+              {% endif %}
+              <strong>{{ fb.name }}</strong>
+              <span class="text-muted small ms-2">{{ fb.email }}</span>
+            </h6>
+            <div class="d-flex gap-2 mb-2">
+              <span class="badge bg-secondary">{{ fb.category }}</span>
+              <span class="text-muted small">{{ fb.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+              {% if fb.user %}
+                <span class="text-muted small">by {{ fb.user.username }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="d-flex gap-1">
+            {% if not fb.is_read %}
+              <form method="POST" action="{{ url_for('admin_feedback_read', fid=fb.id) }}">
+                <button type="submit" class="btn btn-outline-success btn-sm" title="Mark as read">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+              </form>
+            {% endif %}
+            <form method="POST" action="{{ url_for('admin_feedback_delete', fid=fb.id) }}"
+                  onsubmit="return confirm('Delete this feedback?')">
+              <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+        <p class="mb-3">{{ fb.message }}</p>
+
+        {% if fb.admin_reply %}
+          <div class="alert alert-success mb-0">
+            <strong><i class="bi bi-reply me-1"></i>Your Reply:</strong><br>
+            {{ fb.admin_reply }}
+            <div class="text-muted small mt-1">Replied {{ fb.replied_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+          </div>
+        {% else %}
+          <form method="POST" action="{{ url_for('admin_feedback_reply', fid=fb.id) }}">
+            <div class="input-group">
+              <input type="text" class="form-control" name="reply" placeholder="Type your reply..." required>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send me-1"></i>Reply
+              </button>
+            </div>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-chat-heart fs-1 mb-3 d-block"></i>
+      <p>No feedback received yet.</p>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
