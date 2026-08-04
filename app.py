@@ -17,6 +17,22 @@ import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+
+def _load_env_file():
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if not os.path.exists(env_path):
+        return
+    with open(env_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_env_file()
+
 from flask import (
     Flask,
     flash,
@@ -728,8 +744,12 @@ def certificate(name):
     )
 
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+def _gemini_api_key():
+    return os.environ.get("GEMINI_API_KEY", "").strip()
+
+
+def _gemini_model():
+    return os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
 
 EREN_SYSTEM_PROMPT = (
     "You are E.R.E.N (Educational Response Engine for Novices), the friendly AI assistant of "
@@ -752,11 +772,14 @@ EREN_SYSTEM_PROMPT = (
 
 
 def gemini_reply(message):
-    if not GEMINI_API_KEY:
+    api_key = _gemini_api_key()
+    if not api_key:
+        print("[E.R.E.N] No GEMINI_API_KEY set, using offline rules.", file=sys.stderr)
         return None
+    model = _gemini_model()
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+        f"{model}:generateContent?key={api_key}"
     )
     payload = {
         "system_instruction": {"parts": [{"text": EREN_SYSTEM_PROMPT}]},
@@ -775,7 +798,8 @@ def gemini_reply(message):
         parts = body.get("candidates", [{}])[0].get("content", {}).get("parts") or []
         reply = "".join(p.get("text", "") for p in parts).strip()
         return reply or None
-    except Exception:
+    except Exception as exc:
+        print(f"[E.R.E.N] Gemini request failed ({model}), using offline rules: {exc}", file=sys.stderr)
         return None
 
 

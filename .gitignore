@@ -11,6 +11,9 @@ static/uploads/
 # Local history snapshots
 .history/
 
+# Secrets / local env config
+.env
+
 # Tunnel / session artifacts
 tunnel_cookies.txt
 te*.txt
