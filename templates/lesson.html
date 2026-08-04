@@ -128,6 +128,11 @@
           {% endmacro %}
 
           {% if lesson.videos is mapping %}
+            {% if lesson.videos.get("general") %}
+              {% for video in lesson.videos["general"] %}
+                {{ video_block(video, loop.last) }}
+              {% endfor %}
+            {% endif %}
             {% set video_langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("sql", "SQL")] %}
             <ul class="nav nav-tabs" id="videoTabs" role="tablist">
               {% for key, label in video_langs if lesson.videos.get(key) %}

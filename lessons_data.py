@@ -54,9 +54,20 @@ LESSONS = [
         "title": "Programming History",
         "icon": "bi-clock-history",
         "description": "Every programming language has a creator and a story. In this lesson you will learn how C++, Java, and Python were invented — who built them, when, and why each language was designed.",
-        "videos": [
-            {"id": "RU1u-js7db8", "channel": "CrashCourse", "title": "The First Programming Languages: Crash Course Computer Science #11"},
-        ],
+        "videos": {
+            "general": [
+                {"id": "RU1u-js7db8", "channel": "CrashCourse", "title": "The First Programming Languages: Crash Course Computer Science #11"},
+            ],
+            "python": [
+                {"id": "GfH4QL4VqJ0", "channel": "CultRepo", "title": "The Story of Python and how it took over the world | Python: The Documentary"},
+            ],
+            "cpp": [
+                {"id": "lI7tMxzSJ7w", "channel": "CultRepo", "title": "The Story of C++: The World's Most Consequential Programming Language"},
+            ],
+            "java": [
+                {"id": "ZqGSg4b_cZA", "channel": "CultRepo", "title": "The Java Story | The Official Documentary"},
+            ],
+        },
         "key_points": [
             "C++ was created by Bjarne Stroustrup at Bell Labs in 1983, starting out as \"C with Classes\".",
             "C++ added object-oriented features on top of C while keeping C's speed and low-level control.",
