@@ -244,14 +244,20 @@ def admin_required(view):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except Exception:
+        return None
 
 
 @app.before_request
 def update_last_seen():
-    if current_user.is_authenticated:
-        current_user.last_seen = datetime.utcnow()
-        db.session.commit()
+    try:
+        if current_user.is_authenticated:
+            current_user.last_seen = datetime.utcnow()
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 def is_lab_completed(user, lesson_id):
@@ -2653,6 +2659,34 @@ with app.app_context():
     db.create_all()
     os.makedirs(AVATAR_DIR, exist_ok=True)
     is_sqlite = db.engine.dialect.name == "sqlite"
+    
+    # Check if user table has required columns, drop and recreate if corrupted
+    from sqlalchemy import inspect as _inspect
+    try:
+        _user_cols = [c["name"] for c in _inspect(db.engine).get_columns("user")]
+        if "username" not in _user_cols:
+            # Table is corrupted, drop and recreate all tables
+            with db.engine.begin() as conn:
+                if is_sqlite:
+                    conn.execute(sa_text("DROP TABLE IF EXISTS lesson_progress"))
+                    conn.execute(sa_text("DROP TABLE IF EXISTS quiz_score"))
+                    conn.execute(sa_text("DROP TABLE IF EXISTS section_quiz_score"))
+                    conn.execute(sa_text("DROP TABLE IF EXISTS lab_progress"))
+                    conn.execute(sa_text("DROP TABLE IF EXISTS activity_log"))
+                    conn.execute(sa_text("DROP TABLE IF EXISTS feedback"))
+                    conn.execute(sa_text("DROP TABLE IF EXISTS user"))
+                else:
+                    conn.execute(sa_text('DROP TABLE IF EXISTS lesson_progress CASCADE'))
+                    conn.execute(sa_text('DROP TABLE IF EXISTS quiz_score CASCADE'))
+                    conn.execute(sa_text('DROP TABLE IF EXISTS section_quiz_score CASCADE'))
+                    conn.execute(sa_text('DROP TABLE IF EXISTS lab_progress CASCADE'))
+                    conn.execute(sa_text('DROP TABLE IF EXISTS activity_log CASCADE'))
+                    conn.execute(sa_text('DROP TABLE IF EXISTS feedback CASCADE'))
+                    conn.execute(sa_text('DROP TABLE IF EXISTS "user" CASCADE'))
+            db.create_all()
+    except Exception:
+        pass
+    
     if is_sqlite:
         for _ in range(10):
             try:
