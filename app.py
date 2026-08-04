@@ -729,7 +729,7 @@ def certificate(name):
 
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
 
 EREN_SYSTEM_PROMPT = (
     "You are E.R.E.N (Educational Response Engine for Novices), the friendly AI assistant of "
@@ -772,7 +772,7 @@ def gemini_reply(message):
     try:
         with urllib.request.urlopen(req, timeout=25) as resp:
             body = json.loads(resp.read().decode("utf-8"))
-        parts = body["candidates"][0]["content"]["parts"]
+        parts = body.get("candidates", [{}])[0].get("content", {}).get("parts") or []
         reply = "".join(p.get("text", "") for p in parts).strip()
         return reply or None
     except Exception:
