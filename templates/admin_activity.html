@@ -57,7 +57,7 @@
                 <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ log.action }}</span></td>
                 <td class="small">{{ log.details or '-' }}</td>
                 <td class="small text-muted">{{ log.ip_address or '-' }}</td>
-                <td class="small text-muted">{{ log.created_at|localtime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td class="small text-muted">{{ log.created_at|localtime('%Y-%m-%d %H:%M:%S') }} PHT</td>
               </tr>
             {% else %}
               <tr><td colspan="6" class="text-center text-muted py-4">No activity found.</td></tr>
