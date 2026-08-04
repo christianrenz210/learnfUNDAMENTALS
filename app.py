@@ -756,7 +756,7 @@ def gemini_reply(message):
         return None
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{GEMINI_MODEL}:generateContent"
+        f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
     )
     payload = {
         "system_instruction": {"parts": [{"text": EREN_SYSTEM_PROMPT}]},
