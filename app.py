@@ -2677,7 +2677,10 @@ with app.app_context():
                 time.sleep(0.5)
     from sqlalchemy import inspect as _inspect
 
-    _cols = [c["name"] for c in _inspect(db.engine).get_columns("user")]
+    try:
+        _cols = [c["name"] for c in _inspect(db.engine).get_columns("user")]
+    except Exception:
+        _cols = []
     if "avatar" in _cols and not is_sqlite:
         for _ in range(10):
             try:
