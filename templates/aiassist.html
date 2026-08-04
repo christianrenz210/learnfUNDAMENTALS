@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% set hide_assist_widget = True %}
+
+{% block title %}E.R.E.N Assistant - CodeFundamentals{% endblock %}
+
+{% block content %}
+<div class="assist-page">
+  <div class="assist-page-header">
+    <i class="bi bi-robot me-2"></i>
+    <div class="flex-grow-1">
+      <strong>E.R.E.N</strong>
+      <span class="assist-status">Educational Response Engine for Novices</span>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="assist-header-btn" aria-label="Back to dashboard" title="Back to dashboard">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <button type="button" id="assistHistoryBtn" class="assist-header-btn" aria-label="History" title="History">
+      <i class="bi bi-clock-history"></i>
+    </button>
+    <button type="button" id="assistNewChat" class="assist-header-btn" aria-label="New chat" title="New chat">
+      <i class="bi bi-plus-square"></i>
+    </button>
+  </div>
+  <div id="assistHistoryPanel" class="assist-history d-none">
+    <div class="assist-history-head">
+      <span>History</span>
+      <button type="button" id="assistClearHistory" class="assist-history-clear">Clear all</button>
+    </div>
+    <div id="assistHistoryList" class="assist-history-list"></div>
+  </div>
+  <div id="assistMessages" class="assist-page-messages"></div>
+  <div id="assistChips" class="assist-chips">
+    <button type="button" class="assist-chip" data-q="Tell me your story, E.R.E.N">E.R.E.N's story</button>
+    <button type="button" class="assist-chip" data-q="What are variables?">Variables</button>
+    <button type="button" class="assist-chip" data-q="Explain loops">Loops</button>
+    <button type="button" class="assist-chip" data-q="Show me code for a function">Code sample</button>
+    <button type="button" class="assist-chip" data-q="How does the long quiz work?">Long quiz</button>
+    <button type="button" class="assist-chip" data-q="How is the leaderboard ranked?">Leaderboard</button>
+  </div>
+  <form id="assistForm" class="assist-form">
+    <textarea id="assistInput" class="form-control" rows="3" maxlength="500"
+              placeholder="Type your question..." autocomplete="off"></textarea>
+    <button type="submit" class="btn btn-primary" aria-label="Send">
+      <i class="bi bi-send"></i>
+    </button>
+  </form>
+</div>
+{% endblock %}

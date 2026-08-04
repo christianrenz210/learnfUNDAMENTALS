@@ -423,6 +423,12 @@ def compiler():
     return render_template("compiler.html")
 
 
+@app.route("/aiassist")
+@login_required
+def aiassist():
+    return render_template("aiassist.html")
+
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:

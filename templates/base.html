@@ -18,7 +18,7 @@
   </script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/style.css') }}?v=11" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}?v=12" rel="stylesheet">
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -271,7 +271,7 @@
   </div>
 </div>
 
-{% if current_user.is_authenticated %}
+{% if current_user.is_authenticated and not hide_assist_widget %}
 <button type="button" id="assistToggle" class="assist-toggle" aria-label="Open AI Assistant">
   <i class="bi bi-robot"></i>
 </button>
@@ -283,20 +283,29 @@
       <strong>E.R.E.N</strong>
       <div class="assist-status">Educational Response Engine for Novices</div>
     </div>
+    <a href="{{ url_for('aiassist') }}" class="assist-header-btn" aria-label="Open full assistant" title="Open full screen">
+      <i class="bi bi-arrows-fullscreen"></i>
+    </a>
+    <button type="button" id="assistHistoryBtn" class="assist-header-btn" aria-label="History" title="History">
+      <i class="bi bi-clock-history"></i>
+    </button>
+    <button type="button" id="assistNewChat" class="assist-header-btn" aria-label="New chat" title="New chat">
+      <i class="bi bi-plus-square"></i>
+    </button>
     <button type="button" id="assistAbout" class="assist-about" aria-label="E.R.E.N story">
       <i class="bi bi-info-circle"></i>
     </button>
     <button type="button" id="assistClose" class="btn-close btn-close-white"
             aria-label="Close assistant"></button>
   </div>
-  <div id="assistMessages" class="assist-messages">
-    <div class="assist-bubble assist-bot">
-      Hi {{ current_user.username }}! I'm E.R.E.N — Educational Response Engine
-      for Novices. A long time ago, a frustrated student stayed up until 2 AM to
-      build me so no one would get stuck on the same lessons. You've completed
-      {{ user_done }} of {{ user_total }} lessons so far. Ask me anything!
+  <div id="assistHistoryPanel" class="assist-history d-none">
+    <div class="assist-history-head">
+      <span>History</span>
+      <button type="button" id="assistClearHistory" class="assist-history-clear">Clear all</button>
     </div>
+    <div id="assistHistoryList" class="assist-history-list"></div>
   </div>
+  <div id="assistMessages" class="assist-messages"></div>
   <div id="assistChips" class="assist-chips">
     <button type="button" class="assist-chip" data-q="Tell me your story, E.R.E.N">E.R.E.N's story</button>
     <button type="button" class="assist-chip" data-q="What are variables?">Variables</button>
@@ -397,340 +406,19 @@ function togglePassword(inputId, iconId) {
 {% block scripts %}{% endblock %}
 {% if current_user.is_authenticated %}
 <script>
-(function () {
-  const assistToggle = document.getElementById('assistToggle');
-  const assistPanel = document.getElementById('assistPanel');
-  const assistMessages = document.getElementById('assistMessages');
-  const assistForm = document.getElementById('assistForm');
-  const assistInput = document.getElementById('assistInput');
-  let chatHistory = loadChatHistory();
-
-  assistToggle.addEventListener('click', function () {
-    assistPanel.classList.toggle('d-none');
-    if (!assistPanel.classList.contains('d-none')) {
-      assistInput.focus();
-    }
-  });
-  document.getElementById('assistClose').addEventListener('click', function () {
-    assistPanel.classList.add('d-none');
-  });
-  document.getElementById('assistAbout').addEventListener('click', function () {
-    new bootstrap.Modal(document.getElementById('erenModal')).show();
-  });
-
-  function addAssistBubble(text, isUser) {
-    const bubble = document.createElement('div');
-    bubble.className = 'assist-bubble ' + (isUser ? 'assist-user' : 'assist-bot');
-    bubble.textContent = text;
-    assistMessages.appendChild(bubble);
-    assistMessages.scrollTop = assistMessages.scrollHeight;
-    return bubble;
+window.EREN = {
+  username: {{ current_user.username | tojson }},
+  userDone: {{ user_done }},
+  userTotal: {{ user_total }},
+  urls: {
+    assistant: {{ url_for('assistant') | tojson }},
+    runStart: {{ url_for('run_start') | tojson }},
+    runPoll: {{ url_for('run_poll', session_id='SID') | tojson }},
+    compiler: {{ url_for('compiler') | tojson }}
   }
-
-  function addTypingBubble() {
-    const bubble = document.createElement('div');
-    bubble.className = 'assist-bubble assist-bot assist-typing';
-    bubble.innerHTML = '<span></span><span></span><span></span>';
-    assistMessages.appendChild(bubble);
-    assistMessages.scrollTop = assistMessages.scrollHeight;
-    return bubble;
-  }
-
-  function renderBotContent(bubble, text) {
-    bubble.textContent = '';
-    if (/```/.test(text)) {
-      bubble.appendChild(buildReply(text));
-    } else {
-      bubble.textContent = text;
-    }
-    assistMessages.scrollTop = assistMessages.scrollHeight;
-  }
-
-  function finishTypingBubble(bubble, text) {
-    bubble.classList.remove('assist-typing');
-    if (/```/.test(text)) {
-      renderBotContent(bubble, text);
-      return;
-    }
-    let i = 0;
-    const timer = setInterval(function () {
-      i += 3;
-      if (i >= text.length) {
-        clearInterval(timer);
-        bubble.textContent = text;
-      } else {
-        bubble.textContent = text.slice(0, i);
-      }
-      assistMessages.scrollTop = assistMessages.scrollHeight;
-    }, 20);
-  }
-
-  function loadChatHistory() {
-    try {
-      const h = JSON.parse(sessionStorage.getItem('cfChatHistory') || '[]');
-      return Array.isArray(h) ? h.slice(-20) : [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  function saveChatHistory() {
-    try {
-      sessionStorage.setItem('cfChatHistory', JSON.stringify(chatHistory.slice(-20)));
-    } catch (e) {}
-  }
-
-  const RUN_LANGS = {
-    python: 'python', py: 'python', python3: 'python',
-    cpp: 'cpp', c: 'cpp', 'c++': 'cpp', cplusplus: 'cpp',
-    java: 'java'
-  };
-
-  function appendAssistText(wrapper, txt) {
-    const el = document.createElement('div');
-    el.className = 'assist-text';
-    let html = txt
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    el.innerHTML = html;
-    wrapper.appendChild(el);
-  }
-
-  function appendAssistTerm(card, text) {
-    const out = card.querySelector('.assist-terminal-out');
-    out.textContent = out.textContent ? out.textContent + '\n' + text : text;
-    const term = card.querySelector('.assist-terminal');
-    term.scrollTop = term.scrollHeight;
-  }
-
-  function runAssistCode(card, lang, code) {
-    const runBtn = card.querySelector('.assist-code-run');
-    const term = card.querySelector('.assist-terminal');
-    const status = card.querySelector('.assist-code-status');
-    if (runBtn.dataset.running === '1') return;
-    runBtn.dataset.running = '1';
-    runBtn.disabled = true;
-    runBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-    term.classList.remove('d-none');
-    card.querySelector('.assist-terminal-out').textContent = '';
-    status.textContent = '';
-    let sessionId = null;
-    let pollTimer = null;
-
-    function finish(exitCode) {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-      runBtn.dataset.running = '';
-      runBtn.disabled = false;
-      runBtn.textContent = 'Run';
-      status.textContent = 'Finished (exit ' + exitCode + ')';
-    }
-
-    function renderEvents(events) {
-      (events || []).forEach(function (item) {
-        if (item.type === 'out' || item.type === 'err' || item.type === 'error') {
-          appendAssistTerm(card, item.data);
-        }
-      });
-    }
-
-    function poll() {
-      pollTimer = setInterval(function () {
-        fetch('{{ url_for("run_poll", session_id="SID") }}'.replace('SID', sessionId), {
-          method: 'POST',
-          cache: 'no-store'
-        })
-          .then(function (res) { return res.json(); })
-          .then(function (data) {
-            if (!data.ok) {
-              appendAssistTerm(card, data.error || 'Session lost.');
-              finish(-1);
-              return;
-            }
-            renderEvents(data.events);
-            if (data.finished) {
-              finish(data.exit_code);
-            }
-          })
-          .catch(function () {});
-      }, 400);
-    }
-
-    fetch('{{ url_for("run_start") }}', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ language: lang, code: code, stdin: '' })
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (!data.ok) {
-          appendAssistTerm(card, data.compile_error || data.error || 'Could not start the program.');
-          finish(-1);
-          return;
-        }
-        if (data.finished) {
-          renderEvents(data.events);
-          finish(data.exit_code);
-          return;
-        }
-        sessionId = data.session_id;
-        poll();
-      })
-      .catch(function () {
-        appendAssistTerm(card, 'Could not reach the server. Try again.');
-        finish(-1);
-      });
-  }
-
-  function appendAssistCode(wrapper, lang, code) {
-    const langKey = (lang || '').toLowerCase().trim();
-    const runLang = RUN_LANGS[langKey] || null;
-
-    const card = document.createElement('div');
-    card.className = 'assist-code-card';
-
-    const head = document.createElement('div');
-    head.className = 'assist-code-head';
-    const label = document.createElement('span');
-    label.className = 'assist-code-lang';
-    label.textContent = runLang || langKey || 'code';
-    head.appendChild(label);
-
-    const actions = document.createElement('div');
-    actions.className = 'assist-code-actions';
-    if (runLang) {
-      const openBtn = document.createElement('button');
-      openBtn.type = 'button';
-      openBtn.className = 'assist-code-btn';
-      openBtn.textContent = 'Open in Compiler';
-      openBtn.addEventListener('click', function () {
-        try {
-          sessionStorage.setItem('cfCompilerCode', JSON.stringify({ lang: runLang, code: code }));
-        } catch (e) {}
-        window.location.href = '{{ url_for("compiler") }}';
-      });
-      actions.appendChild(openBtn);
-
-      const runBtn = document.createElement('button');
-      runBtn.type = 'button';
-      runBtn.className = 'assist-code-btn assist-code-run';
-      runBtn.textContent = 'Run';
-      runBtn.addEventListener('click', function () {
-        runAssistCode(card, runLang, code);
-      });
-      actions.appendChild(runBtn);
-    }
-    head.appendChild(actions);
-    card.appendChild(head);
-
-    const pre = document.createElement('pre');
-    pre.className = 'assist-code';
-    const codeEl = document.createElement('code');
-    codeEl.textContent = code.replace(/\n$/, '');
-    pre.appendChild(codeEl);
-    card.appendChild(pre);
-
-    const term = document.createElement('pre');
-    term.className = 'assist-terminal d-none';
-    const termOut = document.createElement('code');
-    termOut.className = 'assist-terminal-out';
-    term.appendChild(termOut);
-    card.appendChild(term);
-
-    const status = document.createElement('div');
-    status.className = 'assist-code-status';
-    card.appendChild(status);
-
-    wrapper.appendChild(card);
-  }
-
-  function buildReply(text) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'assist-reply';
-    const regex = /```([\w-+]*)\s*\n?([\s\S]*?)```/g;
-    let last = 0;
-    let m;
-    while ((m = regex.exec(text)) !== null) {
-      if (m.index > last) {
-        appendAssistText(wrapper, text.slice(last, m.index));
-      }
-      appendAssistCode(wrapper, m[1], m[2]);
-      last = regex.lastIndex;
-    }
-    if (last < text.length) {
-      appendAssistText(wrapper, text.slice(last));
-    }
-    return wrapper;
-  }
-
-  function wait(ms) {
-    return new Promise(function (resolve) {
-      setTimeout(resolve, ms);
-    });
-  }
-
-  async function askAssistant(message) {
-    const started = Date.now();
-    let reply;
-    try {
-      const res = await fetch('{{ url_for("assistant") }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: message, history: chatHistory }),
-      });
-      const data = await res.json();
-      reply = data.ok ? data.reply : (data.error || 'Something went wrong.');
-    } catch (e) {
-      reply = 'I could not reach the server. Please try again.';
-    }
-    chatHistory.push({ role: 'user', content: message });
-    chatHistory.push({ role: 'assistant', content: reply });
-    saveChatHistory();
-    const elapsed = Date.now() - started;
-    await wait(Math.max(0, 450 - elapsed));
-    const typing = addTypingBubble();
-    await wait(900);
-    finishTypingBubble(typing, reply);
-  }
-
-  chatHistory.forEach(function (item) {
-    if (item.role === 'user') {
-      addAssistBubble(item.content || '', true);
-    } else if (item.role === 'assistant') {
-      const b = document.createElement('div');
-      b.className = 'assist-bubble assist-bot';
-      assistMessages.appendChild(b);
-      renderBotContent(b, item.content || '');
-    }
-  });
-
-  assistForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    const message = assistInput.value.trim();
-    if (!message) return;
-    addAssistBubble(message, true);
-    assistInput.value = '';
-    askAssistant(message);
-  });
-  assistInput.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      assistForm.dispatchEvent(new Event('submit', { cancelable: true }));
-    }
-  });
-  document.querySelectorAll('.assist-chip').forEach(function (chip) {
-    chip.addEventListener('click', function () {
-      addAssistBubble(this.dataset.q, true);
-      askAssistant(this.dataset.q);
-    });
-  });
-})();
+};
 </script>
+<script src="{{ url_for('static', filename='js/eren.js') }}?v=1"></script>
 {% endif %}
 </body>
 </html>
