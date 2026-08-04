@@ -6,6 +6,17 @@ LESSONS = [
         "title": "Introduction to Programming",
         "icon": "bi-code-slash",
         "description": "Programming is the process of writing instructions that a computer can follow. Every program, no matter how complex, is built from simple instructions. In this lesson you will learn how programs are structured in Python, C++, and Java.",
+        "videos": {
+            "python": [
+                {"id": "9QKe2RvjG-A", "channel": "Doji Creates", "title": "Python Programming for Beginners Explained (Complete Introduction Guide)"},
+            ],
+            "cpp": [
+                {"id": "LApkQYRUru8", "channel": "Doji Creates", "title": "C++ Coding for Beginners Introduction to Programming (Tagalog Tutorial)"},
+            ],
+            "java": [
+                {"id": "Pyx9oLYpbi4", "channel": "Doji Creates", "title": "Java Programming Introduction Explained (What You Need to Know Before You Start)"},
+            ],
+        },
         "key_points": [
             "A program is a sequence of instructions executed by a computer.",
             "Source code is written in a human-readable language, then translated or interpreted.",
@@ -43,6 +54,9 @@ LESSONS = [
         "title": "Programming History",
         "icon": "bi-clock-history",
         "description": "Every programming language has a creator and a story. In this lesson you will learn how C++, Java, and Python were invented — who built them, when, and why each language was designed.",
+        "videos": [
+            {"id": "RU1u-js7db8", "channel": "CrashCourse", "title": "The First Programming Languages: Crash Course Computer Science #11"},
+        ],
         "key_points": [
             "C++ was created by Bjarne Stroustrup at Bell Labs in 1983, starting out as \"C with Classes\".",
             "C++ added object-oriented features on top of C while keeping C's speed and low-level control.",
@@ -81,6 +95,20 @@ LESSONS = [
         "title": "Variables and Data Types",
         "icon": "bi-box-seam",
         "description": "Variables store values in memory. Every variable has a name and a value. Python infers the type automatically, while C++ and Java require you to declare the type before the variable name.",
+        "videos": {
+            "python": [
+                {"id": "2SG133xkpMQ", "channel": "Doji Creates", "title": "Python Variables Explained (How Data Storage Works in Code)"},
+                {"id": "yp2xUIUjdIY", "channel": "Doji Creates", "title": "Python Data Types Explained (How Different Kinds of Data Work)"},
+            ],
+            "cpp": [
+                {"id": "E4yj6QX-TW8", "channel": "Doji Creates", "title": "C++ Variables Explained (How Data Storage Works in Programming)"},
+                {"id": "6yyOS7zeJJY", "channel": "Doji Creates", "title": "C++ Data Types Explained (How Different Data Categories Work)"},
+            ],
+            "java": [
+                {"id": "cD-6C39RPKs", "channel": "Doji Creates", "title": "Java Variables Explained (How They Work for Beginners)"},
+                {"id": "5Lxq9JJZRAg", "channel": "Doji Creates", "title": "Java Primitive Data Types Explained (Everything You Need to Know)"},
+            ],
+        },
         "key_points": [
             "Python is dynamically typed: the type is decided by the value.",
             "C++ and Java are statically typed: you must declare the type.",
@@ -118,6 +146,17 @@ LESSONS = [
         "title": "Input and Output",
         "icon": "bi-input-cursor-text",
         "description": "Programs communicate with the user through input and output. You read data from the keyboard and display results on the screen. Each language has its own functions for this.",
+        "videos": {
+            "python": [
+                {"id": "7iZOEoGWnuU", "channel": "Doji Creates", "title": "Python User Input Explained (How Input Handling Works Step by Step)"},
+            ],
+            "cpp": [
+                {"id": "vkALQRM5NNU", "channel": "Doji Creates", "title": "C++ User Input Explained (How Input Handling Works Step by Step)"},
+            ],
+            "java": [
+                {"id": "sk_TzAjZ3zs", "channel": "Doji Creates", "title": "Java Scanner Input Explained (How to Get User Input)"},
+            ],
+        },
         "key_points": [
             "Python: input() returns a string, print() displays output.",
             "C++: cin reads, cout writes.",
@@ -155,6 +194,20 @@ LESSONS = [
         "title": "Operators",
         "icon": "bi-plus-square",
         "description": "Operators perform calculations and comparisons. Arithmetic operators do math and relational operators compare values. Understanding these operators lets you write expressions that calculate results.",
+        "videos": {
+            "python": [
+                {"id": "RYEDDygFNx8", "channel": "Doji Creates", "title": "Python Arithmetic Operators Explained (How Basic Math Operations Work)"},
+                {"id": "x49Ez5QaqBQ", "channel": "Doji Creates", "title": "Python Comparison Operators Explained (How Values Are Compared Step by Step)"},
+            ],
+            "cpp": [
+                {"id": "ib-Qfx7-iIQ", "channel": "Doji Creates", "title": "C++ Arithmetic Operators Explained (How Basic Math Operations Work)"},
+                {"id": "e5_JYK1oYjA", "channel": "Doji Creates", "title": "C++ Comparison Operators Explained (How Value Comparison Works)"},
+            ],
+            "java": [
+                {"id": "M0lnSma7qMw", "channel": "Doji Creates", "title": "Java Arithmetic Operators Explained (How Calculations Work)"},
+                {"id": "yRwNhHubxc8", "channel": "Doji Creates", "title": "Java Relational Operators Explained (How Comparisons Work)"},
+            ],
+        },
         "key_points": [
             "Arithmetic: + - * / % (modulo gives the remainder).",
             "Integer division differs: / in Python gives a float; int / int in C++ and Java gives an integer.",
@@ -191,6 +244,17 @@ LESSONS = [
         "title": "Logical Operators",
         "icon": "bi-toggle-on",
         "description": "Logical operators combine true and false values to build bigger conditions. They let a program check several things at once. Python uses the words and, or, not; C++ and Java use &&, ||, and !.",
+        "videos": {
+            "python": [
+                {"id": "srYNLwnEfeo", "channel": "Doji Creates", "title": "Python Logical Operators Explained (How AND OR NOT Logic Works)"},
+            ],
+            "cpp": [
+                {"id": "JrcSEPKn6uI", "channel": "Doji Creates", "title": "C++ Logical Operators Explained (How AND OR NOT Logic Works)"},
+            ],
+            "java": [
+                {"id": "h7pGky1QaJs", "channel": "Doji Creates", "title": "Java Logical Operators Explained (How They Work)"},
+            ],
+        },
         "key_points": [
             "and / && : the result is true only if both conditions are true.",
             "or / || : the result is true if at least one condition is true.",
@@ -228,6 +292,18 @@ LESSONS = [
         "title": "Conditionals (if / else)",
         "icon": "bi-signpost-split",
         "description": "Conditionals let your program make decisions. Based on a condition, the program executes one block of code or another. The syntax differs slightly between languages.",
+        "videos": {
+            "python": [
+                {"id": "aXWb4rDK8NE", "channel": "Doji Creates", "title": "Python If Else Statement Explained (How Basic Decision Making Works)"},
+                {"id": "RHM8_z0tpHY", "channel": "Doji Creates", "title": "Python Elif Statement Explained (How Multiple Conditions Work)"},
+            ],
+            "cpp": [
+                {"id": "ISLTa95qJJA", "channel": "Doji Creates", "title": "C++ If Else Statement Explained (How Decision Making Works)"},
+            ],
+            "java": [
+                {"id": "GaAKcy9cEcU", "channel": "Doji Creates", "title": "Java If Else Statement Explained (How Decision Making Works)"},
+            ],
+        },
         "key_points": [
             "Python uses if / elif / else with colons and indentation.",
             "C++ and Java use if / else if / else with braces and parentheses.",
@@ -265,6 +341,20 @@ LESSONS = [
         "title": "Loops",
         "icon": "bi-arrow-repeat",
         "description": "Loops repeat a block of code. A for loop runs a fixed number of times, while a while loop repeats while a condition is true. Loops are used everywhere in real programs.",
+        "videos": {
+            "python": [
+                {"id": "EX47v75YM1Y", "channel": "Doji Creates", "title": "Python For Loop Explained (How Iteration Works Step by Step)"},
+                {"id": "Quuq2lC76iw", "channel": "Doji Creates", "title": "Python While Loop Explained (How Condition Based Repetition Works)"},
+            ],
+            "cpp": [
+                {"id": "-Qev7T2a_Lc", "channel": "Doji Creates", "title": "C++ For Loop Explained (How Iteration Control Works Step by Step)"},
+                {"id": "WKvTa-paPiM", "channel": "Doji Creates", "title": "C++ While Loop with Integer Explained (How Condition Based Loop Works)"},
+            ],
+            "java": [
+                {"id": "Mt-gZKX3dq0", "channel": "Doji Creates", "title": "Java For Loop Explained (How It Works for Beginners)"},
+                {"id": "LWLrbN4f0Fg", "channel": "Doji Creates", "title": "Java While Loop Explained (How It Works for Beginners)"},
+            ],
+        },
         "key_points": [
             "For loop: Python for x in range(n), C++/Java for (int i = 0; i < n; i++).",
             "While loop: repeats while the condition is true.",
@@ -302,6 +392,18 @@ LESSONS = [
         "title": "Functions",
         "icon": "bi-motherboard",
         "description": "A function is a reusable block of code that performs a specific task. You define it once and call it many times, which keeps your programs organized and shorter.",
+        "videos": {
+            "python": [
+                {"id": "89cGQjB5R4M", "channel": "Bro Code", "title": "Functions in Python are easy"},
+            ],
+            "cpp": [
+                {"id": "67I3ZEmyVKQ", "channel": "Doji Creates", "title": "C++ Functions Explained (How Code Reusability Works)"},
+                {"id": "6zhISR9JQc8", "channel": "Doji Creates", "title": "C++ Parameters and Arguments Explained (How Function Inputs Work)"},
+            ],
+            "java": [
+                {"id": "v5p_SUfi710", "channel": "Bro Code", "title": "Java methods explained in 10+ minutes"},
+            ],
+        },
         "key_points": [
             "A function takes inputs (parameters) and returns a result.",
             "Python: def add(a, b): then return a + b.",
@@ -339,6 +441,17 @@ LESSONS = [
         "title": "Arrays and Lists",
         "icon": "bi-collection",
         "description": "Collections store multiple values in one variable. In Python you use lists; in C++ you use arrays or vectors; in Java you use arrays or ArrayLists. Indexing starts at 0 in all three.",
+        "videos": {
+            "python": [
+                {"id": "dpwp1NADaFU", "channel": "Doji Creates", "title": "Python Lists Explained (How Ordered Data Storage Works)"},
+            ],
+            "cpp": [
+                {"id": "dRyf8cLyKgA", "channel": "Doji Creates", "title": "C++ Arrays Explained (How Indexed Data Storage Works)"},
+            ],
+            "java": [
+                {"id": "9dr2mHYYoug", "channel": "Bro Code", "title": "Learn Java arrays in 9 minutes"},
+            ],
+        },
         "key_points": [
             "Indexing starts at 0: the first element is at position 0.",
             "Python lists: grades = [88, 92, 75] and can change size.",
@@ -376,6 +489,9 @@ LESSONS = [
         "title": "Basic Problem Solving",
         "icon": "bi-lightbulb",
         "description": "Programming is really problem solving. The key is to break a problem into small steps, write them as a plan, then translate each step into code. Start with paper and pencil before typing.",
+        "videos": [
+            {"id": "6XJ8294lC0c", "channel": "Doji Creates", "title": "Flowchart Pseudocode and Algorithm Explained (How They Work Together)"},
+        ],
         "key_points": [
             "Understand the problem first: what is the input, what is the output?",
             "Break the problem into smaller sub-problems.",
@@ -413,6 +529,9 @@ LESSONS = [
         "title": "Database Systems Overview",
         "icon": "bi-database",
         "description": "A database is an organized collection of related data, and a DBMS (Database Management System) is the software that stores, retrieves, and manages that data. In this lesson you will see why modern systems use the database approach instead of plain files.",
+        "videos": [
+            {"id": "wR0jg0eQsZA", "channel": "Lucid Software", "title": "Database Tutorial for Beginners"},
+        ],
         "key_points": [
             "Data are raw facts; information is data that has been given meaning.",
             "A database is an organized collection of related data.",
@@ -450,6 +569,9 @@ LESSONS = [
         "diagram": "erd-sample.svg",
         "diagram_caption": "Sample ERD: STUDENTS 1:N ENROLLMENTS N:1 COURSES. A student can enroll in many courses, and a course can be taken by many students. The ENROLLMENTS table holds the foreign keys that link both sides. Primary keys are underlined; foreign keys are marked FK.",
         "description": "Before writing SQL you design the database. The Entity Relationship (ER) model describes entities, attributes, and relationships, and keys make every row unique and link tables together.",
+        "videos": [
+            {"id": "xsg9BDiwiJE", "channel": "Lucid Software", "title": "Entity Relationship Diagram (ERD) Tutorial - Part 1"},
+        ],
         "key_points": [
             "An entity is a thing stored in the database (student, course); an attribute is a property of it (name, age).",
             "A relationship connects entities, e.g. a student enrolls in a course.",
@@ -485,6 +607,9 @@ LESSONS = [
         "title": "Normalization",
         "icon": "bi-layers",
         "description": "Normalization organizes tables to remove redundant data and prevent update problems. You will learn the first three normal forms (1NF, 2NF, 3NF), the most important ones for real database design.",
+        "videos": [
+            {"id": "GFQaEYEc8_8", "channel": "Decomplexify", "title": "Learn Database Normalization - 1NF, 2NF, 3NF, 4NF, 5NF"},
+        ],
         "key_points": [
             "Normalization removes redundancy so the same fact is not stored in many places.",
             "1NF: every cell holds one value and there are no repeating groups.",
@@ -523,6 +648,9 @@ LESSONS = [
         "title": "SQL Basics and DDL",
         "icon": "bi-table",
         "description": "SQL has several command groups. DDL (Data Definition Language) defines the structure of your database: creating, altering, and dropping tables, with proper data types for each column.",
+        "videos": [
+            {"id": "3Qbq61A_sNs", "channel": "Data with Baraa", "title": "SQL DDL Commands (Visually Explained) | CREATE, ALTER, DROP"},
+        ],
         "key_points": [
             "DDL (Data Definition Language): CREATE, ALTER, DROP.",
             "DML (Data Modification Language): INSERT, UPDATE, DELETE.",
@@ -558,6 +686,9 @@ LESSONS = [
         "title": "Data Modification Language (DML)",
         "icon": "bi-pencil-square",
         "description": "DML changes the data inside tables. INSERT adds new rows, UPDATE changes existing rows, and DELETE removes rows. These are the CRUD operations behind almost every application.",
+        "videos": [
+            {"id": "ku3vMAP0h0s", "channel": "Data with Baraa", "title": "SQL DML Commands (Visually Explained) | INSERT, UPDATE, DELETE"},
+        ],
         "key_points": [
             "INSERT adds one row or many rows at once.",
             "UPDATE modifies existing rows; the WHERE clause decides which ones.",
@@ -593,6 +724,9 @@ LESSONS = [
         "title": "Data Query Language (SELECT and Filtering)",
         "icon": "bi-search",
         "description": "SELECT is how you read data. You choose which columns to show, which rows to filter with WHERE, and how to sort with ORDER BY. Filtering uses comparison, logical, and pattern operators.",
+        "videos": [
+            {"id": "4Uv0o8IBqw0", "channel": "Becoming a Data Scientist", "title": "How to Filter with the WHERE clause in SQL"},
+        ],
         "key_points": [
             "SELECT chooses columns; WHERE filters rows.",
             "Comparison operators: =, <>, <, >, <=, >=.",
@@ -628,6 +762,9 @@ LESSONS = [
         "title": "SQL JOINs",
         "icon": "bi-link-45deg",
         "description": "Real databases split data across many tables, so you need JOIN to combine them. INNER JOIN returns only matching rows, while LEFT and RIGHT JOIN keep all rows from one side.",
+        "videos": [
+            {"id": "Yh4CrPHVBdE", "channel": "Anton Putra", "title": "6 SQL Joins you MUST know! (Animated + Practice)"},
+        ],
         "key_points": [
             "INNER JOIN returns only rows that match in both tables.",
             "LEFT JOIN keeps every row of the left table even without a match.",
@@ -663,6 +800,10 @@ LESSONS = [
         "title": "Subqueries, Aggregates, and Grouping",
         "icon": "bi-bar-chart",
         "description": "Aggregate functions summarize whole columns, GROUP BY groups rows for per-group totals, and HAVING filters those groups. Subqueries let you use the result of one query inside another.",
+        "videos": [
+            {"id": "GpC0XyiJPEo", "channel": "Becoming a Data Scientist", "title": "How to do Subqueries in SQL with Examples"},
+            {"id": "nNrgRVIzeHg", "channel": "Becoming a Data Scientist", "title": "Advanced Aggregate Functions in SQL (GROUP BY, HAVING vs. WHERE)"},
+        ],
         "key_points": [
             "Aggregates: COUNT, SUM, AVG, MIN, MAX.",
             "GROUP BY groups rows that share a value; HAVING filters the groups.",
@@ -698,6 +839,9 @@ LESSONS = [
         "title": "Introduction to SQL Injection",
         "icon": "bi-shield-exclamation",
         "description": "SQL injection is one of the most dangerous web attacks: attackers insert malicious SQL into user input to steal, change, or delete database data. Learn how the attack works and how the right defense stops it.",
+        "videos": [
+            {"id": "wcaiKgQU6VE", "channel": "Hacksplaining", "title": "What Is SQL Injection?"},
+        ],
         "key_points": [
             "SQL injection happens when user input is directly concatenated into a SQL query.",
             "The most common target is the login form: typing ' OR '1'='1 -- can bypass authentication.",
@@ -734,6 +878,9 @@ LESSONS = [
         "title": "How SQL Injection Works",
         "icon": "bi-terminal",
         "description": "Understand injection points, how queries are built from user input, and why string concatenation lets attackers rewrite the SQL statement.",
+        "videos": [
+            {"id": "FwIUkAwKzG8", "channel": "Christian Linares", "title": "SQL Injection - Simply Explained"},
+        ],
         "key_points": [
             "An injection point is any place where user input is placed directly into a SQL query.",
             "Classic injection points: login forms, search boxes, URL parameters (id=), and profile fields.",

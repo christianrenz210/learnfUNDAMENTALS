@@ -101,6 +101,67 @@
         </div>
       </div>
 
+      {% if lesson.videos %}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-youtube text-danger me-2"></i>Video Lesson
+          </h5>
+        </div>
+        <div class="card-body">
+          {% macro video_block(video, last=False) %}
+            <div class="mb-4 {% if not last %}border-bottom pb-4{% endif %}">
+              <div class="d-flex align-items-center mb-2 flex-wrap">
+                <span class="fw-semibold">{{ video.title }}</span>
+                {% if video.channel %}
+                  <span class="badge bg-primary bg-opacity-10 text-primary ms-2">{{ video.channel }}</span>
+                {% endif %}
+              </div>
+              <div class="ratio ratio-16x9">
+                <iframe src="https://www.youtube.com/embed/{{ video.id }}"
+                        title="{{ video.title }}" allowfullscreen
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>
+              </div>
+            </div>
+          {% endmacro %}
+
+          {% if lesson.videos is mapping %}
+            {% set video_langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("sql", "SQL")] %}
+            <ul class="nav nav-tabs" id="videoTabs" role="tablist">
+              {% for key, label in video_langs if lesson.videos.get(key) %}
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link {% if loop.first %}active{% endif %}"
+                          id="video-{{ key }}-tab" data-bs-toggle="tab"
+                          data-bs-target="#video-{{ key }}-panel" type="button" role="tab"
+                          aria-controls="video-{{ key }}-panel"
+                          aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+                    {{ label }}
+                  </button>
+                </li>
+              {% endfor %}
+            </ul>
+            <div class="tab-content pt-3" id="videoTabsContent">
+              {% for key, label in video_langs if lesson.videos.get(key) %}
+                <div class="tab-pane fade {% if loop.first %}show active{% endif %}"
+                     id="video-{{ key }}-panel" role="tabpanel"
+                     aria-labelledby="video-{{ key }}-tab">
+                  {% for video in lesson.videos[key] %}
+                    {{ video_block(video, loop.last) }}
+                  {% endfor %}
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            {% for video in lesson.videos %}
+              {{ video_block(video, loop.last) }}
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
       {% if lesson.diagram %}
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-white">

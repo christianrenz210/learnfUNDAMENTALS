@@ -760,6 +760,51 @@ body {
   }
 }
 
+/* ================= Video Credits Marquee ================= */
+.video-credits-marquee {
+  overflow: hidden;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+}
+.video-credits-track {
+  display: inline-flex;
+  animation: video-credits-scroll 40s linear infinite;
+  will-change: transform;
+}
+.video-credits-marquee:hover .video-credits-track {
+  animation-play-state: paused;
+}
+.video-credits-content {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding-right: 2rem;
+}
+.video-credits-content a {
+  color: rgba(255, 255, 255, 0.55);
+  text-decoration: none;
+  margin: 0 0.9rem;
+  transition: color 0.15s ease;
+}
+.video-credits-content a:hover,
+.video-credits-content a:focus {
+  color: #fff;
+  text-decoration: underline;
+}
+.video-credits-dot {
+  color: rgba(255, 255, 255, 0.35);
+}
+@keyframes video-credits-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .video-credits-track {
+    animation: none;
+  }
+}
+
 /* ================= Dark Mode Overrides ================= */
 [data-bs-theme="dark"] {
   --cf-bg: #16161f;
