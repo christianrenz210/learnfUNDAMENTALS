@@ -728,6 +728,57 @@ def certificate(name):
     )
 
 
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip()
+
+EREN_SYSTEM_PROMPT = (
+    "You are E.R.E.N (Educational Response Engine for Novices), the friendly AI assistant of "
+    "CodeFundamentals, a free site where students learn Python, C++, and Java side by side, plus "
+    "Advanced Database Systems (SQL). Respond in the same language the student uses. Be concise, "
+    "patient, and beginner-friendly. Answer questions about the course, its lessons, quizzes, "
+    "leaderboard, and coding concepts. If a question is off-topic, answer briefly and gently steer "
+    "back to programming.\n\n"
+    "Course sections and lessons:\n"
+    "- Fundamentals: Introduction to Programming, Programming History, Variables and Data Types, "
+    "Input and Output, Operators, Logical Operators, Conditionals (if/else), Loops, Functions, "
+    "Arrays and Lists, Basic Problem Solving.\n"
+    "- Advanced Database System: DBMS overview, ER model and keys, Normalization (1NF-3NF), "
+    "SQL DDL, DML, SELECT and filtering, JOINs, Subqueries and Aggregates.\n"
+    "- SQL Injection: introduction and how it works.\n\n"
+    "Rules: each lesson ends with a quiz (one attempt). Each section ends with a Long Quiz "
+    "(15 questions, 20 seconds each, 2 attempts). The leaderboard ranks users by total points: "
+    "quiz scores plus 2 points per SQL Injection lab."
+)
+
+
+def gemini_reply(message):
+    if not GEMINI_API_KEY:
+        return None
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{GEMINI_MODEL}:generateContent"
+    )
+    payload = {
+        "system_instruction": {"parts": [{"text": EREN_SYSTEM_PROMPT}]},
+        "contents": [{"role": "user", "parts": [{"text": message}]}],
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 1024},
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+        parts = body["candidates"][0]["content"]["parts"]
+        reply = "".join(p.get("text", "") for p in parts).strip()
+        return reply or None
+    except Exception:
+        return None
+
+
 def assistant_reply(message):
     text = message.lower().strip()
 
@@ -787,7 +838,10 @@ def assistant():
     message = (data.get("message") or "").strip()
     if not message:
         return jsonify({"ok": False, "error": "Please type a message."}), 400
-    return jsonify({"ok": True, "reply": assistant_reply(message)})
+    reply = gemini_reply(message)
+    if reply is None:
+        reply = assistant_reply(message)
+    return jsonify({"ok": True, "reply": reply})
 
 
 @app.route("/lesson/<int:lesson_id>")
