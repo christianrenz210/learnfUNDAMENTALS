@@ -96,7 +96,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.45"
+APP_VERSION = "1.46"
 
 
 @app.context_processor
@@ -108,7 +108,7 @@ def inject_avatar():
             return user.avatar
         return url_for("static", filename="uploads/" + user.avatar)
 
-    return {"avatar_src": avatar_src, "app_version": APP_VERSION}
+    return {"avatar_src": avatar_src, "app_version": APP_VERSION, "latest_update": CHANGELOG[0]}
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///students.db")
 if DATABASE_URL.startswith("postgres://"):

@@ -328,38 +328,4 @@
     </div>
   </div>
 </section>
-
-<div class="modal fade" id="dbFixedModal" tabindex="-1" aria-labelledby="dbFixedModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <div class="d-flex align-items-center">
-          <i class="bi bi-database-check text-success fs-3 me-3"></i>
-          <h5 class="modal-title fw-bold" id="dbFixedModalLabel">Database Fixed!</h5>
-        </div>
-      </div>
-      <div class="modal-body pt-3">
-        <p class="mb-0">
-          The database is now working with <strong>PostgreSQL</strong>. The error due
-          to the database issue on <strong>August 5 at 1:50 AM</strong> has been fixed.
-          Thank you for your patience!
-        </p>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">OK</button>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    var dbFixedModal = document.getElementById('dbFixedModal');
-    if (dbFixedModal) {
-      new bootstrap.Modal(dbFixedModal).show();
-    }
-  });
-</script>
 {% endblock %}

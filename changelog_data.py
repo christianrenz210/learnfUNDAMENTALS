@@ -1,5 +1,17 @@
 CHANGELOG = [
     {
+        "version": "1.46",
+        "date": "2026-08-05",
+        "type": "feature",
+        "title": "Update Popup Notifications",
+        "changes": [
+            "Added a popup that announces new updates whenever a new version is released",
+            "The popup shows only once per session - refreshing the page will not show it again",
+            "The popup reappears in a new session only when a newer version is available",
+            "Added a link to the full Updates page from the popup",
+        ],
+    },
+    {
         "version": "1.45",
         "date": "2026-08-05",
         "type": "feature",

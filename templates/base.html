@@ -300,6 +300,44 @@
   </div>
 </div>
 
+<div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="updateModalLabel">
+          <i class="bi bi-stars text-primary me-2"></i>New Update Available!
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <span class="badge bg-primary"><i class="bi bi-tag me-1"></i>v{{ latest_update.version }}</span>
+          <span class="badge
+            {% if latest_update.type == 'fix' %}bg-warning text-dark
+            {% elif latest_update.type == 'launch' %}bg-success
+            {% elif latest_update.type == 'notice' %}bg-danger
+            {% else %}bg-info text-dark{% endif %}">
+            {{ latest_update.type | capitalize }}
+          </span>
+          <span class="small text-muted">{{ latest_update.date }}</span>
+        </div>
+        <h6 class="fw-bold mb-2">{{ latest_update.title }}</h6>
+        <ul class="mb-0">
+          {% for change in latest_update.changes %}
+          <li class="mb-1">{{ change }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <a href="{{ url_for('changelog') }}" class="btn btn-outline-primary">
+          <i class="bi bi-journal-code me-1"></i>View All Updates
+        </a>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% if current_user.is_authenticated and not hide_assist_widget %}
 <button type="button" id="assistToggle" class="assist-toggle" aria-label="Open AI Assistant">
   <i class="bi bi-robot"></i>
@@ -396,10 +434,39 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+function versionCompare(a, b) {
+  const pa = (a || '0').split('.').map(Number);
+  const pb = (b || '0').split('.').map(Number);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const x = pa[i] || 0;
+    const y = pb[i] || 0;
+    if (x > y) return 1;
+    if (x < y) return -1;
+  }
+  return 0;
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   const flashModal = document.getElementById('flashModal');
   if (flashModal) {
     new bootstrap.Modal(flashModal).show();
+  }
+
+  const updateModalEl = document.getElementById('updateModal');
+  if (updateModalEl) {
+    let shown = false;
+    try { shown = sessionStorage.getItem('cfUpdateShown') === '1'; } catch (e) {}
+    if (!shown) {
+      let lastSeen = '0';
+      try { lastSeen = localStorage.getItem('cfLastSeenVersion') || '0'; } catch (e) {}
+      const current = '{{ app_version }}';
+      if (versionCompare(current, lastSeen) > 0) {
+        new bootstrap.Modal(updateModalEl).show();
+        try { localStorage.setItem('cfLastSeenVersion', current); } catch (e) {}
+      }
+      try { sessionStorage.setItem('cfUpdateShown', '1'); } catch (e) {}
+    }
   }
 });
 function togglePassword(inputId, iconId) {
