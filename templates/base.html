@@ -434,19 +434,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function versionCompare(a, b) {
-  const pa = (a || '0').split('.').map(Number);
-  const pb = (b || '0').split('.').map(Number);
-  const len = Math.max(pa.length, pb.length);
-  for (let i = 0; i < len; i++) {
-    const x = pa[i] || 0;
-    const y = pb[i] || 0;
-    if (x > y) return 1;
-    if (x < y) return -1;
-  }
-  return 0;
-}
-
 document.addEventListener('DOMContentLoaded', function () {
   const flashModal = document.getElementById('flashModal');
   if (flashModal) {
@@ -458,13 +445,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let shown = false;
     try { shown = sessionStorage.getItem('cfUpdateShown') === '1'; } catch (e) {}
     if (!shown) {
-      let lastSeen = '0';
-      try { lastSeen = localStorage.getItem('cfLastSeenVersion') || '0'; } catch (e) {}
-      const current = '{{ app_version }}';
-      if (versionCompare(current, lastSeen) > 0) {
-        new bootstrap.Modal(updateModalEl).show();
-        try { localStorage.setItem('cfLastSeenVersion', current); } catch (e) {}
-      }
+      new bootstrap.Modal(updateModalEl).show();
       try { sessionStorage.setItem('cfUpdateShown', '1'); } catch (e) {}
     }
   }

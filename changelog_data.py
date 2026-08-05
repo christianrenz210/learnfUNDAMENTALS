@@ -1,5 +1,16 @@
 CHANGELOG = [
     {
+        "version": "1.48",
+        "date": "2026-08-05",
+        "type": "fix",
+        "title": "Update Popup Reliability Fix",
+        "changes": [
+            "Simplified the new update popup to use only sessionStorage for automatic once-per-session display",
+            "Popup now shows automatically on every new session without requiring manual browser cache clearing",
+            "Removed the localStorage version comparison that was causing the popup to not appear",
+        ],
+    },
+    {
         "version": "1.47",
         "date": "2026-08-05",
         "type": "feature",

@@ -96,7 +96,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.47"
+APP_VERSION = "1.48"
 
 
 @app.context_processor
