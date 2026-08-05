@@ -96,7 +96,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.48"
+APP_VERSION = "1.49"
 
 
 @app.context_processor
@@ -2798,19 +2798,29 @@ with app.app_context():
     except Exception:
         pass
     try:
-        has_lesson_10 = db.session.execute(
-            sa_text("SELECT COUNT(*) FROM quiz_score WHERE lesson_id = 10")
+        reset_marker = db.session.execute(
+            sa_text("SELECT COUNT(*) FROM activity_log WHERE action = :a"),
+            {"a": "SYSTEM: progress reset v1.48"},
         ).scalar()
-        if not has_lesson_10:
-            db.session.execute(
-                sa_text("UPDATE quiz_score SET lesson_id = lesson_id + 1 WHERE lesson_id >= 5")
-            )
-            db.session.execute(
-                sa_text("UPDATE lesson_progress SET lesson_id = lesson_id + 1 WHERE lesson_id >= 5")
-            )
+        if not reset_marker:
+            db.session.query(LessonProgress).filter(
+                LessonProgress.lesson_id >= 5
+            ).delete(synchronize_session=False)
+            db.session.query(QuizScore).filter(
+                QuizScore.lesson_id >= 5
+            ).delete(synchronize_session=False)
+            anchor = User.query.order_by(User.id).first()
+            if anchor is not None:
+                db.session.add(
+                    ActivityLog(
+                        user_id=anchor.id,
+                        action="SYSTEM: progress reset v1.48",
+                        details="Reset shifted lesson/quiz progress from legacy migration",
+                    )
+                )
             db.session.commit()
     except Exception:
-        pass
+        db.session.rollback()
     try:
         legacy_users = db.session.execute(
             sa_text(

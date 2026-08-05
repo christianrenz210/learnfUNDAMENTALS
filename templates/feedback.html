@@ -85,7 +85,7 @@
                   </h6>
                   <div class="d-flex gap-2">
                     <span class="badge bg-secondary">{{ fb.category }}</span>
-                    <span class="text-muted small">{{ fb.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                    <span class="text-muted small">{{ fb.created_at|localtime('%b %d, %Y %I:%M %p') }} PHT</span>
                   </div>
                 </div>
               </div>
@@ -97,7 +97,7 @@
                 <div class="d-flex align-items-center mb-1">
                   <i class="bi bi-shield-lock text-success me-2"></i>
                   <strong class="text-success small">Admin Reply</strong>
-                  <span class="text-muted small ms-2">{{ fb.replied_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                  <span class="text-muted small ms-2">{{ fb.replied_at|localtime('%b %d, %Y %I:%M %p') }} PHT</span>
                 </div>
                 <p class="mb-0">{{ fb.admin_reply }}</p>
               </div>

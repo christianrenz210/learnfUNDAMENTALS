@@ -1,5 +1,19 @@
 CHANGELOG = [
     {
+        "version": "1.49",
+        "date": "2026-08-06",
+        "type": "fix",
+        "title": "Lesson Progress Revert Bug Fixed & Update Popup Always Shows",
+        "changes": [
+            "Fixed a critical bug where completed lessons would randomly revert to uncompleted",
+            "Root cause: a legacy lesson-ID renumbering migration ran on every app startup and shifted lesson progress (id 5+) by +1 whenever no quiz score existed for lesson 10",
+            "Removed the destructive one-time migration so lesson progress can no longer be shifted",
+            "Reset the shifted lesson and quiz progress for lessons 5+ (lessons 1-4 and all user accounts were kept intact)",
+            "Update notification popup now shows once per visit (new tab/session), so it is easy to see without being annoying on every page change",
+            "Feedback timestamps now display in Manila time (PHT) on the public feedback page and admin panel",
+        ],
+    },
+    {
         "version": "1.48",
         "date": "2026-08-05",
         "type": "fix",

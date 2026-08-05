@@ -38,7 +38,7 @@
             </h6>
             <div class="d-flex gap-2 mb-2">
               <span class="badge bg-secondary">{{ fb.category }}</span>
-              <span class="text-muted small">{{ fb.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+              <span class="text-muted small">{{ fb.created_at|localtime('%b %d, %Y %I:%M %p') }} PHT</span>
               {% if fb.user %}
                 <span class="text-muted small">by {{ fb.user.username }}</span>
               {% endif %}
@@ -66,7 +66,7 @@
           <div class="alert alert-success mb-0">
             <strong><i class="bi bi-reply me-1"></i>Your Reply:</strong><br>
             {{ fb.admin_reply }}
-            <div class="text-muted small mt-1">Replied {{ fb.replied_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+            <div class="text-muted small mt-1">Replied {{ fb.replied_at|localtime('%b %d, %Y %I:%M %p') }} PHT</div>
           </div>
         {% else %}
           <form method="POST" action="{{ url_for('admin_feedback_reply', fid=fb.id) }}">
