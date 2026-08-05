@@ -10,10 +10,12 @@
         <div class="col-lg-7">
           <h1 class="display-4 fw-bold">Learn the Fundamentals of Programming</h1>
           <p class="lead">
-            Free lessons in Python, C++, Java, SQL, and Web Deployment — plus a
-            hands-on SQL injection security lab — designed for first-year
-            college students. Understand the core concepts that every
-            programming language shares, and deploy your projects to the web.
+            Free lessons in Python, C++, Java, SQL, Web Deployment, and WordPress — plus a
+            hands-on SQL injection security lab. Built for first-year students and anyone
+            starting from zero, with content that scales up through advanced topics for
+            BSIT, Computer Science, and IT courses at any level. Understand the core
+            concepts that every programming language shares, and deploy your projects to
+            the web.
           </p>
           <div class="d-flex gap-2 flex-wrap">
             {% if current_user.is_authenticated %}
@@ -83,8 +85,9 @@
             <i class="bi bi-bezier2 fs-1 text-primary"></i>
             <h5 class="card-title mt-3">Beginner-Friendly</h5>
             <p class="card-text">
-              Written for 1st year students with no prior experience. Concepts
-              are explained simply and clearly.
+              Written for beginners with no prior experience — whether you're a 1st
+              year student or exploring programming at any level. Concepts are
+              explained simply and clearly.
             </p>
           </div>
         </div>
@@ -171,9 +174,9 @@
             <i class="bi bi-book fs-2 text-primary"></i>
             <h5 class="card-title mt-3">Read the Lessons</h5>
             <p class="card-text">
-              Work through 25+ lessons in four sections: programming fundamentals
-              (Python, C++, Java), advanced fundamentals (GitHub, deployment),
-              advanced database systems, and SQL injection security.
+              Work through 26+ lessons in four sections: programming fundamentals
+              (Python, C++, Java), advanced fundamentals (GitHub, deployment,
+              WordPress), advanced database systems, and SQL injection security.
             </p>
           </div>
         </div>
@@ -246,13 +249,14 @@
       {% endfor %}
 
       <div class="col-12">
-        <h5 class="mb-3 mt-2"><i class="bi bi-cloud-arrow-up text-primary me-2"></i>Advanced Fundamentals <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">4 lessons</span></h5>
+        <h5 class="mb-3 mt-2"><i class="bi bi-cloud-arrow-up text-primary me-2"></i>Advanced Fundamentals <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">5 lessons</span></h5>
       </div>
       {% for lesson in [
         {"icon": "bi-github", "title": "Introduction to GitHub", "desc": "Version control and collaboration with Git."},
         {"icon": "bi-globe", "title": "Web Deployment Fundamentals", "desc": "Deploying web apps to the internet."},
         {"icon": "bi-cloud-arrow-up", "title": "Deploying with Render", "desc": "Deploy Laravel and React apps to Render."},
-        {"icon": "bi-cloud-arrow-up", "title": "Deploying with Netlify", "desc": "Deploy static sites and SPAs to Netlify."}
+        {"icon": "bi-cloud-arrow-up", "title": "Deploying with Netlify", "desc": "Deploy static sites and SPAs to Netlify."},
+        {"icon": "bi-wordpress", "title": "Building Websites with WordPress", "desc": "Create and manage a website with WordPress — no coding needed."}
       ] %}
         <div class="col-md-4 col-sm-6">
           <div class="card h-100 shadow-sm">

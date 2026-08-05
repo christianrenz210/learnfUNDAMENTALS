@@ -96,7 +96,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.46"
+APP_VERSION = "1.47"
 
 
 @app.context_processor
@@ -1074,7 +1074,7 @@ EREN_SYSTEM_PROMPT = (
     "- Fundamentals: Introduction to Programming, Programming History, Variables and Data Types, "
     "Input and Output, Operators, Logical Operators, Conditionals (if/else), Loops, Functions, "
     "Arrays and Lists, Basic Problem Solving.\n"
-    "- Advanced Fundamentals: Introduction to GitHub, Web Deployment Fundamentals, Deploying with Render, Deploying with Netlify.\n"
+    "- Advanced Fundamentals: Introduction to GitHub, Web Deployment Fundamentals, Deploying with Render, Deploying with Netlify, Building Websites with WordPress.\n"
     "- Advanced Database System: DBMS overview, ER model and keys, Normalization (1NF-3NF), "
     "SQL DDL, DML, SELECT and filtering, JOINs, Subqueries and Aggregates.\n"
     "- SQL Injection: introduction and how it works.\n\n"

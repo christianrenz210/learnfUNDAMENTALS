@@ -1,5 +1,18 @@
 CHANGELOG = [
     {
+        "version": "1.47",
+        "date": "2026-08-05",
+        "type": "feature",
+        "title": "WordPress Lesson & Expanded Audience",
+        "changes": [
+            "Added a new Advanced Fundamentals lesson: Building Websites with WordPress (id=34)",
+            "Learn WordPress.com vs WordPress.org, themes, plugins, posts and pages, WP-CLI, and security",
+            "Updated the landing page hero to welcome all levels - not just first-year students",
+            "Course is now positioned for BSIT, Computer Science, and IT students at any level",
+            "Advanced Fundamentals section now has 5 lessons; total course has 26 lessons",
+        ],
+    },
+    {
         "version": "1.46",
         "date": "2026-08-05",
         "type": "feature",

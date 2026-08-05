@@ -848,6 +848,91 @@ LESSONS = [
         ],
     },
     {
+        "section": "Advanced Fundamentals",
+        "id": 34,
+        "minutes": 40,
+        "title": "Building Websites with WordPress",
+        "icon": "bi-wordpress",
+        "description": "WordPress powers over 40% of all websites on the internet — and you do not need to be a professional programmer to use it. Learn the difference between WordPress.com and WordPress.org, how themes and plugins work, how to create posts and pages, and how to install, customize, and secure a WordPress site with its own domain and hosting.",
+        "videos": {
+            "general": [
+                {"id": "UT3No6nswz8", "channel": "Kevin Stratvert", "title": "WordPress Tutorial for Beginners"},
+            ],
+        },
+        "key_points": [
+            "WordPress is a free, open-source Content Management System (CMS) written in PHP that lets anyone build a website without coding.",
+            "WordPress.com is a hosted service where WordPress handles the hosting; WordPress.org is the open-source software you install on your own hosting.",
+            "WordPress.org (self-hosted) gives you full control: your own domain, plugins, themes, and ad-free site.",
+            "A theme controls your site's look and layout; thousands of free and paid themes are available.",
+            "A plugin adds features like contact forms, SEO, security, and e-commerce without writing code.",
+            "Posts are for blog entries (shown newest-first); Pages are for static content like About and Contact.",
+            "The admin dashboard (/wp-admin) is where you manage posts, pages, media, themes, plugins, and settings.",
+            "The block editor (Gutenberg) lets you build pages by dragging and dropping blocks for text, images, videos, buttons, and more.",
+            "You can install WordPress with one-click installers from most hosting providers, or manually with a local tool like XAMPP or Local.",
+            "WP-CLI is a command-line tool that lets you install and manage WordPress from the terminal.",
+            "A .htaccess file (Apache) or nginx config handles pretty permalinks and security rules.",
+            "Plugins must stay updated — outdated plugins are the #1 cause of WordPress sites being hacked.",
+            "Keep WordPress core, themes, and plugins updated, use strong passwords, and enable two-factor authentication to stay secure.",
+            "Backups (via plugins or hosting) protect your content and database if something goes wrong.",
+            "A typical WordPress stack needs a web server (Apache/Nginx), PHP, and MySQL/MariaDB — similar to any PHP web app.",
+        ],
+        "code": {
+            "shell": "# ========================================\n# WORDPRESS - INSTALL & MANAGE VIA WP-CLI\n# ========================================\n\n# --- STEP 1: Download WordPress (self-hosted / WordPress.org) ---\ncurl -O https://wordpress.org/latest.tar.gz\ntar -xzf latest.tar.gz\ncd wordpress\n\n# --- STEP 2: Create a database in MySQL ---\nmysql -u root -p -e \"CREATE DATABASE wordpress_db CHARACTER SET utf8mb4;\"\nmysql -u root -p -e \"CREATE USER 'wpuser'@'localhost' IDENTIFIED BY 'strong_password';\"\nmysql -u root -p -e \"GRANT ALL ON wordpress_db.* TO 'wpuser'@'localhost';\"\nmysql -u root -p -e \"FLUSH PRIVILEGES;\"\n\n# --- STEP 3: Configure wp-config.php ---\ncp wp-config-sample.php wp-config.php\n# Edit wp-config.php and set:\n#   define('DB_NAME', 'wordpress_db');\n#   define('DB_USER', 'wpuser');\n#   define('DB_PASSWORD', 'strong_password');\n#   define('DB_HOST', 'localhost');\n\n# --- STEP 4: Install WordPress using WP-CLI (if installed) ---\nwp core install \\\n  --url=https://yoursite.com \\\n  --title=\"My WordPress Site\" \\\n  --admin_user=admin \\\n  --admin_password=strong-admin-pass \\\n  --admin_email=you@example.com\n\n# --- STEP 5: Common WP-CLI commands ---\nwp plugin list                # list installed plugins\nwp plugin install woocommerce # install a plugin\nwp theme activate twentytwentyfive  # activate a theme\nwp post create --post_title=\"Hello World\" --post_status=publish\nwp user create juan juan@example.com --role=author\nwp search-replace 'http://localhost' 'https://yoursite.com' --all-tables\nwp cache flush               # clear the cache\nwp core update               # update WordPress core\nwp plugin update --all       # update all plugins\n\n# --- STEP 6: Useful folders ---\n# wp-content/themes/   -> your themes\n# wp-content/plugins/  -> your plugins\n# wp-content/uploads/  -> your media files\n\n# --- STEP 7: Secure it ---\n# 1. Always keep core, themes, and plugins updated\n# 2. Use a strong admin password and 2FA\n# 3. Limit login attempts (plugin like Limit Login Attempts)\n# 4. Enable HTTPS with a free SSL certificate\n# 5. Schedule regular backups",
+        },
+        "quiz": [
+            {
+                "question": "What is WordPress?",
+                "options": ["A programming language", "A free, open-source Content Management System (CMS)", "A web hosting provider", "A social media platform"],
+                "correct": 1,
+            },
+            {
+                "question": "What is the difference between WordPress.com and WordPress.org?",
+                "options": ["They are the same thing", "WordPress.com hosts your site; WordPress.org is the self-hosted open-source software", "WordPress.org is paid only", "WordPress.com requires coding"],
+                "correct": 1,
+            },
+            {
+                "question": "What controls the look and layout of a WordPress site?",
+                "options": ["A plugin", "A theme", "The database", "PHP settings"],
+                "correct": 1,
+            },
+            {
+                "question": "What adds features like contact forms and SEO without writing code?",
+                "options": ["A theme", "A plugin", "A post", "A tag"],
+                "correct": 1,
+            },
+            {
+                "question": "In WordPress, what is a Page?",
+                "options": ["A blog entry", "Static content like About or Contact", "A theme file", "A plugin setting"],
+                "correct": 1,
+            },
+            {
+                "question": "What does a CMS like WordPress let you do?",
+                "options": ["Write machine code", "Build and manage a website without coding", "Compile programs", "Design microchips"],
+                "correct": 1,
+            },
+            {
+                "question": "What is the #1 cause of WordPress sites being hacked?",
+                "options": ["Using too many pages", "Outdated plugins", "Dark themes", "Too many posts"],
+                "correct": 1,
+            },
+            {
+                "question": "Which components make up a typical WordPress hosting stack?",
+                "options": ["Node.js, MongoDB, Express", "Apache/Nginx, PHP, and MySQL/MariaDB", "Java, Tomcat, Oracle", "HTML, CSS, JavaScript only"],
+                "correct": 1,
+            },
+            {
+                "question": "What command-line tool manages WordPress from the terminal?",
+                "options": ["npm", "WP-CLI", "pip", "composer"],
+                "correct": 1,
+            },
+            {
+                "question": "Where is the WordPress admin area usually located?",
+                "options": ["/admin", "/wp-admin", "/dashboard", "/login"],
+                "correct": 1,
+            },
+        ],
+    },
+    {
         "section": "Advanced Database System",
         "id": 11,
         "minutes": 35,
