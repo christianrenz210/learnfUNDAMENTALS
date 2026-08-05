@@ -6,7 +6,7 @@
 <div class="container py-4">
   <div class="row justify-content-center">
     <div class="col-lg-7">
-      <div class="card shadow-sm border-0 mb-4">
+      <div class="card shadow-sm border-0 mb-4 fade-up">
         <div class="card-body text-center">
           <i class="bi bi-trophy-fill text-warning display-4"></i>
           <h2 class="mb-1">Section Long Quiz</h2>
@@ -15,7 +15,7 @@
       </div>
 
       {% if score %}
-      <div class="card shadow-sm border-0" id="lockCard">
+      <div class="card shadow-sm border-0 fade-up" id="lockCard">
         <div class="card-body text-center py-5">
           <i class="bi bi-lock-fill text-secondary display-3"></i>
           <h4 class="mt-3 mb-2">You already took this quiz</h4>
@@ -69,7 +69,7 @@
         </div>
       </div>
       {% endif %}
-      <div class="card shadow-sm border-0 {% if score %}d-none{% endif %}" id="quizCard">
+      <div class="card shadow-sm border-0 fade-up {% if score %}d-none{% endif %}" id="quizCard">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="badge bg-primary bg-opacity-10 text-primary" id="qCounter">

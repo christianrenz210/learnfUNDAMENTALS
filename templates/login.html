@@ -3,17 +3,20 @@
 {% block title %}Login - CodeFundamentals{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-  <div class="row justify-content-center">
+<div class="auth-page container py-5">
+  <div class="row justify-content-center w-100 mx-0">
     <div class="col-md-6 col-lg-5">
-      <div class="card shadow-sm">
-        <div class="card-body p-4">
-          <h3 class="card-title mb-3">
-            <i class="bi bi-box-arrow-in-right text-primary me-2"></i>Login
-          </h3>
-          <p class="text-muted">Welcome back. Log in to continue your lessons.</p>
-          <form method="POST" action="{{ url_for('login') }}">
-            <div class="mb-3">
+      <div class="card auth-card">
+        <div class="card-body p-4 p-md-5">
+          <div class="text-center mb-3 fade-up">
+            <div class="auth-icon-wrap mx-auto">
+              <i class="bi bi-box-arrow-in-right"></i>
+            </div>
+          </div>
+          <h3 class="auth-title fade-up">Welcome Back</h3>
+          <p class="auth-subtitle fade-up">Log in to continue your lessons.</p>
+          <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+            <div class="mb-3 fade-up">
               <label for="username" class="form-label">Username</label>
               <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-person"></i></span>
@@ -21,7 +24,7 @@
                        placeholder="Enter your username" required>
               </div>
             </div>
-            <div class="mb-4">
+            <div class="mb-4 fade-up">
               <label for="password" class="form-label">Password</label>
               <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-lock"></i></span>
@@ -34,11 +37,12 @@
                 </button>
               </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100">
+            <button type="submit" class="btn auth-btn w-100 fade-up">
               <i class="bi bi-box-arrow-in-right me-2"></i>Login
             </button>
           </form>
-          <p class="text-center mt-3 mb-0">
+          <div class="auth-divider my-4 fade-up"><span>or</span></div>
+          <p class="text-center mb-0 fade-up">
             New here?
             <a href="{{ url_for('register') }}">Create an account</a>
           </p>

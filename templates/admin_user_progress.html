@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container-fluid px-lg-4 py-4">
-  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 fade-up">
     <div>
       <h2 class="mb-1">
         <i class="bi bi-person-gear text-primary me-2"></i>{{ target_user.username }}'s Progress
@@ -33,7 +33,7 @@
   {% set quiz_count = lessons_progress | selectattr('quiz_score') | list | length %}
   {% set lab_count = lessons_progress | selectattr('lab_completed') | list | length %}
 
-  <div class="row g-3 mb-4">
+  <div class="row g-3 mb-4 fade-up">
     <div class="col-6 col-lg-3">
       <div class="card card-body text-center shadow-sm h-100">
         <div class="display-6 fw-bold text-primary">{{ completed_count }} / {{ total_lessons }}</div>
@@ -75,7 +75,7 @@
     {% endfor %}
 
     {% if section_lessons %}
-      <div class="card shadow-sm mb-4">
+      <div class="card shadow-sm mb-4 fade-up">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
           <h6 class="mb-0">
             <i class="bi bi-folder2-open text-primary me-2"></i>{{ section_name }}

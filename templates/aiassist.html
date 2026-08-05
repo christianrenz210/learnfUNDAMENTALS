@@ -9,7 +9,7 @@
 {% block content %}
 <div class="assist-layout">
   <!-- Sidebar -->
-  <aside class="assist-sidebar" id="assistSidebar">
+  <aside class="assist-sidebar fade-up" id="assistSidebar">
     <div class="assist-sidebar-head">
       <a href="{{ url_for('dashboard') }}" class="assist-sidebar-logo" aria-label="Back to dashboard" title="Back to dashboard">
         <i class="bi bi-code-slash"></i>
@@ -39,7 +39,7 @@
   </aside>
 
   <!-- Main chat area -->
-  <main class="assist-main">
+  <main class="assist-main fade-up">
     <header class="assist-topbar">
       <button type="button" id="assistSidebarOpen" class="assist-topbar-btn d-lg-none" aria-label="Open sidebar">
         <i class="bi bi-list"></i>

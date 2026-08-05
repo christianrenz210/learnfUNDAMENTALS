@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container-fluid px-lg-4 py-4">
-  <div class="row align-items-center mb-4">
+  <div class="row align-items-center mb-4 fade-up">
     <div class="col-md-8">
       <h2 class="mb-1">
         <i class="bi bi-grid text-primary me-2"></i>Dashboard
@@ -26,7 +26,7 @@
 
   <div class="row g-4 align-items-start">
     <aside class="col-lg-4 dashboard-sidebar">
-      <div class="card shadow-sm mb-4">
+      <div class="card shadow-sm mb-4 fade-up">
         <div class="card-body text-center">
           {% if current_user.avatar %}
             <img src="{{ avatar_src(current_user) }}" alt="{{ current_user.username }}" class="avatar-circle-img mx-auto mb-3">
@@ -41,7 +41,7 @@
           </button>
         </div>
       </div>
-      <div class="card shadow-sm mb-4">
+      <div class="card shadow-sm mb-4 fade-up">
         <div class="card-header bg-white">
           <h6 class="mb-0">
             <i class="bi bi-graph-up text-primary me-2"></i>Your Progress
@@ -137,7 +137,7 @@
           </div>
         </div>
       </div>
-      <div class="card shadow-sm">
+      <div class="card shadow-sm fade-up">
         <div class="card-header bg-white">
           <h5 class="mb-0">
             <i class="bi bi-trophy text-warning me-2"></i>Leaderboard
@@ -181,7 +181,7 @@
           {% endfor %}
         </ul>
       </div>
-      <div class="card shadow-sm mt-4">
+      <div class="card shadow-sm mt-4 fade-up">
         <div class="card-header bg-white">
           <h5 class="mb-0">
             <i class="bi bi-patch-check text-primary me-2"></i>Your Badges
@@ -256,7 +256,7 @@
         {% set sec_done = section_lessons|selectattr('id', 'in', completed)|list|length %}
         {% set sec_total = section_stats | selectattr('name', 'equalto', section) | map(attribute='total') | list | first %}
         {% set sec_total = sec_total if sec_total else section_lessons|length %}
-        <div class="card folder-card shadow-sm mb-3">
+        <div class="card folder-card shadow-sm mb-3 fade-up">
           <button type="button" class="folder-toggle w-100 d-flex align-items-center text-start bg-transparent border-0 p-3"
                   data-bs-toggle="collapse" data-bs-target="#{{ sec_id }}"
                   aria-expanded="false" aria-controls="{{ sec_id }}">

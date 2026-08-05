@@ -1879,3 +1879,127 @@ body {
     flex-direction: column;
   }
 }
+
+/* ===== Auth Pages (Login / Register) ===== */
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 150px);
+}
+
+.auth-card {
+  border: none;
+  border-radius: 1.25rem;
+  box-shadow: 0 0.5rem 1.75rem rgba(23, 12, 121, 0.12) !important;
+}
+
+.auth-icon-wrap {
+  width: 4.5rem;
+  height: 4.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    var(--brand-primary-dark) 55%,
+    var(--brand-secondary-dark) 100%
+  );
+  color: #fff;
+  font-size: 1.9rem;
+  box-shadow: 0 0.4rem 1rem rgba(23, 12, 121, 0.35);
+}
+
+.auth-title {
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.auth-subtitle {
+  text-align: center;
+  color: var(--bs-secondary-color);
+  margin-bottom: 1.75rem;
+}
+
+.auth-form .input-group-text {
+  background: var(--bs-tertiary-bg);
+  font-size: 1rem;
+}
+
+.auth-form .form-control {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+
+.auth-form .form-control:focus {
+  border-color: var(--brand-secondary);
+  box-shadow: 0 0 0 0.25rem rgba(86, 182, 198, 0.25);
+}
+
+.auth-btn {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.7rem 1rem;
+  font-weight: 600;
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    var(--brand-primary-dark) 100%
+  );
+  color: #fff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-btn:hover,
+.auth-btn:focus {
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 0.35rem 1rem rgba(23, 12, 121, 0.3);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  color: var(--bs-secondary-color);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.auth-divider span {
+  padding: 0 0.75rem;
+}
+
+[data-bs-theme="dark"] .auth-card {
+  background-color: var(--bs-body-bg);
+}
+
+/* ===== Scroll-triggered entrance animations ===== */
+.js .fade-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.js .fade-up.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .fade-up {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
