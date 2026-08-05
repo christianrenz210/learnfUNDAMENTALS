@@ -32,10 +32,6 @@
         We're currently performing scheduled maintenance to improve your experience.
         <br>Please check back soon.
       </p>
-      <div class="maintenance-notice mb-4">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <strong>Important Notice:</strong> Due to a database issue on August 5 at 1:50 AM, your account information was lost. We sincerely apologize for the inconvenience.
-      </div>
       <div class="maintenance-divider mb-4"></div>
       <div class="maintenance-info">
         <div class="maintenance-info-item mb-2">
@@ -61,6 +57,28 @@
     </div>
   </div>
 
+  <div class="modal fade" id="noticeModal" tabindex="-1" aria-labelledby="noticeModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-exclamation-triangle-fill text-warning fs-3 me-3"></i>
+            <h5 class="modal-title fw-bold" id="noticeModalLabel">Important Notice</h5>
+          </div>
+        </div>
+        <div class="modal-body pt-3">
+          <p class="mb-0 fs-6">
+            Due to a database issue on <strong>August 5 at 1:50 AM</strong>, your account information was lost.
+            We sincerely apologize for the inconvenience.
+          </p>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer class="maintenance-footer mt-auto">
     <div class="container text-center">
       <p class="mb-1 small text-white-50">
@@ -71,6 +89,10 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
+      var noticeModal = document.getElementById('noticeModal');
+      if (noticeModal) {
+        new bootstrap.Modal(noticeModal).show();
+      }
       var buttons = document.querySelectorAll('.maintenance-buttons .btn');
       buttons.forEach(function(btn) {
         btn.addEventListener('click', function(e) {
