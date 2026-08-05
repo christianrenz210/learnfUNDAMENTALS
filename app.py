@@ -55,7 +55,7 @@ from sqlalchemy import text as sa_text
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from lessons_data import LESSONS, LONG_QUIZZES
-
+from changelog_data import CHANGELOG
 SECTION_ORDER = ["Fundamentals", "Advanced Fundamentals", "Advanced Database System", "SQL Injection"]
 SECTION_LESSON_MINUTES = {"Fundamentals": 40, "Advanced Database System": 45}
 AVAILABLE_LESSONS = [l for l in LESSONS if not l.get("coming_soon")]
@@ -458,6 +458,11 @@ def no_cache_html(response):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/changelog")
+def changelog():
+    return render_template("changelog.html", changelog=CHANGELOG)
 
 
 @app.route("/faq")

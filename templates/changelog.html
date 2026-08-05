@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Updates & Version History - CodeFundamentals{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h2 class="mb-1">
+        <i class="bi bi-journal-code text-primary me-2"></i>Updates & Version History
+      </h2>
+      <p class="text-muted mb-4">
+        Everything new, changed, and fixed in CodeFundamentals — current version
+        <span class="badge bg-primary-subtle text-primary-emphasis"><i class="bi bi-tag me-1"></i>v{{ app_version }}</span>
+      </p>
+
+      <div class="changelog-timeline">
+        {% for entry in changelog %}
+        <div class="changelog-item {% if loop.first %}changelog-item-current{% endif %}">
+          <div class="changelog-marker">
+            {% if entry.type == "fix" %}
+              <i class="bi bi-tools"></i>
+            {% elif entry.type == "launch" %}
+              <i class="bi bi-rocket-takeoff"></i>
+            {% elif entry.type == "notice" %}
+              <i class="bi bi-exclamation-triangle"></i>
+            {% else %}
+              <i class="bi bi-stars"></i>
+            {% endif %}
+          </div>
+          <div class="changelog-body">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+              <span class="badge bg-primary changelog-version">v{{ entry.version }}</span>
+              <span class="badge
+                {% if entry.type == 'fix' %}bg-warning text-dark
+                {% elif entry.type == 'launch' %}bg-success
+                {% elif entry.type == 'notice' %}bg-danger
+                {% else %}bg-info text-dark{% endif %}">
+                {{ entry.type | capitalize }}
+              </span>
+              <span class="changelog-date small text-muted">{{ entry.date }}</span>
+            </div>
+            <h5 class="mb-2">{{ entry.title }}</h5>
+            <ul class="changelog-list mb-0">
+              {% for change in entry.changes %}
+              <li>{{ change }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

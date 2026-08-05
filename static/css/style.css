@@ -1642,6 +1642,81 @@ body {
   color: #9b9eb3 !important;
 }
 
+/* Changelog Timeline */
+.changelog-timeline {
+  position: relative;
+  padding-left: 2.5rem;
+}
+
+.changelog-timeline::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--brand-primary), var(--brand-secondary));
+}
+
+.changelog-item {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.changelog-marker {
+  position: absolute;
+  left: -2.5rem;
+  top: 0.15rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  box-shadow: 0 0 0 4px var(--cf-bg), 0 0 0 6px var(--brand-primary);
+}
+
+.changelog-item-current .changelog-marker {
+  background: var(--brand-secondary);
+  box-shadow: 0 0 0 4px var(--cf-bg), 0 0 0 6px var(--brand-secondary);
+  animation: changelogPulse 2s ease-in-out infinite;
+}
+
+@keyframes changelogPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+.changelog-body {
+  background: #fff;
+  border: 1px solid #e5e7f0;
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(23, 12, 121, 0.05);
+}
+
+[data-bs-theme="dark"] .changelog-body {
+  background: var(--bs-body-bg);
+  border-color: #2a2b38;
+}
+
+.changelog-version {
+  font-size: 0.8rem;
+}
+
+.changelog-list {
+  padding-left: 1.25rem;
+  color: var(--bs-body-color);
+}
+
+.changelog-list li {
+  margin-bottom: 0.4rem;
+  line-height: 1.5;
+}
+
 /* Maintenance Mode */
 .maintenance-overlay {
   display: flex;
