@@ -250,7 +250,7 @@ def load_user(user_id):
         return None
 
 
-MAINTENANCE_MODE = os.environ.get("MAINTENANCE_MODE", "1") == "1"
+MAINTENANCE_MODE = os.environ.get("MAINTENANCE_MODE", "0") == "1"
 
 
 @app.before_request
