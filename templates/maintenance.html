@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Under Maintenance - CodeFundamentals</title>
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('cfTheme'); } catch (e) {}
+      if (!t) {
+        try { t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { t = 'light'; }
+      }
+      if (t === 'dark') {
+        document.documentElement.setAttribute('data-bs-theme', 'dark');
+      }
+    })();
+  </script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}?v=13" rel="stylesheet">
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+  <div class="maintenance-overlay" id="maintenanceOverlay">
+    <div class="maintenance-popup">
+      <div class="maintenance-icon-wrapper mb-4">
+        <i class="bi bi-tools maintenance-icon"></i>
+      </div>
+      <h1 class="maintenance-title mb-3">Under Maintenance</h1>
+      <p class="maintenance-subtitle mb-4">
+        We're currently performing scheduled maintenance to improve your experience.
+        <br>Please check back soon.
+      </p>
+      <div class="maintenance-notice mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Important Notice:</strong> Due to a database issue on August 5 at 1:50 AM, your account information was lost. We sincerely apologize for the inconvenience.
+      </div>
+      <div class="maintenance-divider mb-4"></div>
+      <div class="maintenance-info">
+        <div class="maintenance-info-item mb-2">
+          <i class="bi bi-envelope me-2"></i>
+          <span>renzledesma76@gmail.com</span>
+        </div>
+        <div class="maintenance-info-item">
+          <i class="bi bi-telephone me-2"></i>
+          <span>+63 9914458507</span>
+        </div>
+      </div>
+      <div class="maintenance-buttons mt-4">
+        <button type="button" class="btn maintenance-btn-primary" disabled title="Maintenance in progress">
+          <i class="bi bi-house-door me-2"></i>Home
+        </button>
+        <button type="button" class="btn maintenance-btn-secondary" disabled title="Maintenance in progress">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Login
+        </button>
+        <button type="button" class="btn maintenance-btn-secondary" disabled title="Maintenance in progress">
+          <i class="bi bi-person-plus me-2"></i>Register
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="maintenance-footer mt-auto">
+    <div class="container text-center">
+      <p class="mb-1 small text-white-50">
+        <i class="bi bi-code-slash me-1"></i>2026 CodeFundamentals. All rights reserved.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var buttons = document.querySelectorAll('.maintenance-buttons .btn');
+      buttons.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      });
+      var links = document.querySelectorAll('a');
+      links.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      });
+    });
+  </script>
+</body>
+</html>

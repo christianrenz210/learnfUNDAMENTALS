@@ -250,6 +250,27 @@ def load_user(user_id):
         return None
 
 
+MAINTENANCE_MODE = os.environ.get("MAINTENANCE_MODE", "1") == "1"
+
+
+@app.before_request
+def check_maintenance_mode():
+    if MAINTENANCE_MODE:
+        maintenance_paths = {"/maintenance", "/static/"}
+        path = request.path
+        if path.startswith("/static/") or path == "/maintenance":
+            return None
+        return render_template("maintenance.html"), 503
+
+
+@app.after_request
+def add_maintenance_header(response):
+    if MAINTENANCE_MODE:
+        if request.path != "/maintenance" and not request.path.startswith("/static/"):
+            response.headers["Retry-After"] = "3600"
+    return response
+
+
 @app.before_request
 def update_last_seen():
     try:
