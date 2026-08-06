@@ -5,7 +5,7 @@ LESSONS = [
         "minutes": 40,
         "title": "Introduction to Programming",
         "icon": "bi-code-slash",
-        "description": "Programming is the process of writing instructions that a computer can follow. Every program, no matter how complex, is built from simple instructions. In this lesson you will learn how programs are structured in Python, C++, and Java.",
+        "description": "Programming is the process of writing instructions that a computer can follow. Every program, no matter how complex, is built from simple instructions. In this lesson you will learn how programs are structured in Python, C++, Java, and C.",
         "videos": {
             "python": [
                 {"id": "9QKe2RvjG-A", "channel": "Doji Creates", "title": "Python Programming for Beginners Explained (Complete Introduction Guide)"},
@@ -16,18 +16,22 @@ LESSONS = [
             "java": [
                 {"id": "Pyx9oLYpbi4", "channel": "Doji Creates", "title": "Java Programming Introduction Explained (What You Need to Know Before You Start)"},
             ],
+            "c": [
+                {"id": "aMpsKnf6DrQ", "channel": "mycodeschool", "title": "Writing and executing your first program: C Programming Tutorial 03"},
+            ],
         },
         "key_points": [
             "A program is a sequence of instructions executed by a computer.",
             "Source code is written in a human-readable language, then translated or interpreted.",
-            "Python is interpreted, while C++ and Java are compiled.",
-            "C++ and Java use braces {} to group code, Python uses indentation.",
-            "Java programs need a main method, C++ needs a main function.",
+            "Python is interpreted, while C++, Java, and C are compiled.",
+            "C, C++, and Java use braces {} to group code, Python uses indentation.",
+            "Java programs need a main method, C and C++ need a main function.",
         ],
         "code": {
             "python": "print(\"Hello, world!\")\nprint(\"Welcome to programming.\")",
             "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"Hello, world!\" << endl;\n    cout << \"Welcome to programming.\" << endl;\n    return 0;\n}",
             "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, world!\");\n        System.out.println(\"Welcome to programming.\");\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    printf(\"Hello, world!\\n\");\n    printf(\"Welcome to programming.\\n\");\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -53,7 +57,7 @@ LESSONS = [
         "minutes": 35,
         "title": "Programming History",
         "icon": "bi-clock-history",
-        "description": "Every programming language has a creator and a story. In this lesson you will learn how C++, Java, and Python were invented — who built them, when, and why each language was designed.",
+        "description": "Every programming language has a creator and a story. In this lesson you will learn how C, C++, Java, and Python were invented — who built them, when, and why each language was designed.",
         "videos": {
             "general": [
                 {"id": "RU1u-js7db8", "channel": "CrashCourse", "title": "The First Programming Languages: Crash Course Computer Science #11", "duration": 12},
@@ -67,8 +71,13 @@ LESSONS = [
             "java": [
                 {"id": "ZqGSg4b_cZA", "channel": "CultRepo", "title": "The Java Story | The Official Documentary", "duration": 74},
             ],
+            "c": [
+                {"id": "6VT8hDr2GhU", "channel": "LearningLad", "title": "Introduction to C Programming Language | What it is | History, Features | Beginners Video Tutorial", "duration": 13},
+            ],
         },
         "key_points": [
+            "C was created by Dennis Ritchie at Bell Labs in 1972 to build the UNIX operating system.",
+            "C is the foundation of C++, Java, and Python; learning C helps you understand how the other languages work.",
             "C++ was created by Bjarne Stroustrup at Bell Labs in 1983, starting out as \"C with Classes\".",
             "C++ added object-oriented features on top of C while keeping C's speed and low-level control.",
             "Java was created by James Gosling at Sun Microsystems and released in 1995; its original name was Oak.",
@@ -80,6 +89,7 @@ LESSONS = [
             "python": "# A quick history lesson in code\n\nmilestones = [\n    (1983, \"C++\", \"Bjarne Stroustrup\"),\n    (1991, \"Python\", \"Guido van Rossum\"),\n    (1995, \"Java\", \"James Gosling\"),\n]\n\nfor year, name, creator in milestones:\n    print(str(year) + \": \" + name + \" was created by \" + creator)",
             "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"1983: C++ was created by Bjarne Stroustrup\" << endl;\n    cout << \"1991: Python was created by Guido van Rossum\" << endl;\n    cout << \"1995: Java was created by James Gosling\" << endl;\n    return 0;\n}",
             "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"1983: C++ was created by Bjarne Stroustrup\");\n        System.out.println(\"1991: Python was created by Guido van Rossum\");\n        System.out.println(\"1995: Java was created by James Gosling\");\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    printf(\"1972: C was created by Dennis Ritchie\\n\");\n    printf(\"1983: C++ was created by Bjarne Stroustrup\\n\");\n    printf(\"1991: Python was created by Guido van Rossum\\n\");\n    printf(\"1995: Java was created by James Gosling\\n\");\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -105,7 +115,7 @@ LESSONS = [
         "minutes": 40,
         "title": "Variables and Data Types",
         "icon": "bi-box-seam",
-        "description": "Variables store values in memory. Every variable has a name and a value. Python infers the type automatically, while C++ and Java require you to declare the type before the variable name.",
+        "description": "Variables store values in memory. Every variable has a name and a value. Python infers the type automatically, while C, C++, and Java require you to declare the type before the variable name.",
         "videos": {
             "python": [
                 {"id": "2SG133xkpMQ", "channel": "Doji Creates", "title": "Python Variables Explained (How Data Storage Works in Code)"},
@@ -119,18 +129,23 @@ LESSONS = [
                 {"id": "cD-6C39RPKs", "channel": "Doji Creates", "title": "Java Variables Explained (How They Work for Beginners)"},
                 {"id": "5Lxq9JJZRAg", "channel": "Doji Creates", "title": "Java Primitive Data Types Explained (Everything You Need to Know)"},
             ],
+            "c": [
+                {"id": "OSyjOvFbAGI", "channel": "mycodeschool", "title": "Data types, Constants and Variables - C Programming Tutorial 05"},
+            ],
         },
         "key_points": [
             "Python is dynamically typed: the type is decided by the value.",
-            "C++ and Java are statically typed: you must declare the type.",
+            "C, C++, and Java are statically typed: you must declare the type.",
             "Common types: int, double/float, char, boolean, and String.",
             "In Java a String is a class; in C++ it is std::string.",
-            "In Java and C++, every statement ends with a semicolon.",
+            "C has no String type — text is stored in char arrays and printed with printf().",
+            "In C, C++, and Java, every statement ends with a semicolon.",
         ],
         "code": {
             "python": "name = \"Alice\"\nage = 19\nheight = 1.68\nis_student = True\n\nprint(name, age, height, is_student)",
             "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string name = \"Alice\";\n    int age = 19;\n    double height = 1.68;\n    bool is_student = true;\n\n    cout << name << \" \" << age << \" \" << height << \" \" << is_student << endl;\n    return 0;\n}",
             "java": "public class Main {\n    public static void main(String[] args) {\n        String name = \"Alice\";\n        int age = 19;\n        double height = 1.68;\n        boolean isStudent = true;\n\n        System.out.println(name + \" \" + age + \" \" + height + \" \" + isStudent);\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    char name[20] = \"Alice\";\n    int age = 19;\n    double height = 1.68;\n    int is_student = 1;  // 1 = true\n\n    printf(\"%s %d %.2f %d\\n\", name, age, height, is_student);\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -167,18 +182,23 @@ LESSONS = [
             "java": [
                 {"id": "sk_TzAjZ3zs", "channel": "Doji Creates", "title": "Java Scanner Input Explained (How to Get User Input)"},
             ],
+            "c": [
+                {"id": "xOIVXR35aI4", "channel": "mycodeschool", "title": "Input and Output: Printf and Scanf - C Programming Tutorial 06"},
+            ],
         },
         "key_points": [
             "Python: input() returns a string, print() displays output.",
             "C++: cin reads, cout writes.",
             "Java: Scanner reads input, System.out.println prints.",
-            "Numeric input must be converted (int(), stoi, nextInt).",
+            "C: scanf() reads input, printf() writes output.",
+            "Numeric input must be converted (int(), stoi, nextInt) or read with the right format specifier in C (scanf(\"%d\")).",
             "Always handle user input carefully; it comes in as text.",
         ],
         "code": {
             "python": "name = input(\"Enter your name: \")\nage = int(input(\"Enter your age: \"))\n\nprint(\"Hello, \" + name)\nprint(\"Next year you will be\", age + 1)",
             "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string name;\n    int age;\n\n    cout << \"Enter your name: \";\n    cin >> name;\n    cout << \"Enter your age: \";\n    cin >> age;\n\n    cout << \"Hello, \" << name << endl;\n    cout << \"Next year you will be \" << age + 1 << endl;\n    return 0;\n}",
             "java": "import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n\n        System.out.print(\"Enter your name: \");\n        String name = scanner.nextLine();\n        System.out.print(\"Enter your age: \");\n        int age = scanner.nextInt();\n\n        System.out.println(\"Hello, \" + name);\n        System.out.println(\"Next year you will be \" + (age + 1));\n        scanner.close();\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    char name[50];\n    int age;\n\n    printf(\"Enter your name: \");\n    scanf(\"%s\", name);\n    printf(\"Enter your age: \");\n    scanf(\"%d\", &age);\n\n    printf(\"Hello, %s\\n\", name);\n    printf(\"Next year you will be %d\\n\", age + 1);\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -218,17 +238,21 @@ LESSONS = [
                 {"id": "M0lnSma7qMw", "channel": "Doji Creates", "title": "Java Arithmetic Operators Explained (How Calculations Work)"},
                 {"id": "yRwNhHubxc8", "channel": "Doji Creates", "title": "Java Relational Operators Explained (How Comparisons Work)"},
             ],
+            "c": [
+                {"id": "vvpDbhqPrww", "channel": "mycodeschool", "title": "Using Arithmetic Operators - C Programming Tutorial 07"},
+            ],
         },
         "key_points": [
             "Arithmetic: + - * / % (modulo gives the remainder).",
-            "Integer division differs: / in Python gives a float; int / int in C++ and Java gives an integer.",
+            "Integer division differs: / in Python gives a float; int / int in C, C++, and Java gives an integer.",
             "Relational: == != < > <= >=. Comparison always produces true or false.",
-            "The % operator (modulo) is common in all three languages.",
+            "The % operator (modulo) is common in all four languages.",
         ],
         "code": {
             "python": "a = 10\nb = 3\n\nprint(\"a + b =\", a + b)\nprint(\"a - b =\", a - b)\nprint(\"a * b =\", a * b)\nprint(\"a / b =\", a / b)\nprint(\"a % b =\", a % b)\nprint(\"a == b:\", a == b)\nprint(\"a > b:\", a > b)\nprint(\"b < a:\", b < a)",
             "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int a = 10;\n    int b = 3;\n\n    cout << \"a + b = \" << a + b << endl;\n    cout << \"a - b = \" << a - b << endl;\n    cout << \"a * b = \" << a * b << endl;\n    cout << \"a / b = \" << a / b << endl;  // integer division: 3\n    cout << \"a % b = \" << a % b << endl;\n    cout << \"a == b = \" << (a == b) << endl;\n    cout << \"a > b = \" << (a > b) << endl;\n    cout << \"b < a = \" << (b < a) << endl;\n    return 0;\n}",
             "java": "public class Main {\n    public static void main(String[] args) {\n        int a = 10;\n        int b = 3;\n\n        System.out.println(\"a + b = \" + (a + b));\n        System.out.println(\"a - b = \" + (a - b));\n        System.out.println(\"a * b = \" + (a * b));\n        System.out.println(\"a / b = \" + (a / b));  // integer division: 3\n        System.out.println(\"a % b = \" + (a % b));\n        System.out.println(\"a == b = \" + (a == b));\n        System.out.println(\"a > b = \" + (a > b));\n        System.out.println(\"b < a = \" + (b < a));\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    int a = 10;\n    int b = 3;\n\n    printf(\"a + b = %d\\n\", a + b);\n    printf(\"a - b = %d\\n\", a - b);\n    printf(\"a * b = %d\\n\", a * b);\n    printf(\"a / b = %d\\n\", a / b);  // integer division: 3\n    printf(\"a %% b = %d\\n\", a % b);\n    printf(\"a == b = %d\\n\", a == b);\n    printf(\"a > b = %d\\n\", a > b);\n    printf(\"b < a = %d\\n\", b < a);\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -254,7 +278,7 @@ LESSONS = [
         "minutes": 50,
         "title": "Logical Operators",
         "icon": "bi-toggle-on",
-        "description": "Logical operators combine true and false values to build bigger conditions. They let a program check several things at once. Python uses the words and, or, not; C++ and Java use &&, ||, and !.",
+        "description": "Logical operators combine true and false values to build bigger conditions. They let a program check several things at once. Python uses the words and, or, not; C, C++, and Java use &&, ||, and !.",
         "videos": {
             "python": [
                 {"id": "srYNLwnEfeo", "channel": "Doji Creates", "title": "Python Logical Operators Explained (How AND OR NOT Logic Works)"},
@@ -264,6 +288,9 @@ LESSONS = [
             ],
             "java": [
                 {"id": "h7pGky1QaJs", "channel": "Doji Creates", "title": "Java Logical Operators Explained (How They Work)"},
+            ],
+            "c": [
+                {"id": "U19kiynYopE", "channel": "Portfolio Courses", "title": "Logical Operators | C Programming Tutorial"},
             ],
         },
         "key_points": [
@@ -277,6 +304,7 @@ LESSONS = [
             "python": "age = 20\nhas_id = True\n\nif age >= 18 and has_id:\n    print(\"You may enter.\")\n\nif age < 13 or age > 65:\n    print(\"Discount applies.\")\n\nif not has_id:\n    print(\"Show your ID first.\")\n\nprint(\"True and False:\", True and False)\nprint(\"True or False:\", True or False)\nprint(\"not True:\", not True)",
             "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int age = 20;\n    bool hasId = true;\n\n    if (age >= 18 && hasId) {\n        cout << \"You may enter.\" << endl;\n    }\n\n    if (age < 13 || age > 65) {\n        cout << \"Discount applies.\" << endl;\n    }\n\n    if (!hasId) {\n        cout << \"Show your ID first.\" << endl;\n    }\n\n    cout << \"True and False: \" << (true && false) << endl;\n    cout << \"True or False: \" << (true || false) << endl;\n    cout << \"not True: \" << (!true) << endl;\n    return 0;\n}",
             "java": "public class Main {\n    public static void main(String[] args) {\n        int age = 20;\n        boolean hasId = true;\n\n        if (age >= 18 && hasId) {\n            System.out.println(\"You may enter.\");\n        }\n\n        if (age < 13 || age > 65) {\n            System.out.println(\"Discount applies.\");\n        }\n\n        if (!hasId) {\n            System.out.println(\"Show your ID first.\");\n        }\n\n        System.out.println(\"True and False: \" + (true && false));\n        System.out.println(\"True or False: \" + (true || false));\n        System.out.println(\"not True: \" + (!true));\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    int age = 20;\n    int has_id = 1;  // 1 = true\n\n    if (age >= 18 && has_id) {\n        printf(\"You may enter.\\n\");\n    }\n\n    if (age < 13 || age > 65) {\n        printf(\"Discount applies.\\n\");\n    }\n\n    if (!has_id) {\n        printf(\"Show your ID first.\\n\");\n    }\n\n    printf(\"True and False: %d\\n\", 1 && 0);\n    printf(\"True or False: %d\\n\", 1 || 0);\n    printf(\"not True: %d\\n\", !1);\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -314,11 +342,14 @@ LESSONS = [
             "java": [
                 {"id": "GaAKcy9cEcU", "channel": "Doji Creates", "title": "Java If Else Statement Explained (How Decision Making Works)"},
             ],
+            "c": [
+                {"id": "q2LCT6gRZVY", "channel": "LearningLad", "title": "IF ELSE Conditional Statements in C Programming Video Tutorial"},
+            ],
         },
         "key_points": [
             "Python uses if / elif / else with colons and indentation.",
-            "C++ and Java use if / else if / else with braces and parentheses.",
-            "In C++ and Java, the condition must be inside parentheses.",
+            "C, C++, and Java use if / else if / else with braces and parentheses.",
+            "In C, C++, and Java, the condition must be inside parentheses.",
             "You can nest conditionals inside other conditionals.",
             "Comparisons like >= and == are common in conditions.",
         ],
@@ -326,6 +357,7 @@ LESSONS = [
             "python": "score = 85\n\nif score >= 90:\n    print(\"Grade: A\")\nelif score >= 75:\n    print(\"Grade: B\")\nelif score >= 60:\n    print(\"Grade: C\")\nelse:\n    print(\"Grade: F\")\n\nif score >= 60 and score < 75:\n    print(\"Almost passing.\")",
             "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int score = 85;\n\n    if (score >= 90) {\n        cout << \"Grade: A\" << endl;\n    } else if (score >= 75) {\n        cout << \"Grade: B\" << endl;\n    } else if (score >= 60) {\n        cout << \"Grade: C\" << endl;\n    } else {\n        cout << \"Grade: F\" << endl;\n    }\n\n    return 0;\n}",
             "java": "public class Main {\n    public static void main(String[] args) {\n        int score = 85;\n\n        if (score >= 90) {\n            System.out.println(\"Grade: A\");\n        } else if (score >= 75) {\n            System.out.println(\"Grade: B\");\n        } else if (score >= 60) {\n            System.out.println(\"Grade: C\");\n        } else {\n            System.out.println(\"Grade: F\");\n        }\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    int score = 85;\n\n    if (score >= 90) {\n        printf(\"Grade: A\\n\");\n    } else if (score >= 75) {\n        printf(\"Grade: B\\n\");\n    } else if (score >= 60) {\n        printf(\"Grade: C\\n\");\n    } else {\n        printf(\"Grade: F\\n\");\n    }\n\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -365,9 +397,13 @@ LESSONS = [
                 {"id": "Mt-gZKX3dq0", "channel": "Doji Creates", "title": "Java For Loop Explained (How It Works for Beginners)"},
                 {"id": "LWLrbN4f0Fg", "channel": "Doji Creates", "title": "Java While Loop Explained (How It Works for Beginners)"},
             ],
+            "c": [
+                {"id": "b4DPj0XAfSg", "channel": "Bro Code", "title": "C for loops in 3 minutes!"},
+                {"id": "GWS9Jm0d7Sw", "channel": "CodeWithBasha", "title": "While Loop in C Explained | C Programming Loops Tutorial for Beginners"},
+            ],
         },
         "key_points": [
-            "For loop: Python for x in range(n), C++/Java for (int i = 0; i < n; i++).",
+            "For loop: Python for x in range(n), C/C++/Java for (int i = 0; i < n; i++).",
             "While loop: repeats while the condition is true.",
             "Be careful: if the condition never becomes false, the loop runs forever.",
             "break stops the loop early, continue skips to the next iteration.",
@@ -377,6 +413,7 @@ LESSONS = [
             "python": "print(\"Counting from 1 to 5:\")\nfor i in range(1, 6):\n    print(i)\n\nsum_of_evens = 0\nnum = 2\nwhile num <= 10:\n    sum_of_evens += num\n    num += 2\nprint(\"Sum of evens up to 10:\", sum_of_evens)",
             "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"Counting from 1 to 5:\" << endl;\n    for (int i = 1; i <= 5; i++) {\n        cout << i << endl;\n    }\n\n    int sum = 0;\n    int num = 2;\n    while (num <= 10) {\n        sum += num;\n        num += 2;\n    }\n    cout << \"Sum of evens up to 10: \" << sum << endl;\n    return 0;\n}",
             "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Counting from 1 to 5:\");\n        for (int i = 1; i <= 5; i++) {\n            System.out.println(i);\n        }\n\n        int sum = 0;\n        int num = 2;\n        while (num <= 10) {\n            sum += num;\n            num += 2;\n        }\n        System.out.println(\"Sum of evens up to 10: \" + sum);\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    printf(\"Counting from 1 to 5:\\n\");\n    for (int i = 1; i <= 5; i++) {\n        printf(\"%d\\n\", i);\n    }\n\n    int sum = 0;\n    int num = 2;\n    while (num <= 10) {\n        sum += num;\n        num += 2;\n    }\n    printf(\"Sum of evens up to 10: %d\\n\", sum);\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -414,11 +451,14 @@ LESSONS = [
             "java": [
                 {"id": "v5p_SUfi710", "channel": "Bro Code", "title": "Java methods explained in 10+ minutes"},
             ],
+            "c": [
+                {"id": "NGQoKF2Ggt8", "channel": "Portfolio Courses", "title": "Function Basics | C Programming Tutorial"},
+            ],
         },
         "key_points": [
             "A function takes inputs (parameters) and returns a result.",
             "Python: def add(a, b): then return a + b.",
-            "C++: specify the return type, e.g. int add(int a, int b).",
+            "C and C++: specify the return type, e.g. int add(int a, int b).",
             "Java: methods live inside a class, e.g. static int add(...).",
             "Always give functions clear names that describe what they do.",
         ],
@@ -426,6 +466,7 @@ LESSONS = [
             "python": "def add(a, b):\n    return a + b\n\ndef greet(name):\n    print(\"Hello, \" + name + \"!\")\n\nresult = add(5, 7)\nprint(\"5 + 7 =\", result)\ngreet(\"Alice\")",
             "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint add(int a, int b) {\n    return a + b;\n}\n\nvoid greet(string name) {\n    cout << \"Hello, \" << name << \"!\" << endl;\n}\n\nint main() {\n    int result = add(5, 7);\n    cout << \"5 + 7 = \" << result << endl;\n    greet(\"Alice\");\n    return 0;\n}",
             "java": "public class Main {\n    static int add(int a, int b) {\n        return a + b;\n    }\n\n    static void greet(String name) {\n        System.out.println(\"Hello, \" + name + \"!\");\n    }\n\n    public static void main(String[] args) {\n        int result = add(5, 7);\n        System.out.println(\"5 + 7 = \" + result);\n        greet(\"Alice\");\n    }\n}",
+            "c": "#include <stdio.h>\n\nint add(int a, int b) {\n    return a + b;\n}\n\nvoid greet(char name[]) {\n    printf(\"Hello, %s!\\n\", name);\n}\n\nint main() {\n    int result = add(5, 7);\n    printf(\"5 + 7 = %d\\n\", result);\n    greet(\"Alice\");\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -451,7 +492,7 @@ LESSONS = [
         "minutes": 45,
         "title": "Arrays and Lists",
         "icon": "bi-collection",
-        "description": "Collections store multiple values in one variable. In Python you use lists; in C++ you use arrays or vectors; in Java you use arrays or ArrayLists. Indexing starts at 0 in all three.",
+        "description": "Collections store multiple values in one variable. In Python you use lists; in C and C++ you use arrays or vectors; in Java you use arrays or ArrayLists. Indexing starts at 0 in all four.",
         "videos": {
             "python": [
                 {"id": "dpwp1NADaFU", "channel": "Doji Creates", "title": "Python Lists Explained (How Ordered Data Storage Works)"},
@@ -462,11 +503,14 @@ LESSONS = [
             "java": [
                 {"id": "9dr2mHYYoug", "channel": "Bro Code", "title": "Learn Java arrays in 9 minutes"},
             ],
+            "c": [
+                {"id": "MOeGnamlUP4", "channel": "Programiz", "title": "#19 C Arrays | [2025] C Programming For Beginners"},
+            ],
         },
         "key_points": [
             "Indexing starts at 0: the first element is at position 0.",
             "Python lists: grades = [88, 92, 75] and can change size.",
-            "C++ arrays have a fixed size; std::vector grows dynamically.",
+            "C and C++ arrays have a fixed size; C++ std::vector grows dynamically.",
             "Java arrays have a fixed size; ArrayList grows dynamically.",
             "Loop over the collection to print or process every element.",
         ],
@@ -474,6 +518,7 @@ LESSONS = [
             "python": "grades = [88, 92, 75, 96, 81]\n\ntotal = 0\nfor g in grades:\n    total += g\n\naverage = total / len(grades)\nprint(\"Grades:\", grades)\nprint(\"Average:\", average)\nprint(\"First grade:\", grades[0])",
             "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int grades[] = {88, 92, 75, 96, 81};\n    int total = 0;\n    int count = 5;\n\n    for (int i = 0; i < count; i++) {\n        total += grades[i];\n    }\n\n    double average = (double)total / count;\n    cout << \"Average: \" << average << endl;\n    cout << \"First grade: \" << grades[0] << endl;\n    return 0;\n}",
             "java": "public class Main {\n    public static void main(String[] args) {\n        int[] grades = {88, 92, 75, 96, 81};\n        int total = 0;\n\n        for (int i = 0; i < grades.length; i++) {\n            total += grades[i];\n        }\n\n        double average = (double) total / grades.length;\n        System.out.println(\"Average: \" + average);\n        System.out.println(\"First grade: \" + grades[0]);\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    int grades[] = {88, 92, 75, 96, 81};\n    int total = 0;\n    int count = 5;\n\n    for (int i = 0; i < count; i++) {\n        total += grades[i];\n    }\n\n    double average = (double)total / count;\n    printf(\"Average: %.1f\\n\", average);\n    printf(\"First grade: %d\\n\", grades[0]);\n    return 0;\n}",
         },
         "quiz": [
             {
@@ -514,6 +559,7 @@ LESSONS = [
             "python": "# Problem: sum of all even numbers from 1 to n\ndef sum_of_evens(n):\n    total = 0\n    for i in range(1, n + 1):\n        if i % 2 == 0:\n            total += i\n    return total\n\nn = 20\nprint(\"Sum of evens up to\", n, \"=\", sum_of_evens(n))",
             "cpp": "#include <iostream>\nusing namespace std;\n\nint sumOfEvens(int n) {\n    int total = 0;\n    for (int i = 1; i <= n; i++) {\n        if (i % 2 == 0) {\n            total += i;\n        }\n    }\n    return total;\n}\n\nint main() {\n    int n = 20;\n    cout << \"Sum of evens up to \" << n << \" = \" << sumOfEvens(n) << endl;\n    return 0;\n}",
             "java": "public class Main {\n    static int sumOfEvens(int n) {\n        int total = 0;\n        for (int i = 1; i <= n; i++) {\n            if (i % 2 == 0) {\n                total += i;\n            }\n        }\n        return total;\n    }\n\n    public static void main(String[] args) {\n        int n = 20;\n        System.out.println(\"Sum of evens up to \" + n + \" = \" + sumOfEvens(n));\n    }\n}",
+            "c": "#include <stdio.h>\n\n// Problem: sum of all even numbers from 1 to n\nint sum_of_evens(int n) {\n    int total = 0;\n    for (int i = 1; i <= n; i++) {\n        if (i % 2 == 0) {\n            total += i;\n        }\n    }\n    return total;\n}\n\nint main() {\n    int n = 20;\n    printf(\"Sum of evens up to %d = %d\\n\", n, sum_of_evens(n));\n    return 0;\n}",
         },
         "quiz": [
             {

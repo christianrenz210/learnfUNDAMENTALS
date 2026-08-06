@@ -80,6 +80,48 @@ def lesson_estimate_minutes(lesson):
 LAB_POINTS_PER_LAB = 2
 LAB_LESSON_IDS = {19, 20}
 LAB_ROUTES = {19: "sql_lab", 20: "sql_lab_2"}
+COINS_PER_LESSON = 10
+DIFFICULTY_UNLOCK_COST = {
+    "easy": 10,
+    "medium": 20,
+    "hard": 30,
+}
+LESSON_DIFFICULTY = {
+    1: "easy",
+    29: "easy",
+    2: "easy",
+    3: "easy",
+    4: "medium",
+    5: "medium",
+    6: "medium",
+    7: "medium",
+    8: "medium",
+    9: "medium",
+    10: "hard",
+    11: "medium",
+    12: "medium",
+    13: "hard",
+    14: "medium",
+    15: "medium",
+    16: "medium",
+    17: "hard",
+    18: "hard",
+    19: "hard",
+    20: "hard",
+    30: "medium",
+    31: "medium",
+    32: "medium",
+    33: "medium",
+    34: "medium",
+}
+
+
+def lesson_difficulty(lesson_id):
+    return LESSON_DIFFICULTY.get(lesson_id, "medium")
+
+
+def lesson_unlock_cost(lesson_id):
+    return DIFFICULTY_UNLOCK_COST.get(lesson_difficulty(lesson_id), 20)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key-in-production")
@@ -96,7 +138,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.49"
+APP_VERSION = "1.53"
 
 
 @app.context_processor
@@ -109,6 +151,11 @@ def inject_avatar():
         return url_for("static", filename="uploads/" + user.avatar)
 
     return {"avatar_src": avatar_src, "app_version": APP_VERSION, "latest_update": CHANGELOG[0]}
+
+
+@app.context_processor
+def inject_coin_settings():
+    return {"coins_per_lesson": COINS_PER_LESSON}
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///students.db")
 if DATABASE_URL.startswith("postgres://"):
@@ -147,11 +194,13 @@ class User(UserMixin, db.Model):
     avatar = db.Column(db.Text, nullable=True)
     lab_completed = db.Column(db.Integer, default=0)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    coins = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     progress = db.relationship("LessonProgress", backref="user", cascade="all, delete-orphan")
     quiz_scores = db.relationship("QuizScore", backref="user", cascade="all, delete-orphan")
     section_quiz_scores = db.relationship("SectionQuizScore", backref="user", cascade="all, delete-orphan")
+    unlocked_lessons = db.relationship("UnlockedLesson", backref="user", cascade="all, delete-orphan")
 
 
 class LessonProgress(db.Model):
@@ -159,6 +208,13 @@ class LessonProgress(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     lesson_id = db.Column(db.Integer, nullable=False)
     completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class UnlockedLesson(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    lesson_id = db.Column(db.Integer, nullable=False)
+    unlocked_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class QuizScore(db.Model):
@@ -213,6 +269,24 @@ class Feedback(db.Model):
     replied_at = db.Column(db.DateTime, nullable=True)
 
     user = db.relationship("User", backref=db.backref("feedbacks", lazy="dynamic"))
+
+    @property
+    def like_count(self):
+        return self.likes.count()
+
+
+class FeedbackLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    feedback_id = db.Column(db.Integer, db.ForeignKey("feedback.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint("feedback_id", "user_id", name="uq_feedback_like"),)
+
+    feedback = db.relationship(
+        "Feedback", backref=db.backref("likes", lazy="dynamic", cascade="all, delete-orphan")
+    )
+    user = db.relationship("User", backref=db.backref("feedback_likes", lazy="dynamic"))
 
 
 def log_activity(user, action, details=""):
@@ -322,6 +396,12 @@ def get_completed_ids(user):
     if user is None:
         return set()
     return {p.lesson_id for p in user.progress}
+
+
+def get_unlocked_ids(user):
+    if user is None:
+        return set()
+    return {ul.lesson_id for ul in user.unlocked_lessons}
 
 
 def get_quiz_scores(user):
@@ -500,7 +580,29 @@ def feedback():
         return redirect(url_for("feedback"))
 
     feedbacks = Feedback.query.order_by(Feedback.created_at.desc()).limit(50).all()
-    return render_template("feedback.html", feedbacks=feedbacks)
+    liked_ids = set()
+    if current_user.is_authenticated:
+        liked_ids = {
+            l.feedback_id for l in FeedbackLike.query.filter_by(user_id=current_user.id).all()
+        }
+    return render_template("feedback.html", feedbacks=feedbacks, liked_ids=liked_ids)
+
+
+@app.route("/feedback/<int:fid>/like", methods=["POST"])
+@login_required
+def feedback_like(fid):
+    fb = db.session.get(Feedback, fid)
+    if not fb:
+        return jsonify({"error": "Feedback not found."}), 404
+    existing = FeedbackLike.query.filter_by(feedback_id=fid, user_id=current_user.id).first()
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify({"liked": False, "count": fb.like_count})
+    db.session.add(FeedbackLike(feedback_id=fid, user_id=current_user.id))
+    db.session.commit()
+    log_activity(current_user, "Liked feedback", f"Feedback #{fid} from {fb.name}")
+    return jsonify({"liked": True, "count": fb.like_count})
 
 
 @app.route("/about")
@@ -670,13 +772,15 @@ def dashboard():
     for name in SECTION_ORDER:
         sections.setdefault(name, [])
     locked_ids = set()
+    unlocked_ids = get_unlocked_ids(current_user)
     for name in SECTION_ORDER:
         sec = sections.get(name, [])
         for i, l in enumerate(sec):
             if l.get("coming_soon"):
                 continue
             if i > 0 and sec[i - 1]["id"] not in completed:
-                locked_ids.add(l["id"])
+                if l["id"] not in unlocked_ids:
+                    locked_ids.add(l["id"])
     section_quiz_map = {
         q.section: q
         for q in SectionQuizScore.query.filter_by(user_id=current_user.id).all()
@@ -723,6 +827,9 @@ def dashboard():
         lesson_estimate_minutes=lesson_estimate_minutes,
         lab_completed=bool(lab_count),
         completed_lab_ids=lab_ids,
+        unlocked_ids=unlocked_ids,
+        unlock_costs={l["id"]: lesson_unlock_cost(l["id"]) for l in LESSONS},
+        lesson_difficulties={l["id"]: lesson_difficulty(l["id"]) for l in LESSONS},
     )
 
 
@@ -830,6 +937,7 @@ def admin_feedback_reply(fid):
 def admin_feedback_delete(fid):
     fb = db.session.get(Feedback, fid)
     if fb:
+        FeedbackLike.query.filter_by(feedback_id=fid).delete()
         db.session.delete(fb)
         db.session.commit()
     flash("Feedback deleted.", "success")
@@ -967,6 +1075,7 @@ def admin_reset_lesson(uid, lid):
     deleted_quiz = QuizScore.query.filter_by(user_id=uid, lesson_id=lid).delete()
     # Remove lab completion if applicable
     deleted_lab = LabProgress.query.filter_by(user_id=uid, lesson_id=lid).delete()
+    user.coins = len(LessonProgress.query.filter_by(user_id=uid).all()) * COINS_PER_LESSON
     db.session.commit()
 
     log_activity(user, "Admin reset lesson", f"Admin reset lesson '{lesson['title']}' (completed={deleted}, quiz={deleted_quiz}, lab={deleted_lab})")
@@ -1004,6 +1113,7 @@ def admin_reset_all(uid):
     deleted_quizzes = QuizScore.query.filter_by(user_id=uid).delete()
     deleted_section_quizzes = SectionQuizScore.query.filter_by(user_id=uid).delete()
     deleted_labs = LabProgress.query.filter_by(user_id=uid).delete()
+    user.coins = 0
     db.session.commit()
 
     log_activity(user, "Admin reset all progress", f"Admin reset ALL progress (lessons={deleted_progress}, quizzes={deleted_quizzes}, section_quizzes={deleted_section_quizzes}, labs={deleted_labs})")
@@ -1062,7 +1172,7 @@ def _gemini_model():
 
 EREN_SYSTEM_PROMPT = (
     "You are E.R.E.N (Educational Response Engine for Novices), the friendly AI assistant of "
-    "CodeFundamentals, a free site where students learn Python, C++, and Java side by side, plus "
+    "CodeFundamentals, a free site where students learn Python, C++, Java, and C side by side, plus "
     "Advanced Database System (SQL). ALWAYS respond only in English or Filipino (Tagalog) — "
     "never in any other language. If the student writes in English or Filipino, answer in that "
     "same language. If the student writes in any other language (for example Spanish, French, "
@@ -1073,7 +1183,8 @@ EREN_SYSTEM_PROMPT = (
     "Course sections and lessons:\n"
     "- Fundamentals: Introduction to Programming, Programming History, Variables and Data Types, "
     "Input and Output, Operators, Logical Operators, Conditionals (if/else), Loops, Functions, "
-    "Arrays and Lists, Basic Problem Solving.\n"
+    "Arrays and Lists, Basic Problem Solving. C is taught side by side with Python, C++, and Java "
+    "inside every Fundamentals lesson.\n"
     "- Advanced Fundamentals: Introduction to GitHub, Web Deployment Fundamentals, Deploying with Render, Deploying with Netlify, Building Websites with WordPress.\n"
     "- Advanced Database System: DBMS overview, ER model and keys, Normalization (1NF-3NF), "
     "SQL DDL, DML, SELECT and filtering, JOINs, Subqueries and Aggregates.\n"
@@ -1084,16 +1195,16 @@ EREN_SYSTEM_PROMPT = (
     "Video Lessons & Embedding:\n"
     "When a student asks to watch, see, or receive a video lesson for a topic (e.g., 'papanood ng video', 'send video lesson', 'video on loops', etc.), you CAN and SHOULD embed the video using YouTube iframe format: `<iframe src=\"https://www.youtube.com/embed/VIDEO_ID\" title=\"TITLE\" allowfullscreen></iframe>` or `https://www.youtube.com/embed/VIDEO_ID`.\n"
     "Available lesson video IDs:\n"
-    "- Introduction to Programming: Python (9QKe2RvjG-A), C++ (LApkQYRUru8), Java (Pyx9oLYpbi4)\n"
-    "- Programming History: General (RU1u-js7db8), Python (GfH4QL4VqJ0), C++ (lI7tMxzSJ7w), Java (ZqGSg4b_cZA)\n"
-    "- Variables & Data Types: Python (2SG133xkpMQ), C++ (E4yj6QX-TW8), Java (cD-6C39RPKs)\n"
-    "- Input & Output: Python (7iZOEoGWnuU), C++ (vkALQRM5NNU), Java (sk_TzAjZ3zs)\n"
-    "- Operators: Python (RYEDDygFNx8), C++ (ib-Qfx7-iIQ), Java (M0lnSma7qMw)\n"
-    "- Logical Operators: Python (srYNLwnEfeo), C++ (JrcSEPKn6uI), Java (h7pGky1QaJs)\n"
-    "- Conditionals: Python (aXWb4rDK8NE), C++ (ISLTa95qJJA), Java (GaAKcy9cEcU)\n"
-    "- Loops: Python (EX47v75YM1Y), C++ (-Qev7T2a_Lc), Java (Mt-gZKX3dq0)\n"
-    "- Functions: Python (89cGQjB5R4M), C++ (67I3ZEmyVKQ), Java (v5p_SUfi710)\n"
-    "- Arrays & Lists: Python (dpwp1NADaFU), C++ (dRyf8cLyKgA), Java (9dr2mHYYoug)\n"
+    "- Introduction to Programming: Python (9QKe2RvjG-A), C++ (LApkQYRUru8), Java (Pyx9oLYpbi4), C (aMpsKnf6DrQ)\n"
+    "- Programming History: General (RU1u-js7db8), Python (GfH4QL4VqJ0), C++ (lI7tMxzSJ7w), Java (ZqGSg4b_cZA), C (6VT8hDr2GhU)\n"
+    "- Variables & Data Types: Python (2SG133xkpMQ), C++ (E4yj6QX-TW8), Java (cD-6C39RPKs), C (OSyjOvFbAGI)\n"
+    "- Input & Output: Python (7iZOEoGWnuU), C++ (vkALQRM5NNU), Java (sk_TzAjZ3zs), C (xOIVXR35aI4)\n"
+    "- Operators: Python (RYEDDygFNx8), C++ (ib-Qfx7-iIQ), Java (M0lnSma7qMw), C (vvpDbhqPrww)\n"
+    "- Logical Operators: Python (srYNLwnEfeo), C++ (JrcSEPKn6uI), Java (h7pGky1QaJs), C (U19kiynYopE)\n"
+    "- Conditionals: Python (aXWb4rDK8NE), C++ (ISLTa95qJJA), Java (GaAKcy9cEcU), C (q2LCT6gRZVY)\n"
+    "- Loops: Python (EX47v75YM1Y), C++ (-Qev7T2a_Lc), Java (Mt-gZKX3dq0), C (b4DPj0XAfSg)\n"
+    "- Functions: Python (89cGQjB5R4M), C++ (67I3ZEmyVKQ), Java (v5p_SUfi710), C (NGQoKF2Ggt8)\n"
+    "- Arrays & Lists: Python (dpwp1NADaFU), C++ (dRyf8cLyKgA), Java (9dr2mHYYoug), C (MOeGnamlUP4)\n"
     "- Basic Problem Solving: (6XJ8294lC0c)\n"
     "- Database Systems Overview: (wR0jg0eQsZA)\n"
     "- ER Model & Keys: (xsg9BDiwiJE)\n"
@@ -1732,11 +1843,12 @@ def assistant_reply(message):
         (lambda: has("quiz", "quizzes", "attempt"), "Each lesson ends with a quiz. You get one attempt per quiz, so answer carefully! Your score is saved on your dashboard and added to the lesson and global leaderboards."),
         (lambda: has("leaderboard", "rank", "ranking", "points", "compete"), "Leaderboards rank users by total points: quiz scores plus lab bonuses. Completing a SQL Injection Lab earns 2 points per lab. There is a global leaderboard on your dashboard and a separate one for each lesson page."),
         (lambda: has("progress", "completed", "dashboard"), "Your dashboard shows your progress: lessons completed, quiz stats, and total points. Mark a lesson complete from the lesson page, then watch your progress bar grow."),
-        (lambda: has("vs"), "You learn Python, C++, and Java side by side. Python is interpreted and uses indentation; C++ and Java are compiled and use braces {} and semicolons. Every lesson shows the same concept in all three languages, so you can compare them directly in the lessons."),
+        (lambda: has("vs"), "You learn Python, C++, Java, and C side by side. Python is interpreted and uses indentation; C++ and Java are compiled and use braces {} and semicolons; C is a compiled language that is simpler and closer to the hardware. Every lesson shows the same concept in each language, so you can compare them directly in the lessons."),
         (lambda: has("c++", "cpp", "c plus plus"), "C++ is a compiled language: a compiler turns your source code into a fast machine program before it runs. It is used for games, operating systems, and performance-heavy software. C++ uses braces {} and requires semicolons at the end of each statement."),
         (lambda: has("java"), "Java is a compiled, object-oriented language that runs on the Java Virtual Machine (JVM), so the same code can run on many devices. It is widely used for Android apps and enterprise systems. Like C++, Java uses braces {} and semicolons, and you must declare variable types."),
         (lambda: has("python"), "Python is an interpreted language: it runs line by line, which makes it quick to test. Its readable syntax uses indentation instead of braces, which is why it is so beginner-friendly. Python is popular in data science, web apps, and automation."),
-        (lambda: has("language", "languages", "syntax"), "You learn Python, C++, and Java side by side. Python is interpreted and uses indentation; C++ and Java are compiled and use braces {} and semicolons. Every lesson shows the same concept in all three languages."),
+        (lambda: has("c language", "c programming", "c program", "learn c", "dennis ritchie", "printf"), "C is a compiled language created by Dennis Ritchie in 1972 at Bell Labs. It is the foundation of C++, Java, and Python, and is used for operating systems and embedded devices. Every C program needs a main() function and prints with printf(). C is taught side by side with Python, C++, and Java in every Fundamentals lesson, where you can run C code right in the browser."),
+        (lambda: has("language", "languages", "syntax"), "You learn Python, C++, Java, and C side by side. Python is interpreted and uses indentation; C++ and Java are compiled and use braces {} and semicolons; C is a compact compiled language that inspired them both. Every lesson shows the same concept in each language."),
         (lambda: has("sql", "database", "dbms", "normaliz", "er model", "entity", "foreign key", "primary key", "ddl", "dml", "dql", "join"), "The Advanced Database System section covers databases and SQL: DBMS overview, ER model and keys, normalization, DDL (CREATE/ALTER/DROP), DML (INSERT/UPDATE/DELETE), SELECT and filtering, JOINs, and subqueries with aggregates. The SQL examples in those lessons run right in your browser against a live database engine."),
         (lambda: has("error", "debug", "compile", "bug"), "Debugging tips: read the error message first, check semicolons and braces in C++/Java, check indentation in Python, and add print statements to see what your code is doing. The code editor lets you test changes instantly."),
         (lambda: has("register", "sign up", "account", "free"), "Creating an account is free and takes seconds. It saves your progress, quiz scores, profile picture, and leaderboard standing."),
@@ -1782,6 +1894,133 @@ def assistant_reply(message):
     )
 
 
+_QUIZ_BLOCK_ITEMS = []
+for _lesson in LESSONS:
+    _QUIZ_BLOCK_ITEMS.extend(_lesson.get("quiz", []))
+for _questions in LONG_QUIZZES.values():
+    _QUIZ_BLOCK_ITEMS.extend(_questions)
+
+
+def _norm_text(text):
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", (text or "").lower())).strip()
+
+
+QUIZ_Q_TO_OPTIONS = {}
+for _q in _QUIZ_BLOCK_ITEMS:
+    _qn = _norm_text(_q.get("question", ""))
+    if _qn:
+        _opts = {_norm_text(o) for o in _q.get("options", []) if o}
+        if _opts:
+            QUIZ_Q_TO_OPTIONS.setdefault(_qn, set()).update(_opts)
+QUIZ_QUESTIONS = set(QUIZ_Q_TO_OPTIONS)
+QUIZ_OPTIONS = {o for opts in QUIZ_Q_TO_OPTIONS.values() for o in opts}
+
+QUIZ_QUESTION_LESSON = {}
+for _l in LESSONS:
+    for _qq in _l.get("quiz", []):
+        _qnorm = _norm_text(_qq.get("question", ""))
+        if _qnorm:
+            QUIZ_QUESTION_LESSON.setdefault(_qnorm, _l["id"])
+for _questions in LONG_QUIZZES.values():
+    for _qq in _questions:
+        _qnorm = _norm_text(_qq.get("question", ""))
+        if _qnorm:
+            QUIZ_QUESTION_LESSON.setdefault(_qnorm, None)
+del _QUIZ_BLOCK_ITEMS, _q, _qn, _opts, _l, _qq, _qnorm, _questions
+
+QUIZ_ANSWER_INTENT = [
+    "answer",
+    "answers",
+    "sagot",
+    "sagutan",
+    "sagutin",
+    "pasagot",
+    "tamang sagot",
+    "which is correct",
+    "correct answer",
+    "right answer",
+    "right one",
+    "correct one",
+    "correct choice",
+    "what is the answer",
+    "what's the answer",
+    "give me the answer",
+    "cheat",
+    "leak",
+    "leaks",
+]
+
+QUIZ_REFUSAL = (
+    "I can't answer that one — it looks like a quiz question, and getting the "
+    "answer from me would just be cheating yourself! Review the lesson and its "
+    "key points, then try the quiz on your own. If you want to actually "
+    "understand the topic (not just get the answer), rephrase your question and "
+    "I will gladly explain it to you."
+)
+
+
+def _has_quiz_answer_intent(norm):
+    return any(k in norm for k in QUIZ_ANSWER_INTENT)
+
+
+def _norm_has_phrase(norm, phrase):
+    words = norm.split()
+    pwords = phrase.split()
+    if not pwords:
+        return False
+    if len(pwords) == 1:
+        return pwords[0] in words
+    return any(words[i:i + len(pwords)] == pwords for i in range(len(words) - len(pwords) + 1))
+
+
+def is_quiz_question_request(message):
+    norm = _norm_text(message)
+    if not norm:
+        return False
+    matched_questions = [q for q in QUIZ_QUESTIONS if q in norm]
+    for q in matched_questions:
+        if any(_norm_has_phrase(norm, o) for o in QUIZ_Q_TO_OPTIONS[q]):
+            return True
+    if not _has_quiz_answer_intent(norm):
+        return False
+    matched_options = [o for o in QUIZ_OPTIONS if _norm_has_phrase(norm, o)]
+    return len(matched_options) >= 2
+
+
+def lesson_for_quiz_question(message):
+    norm = _norm_text(message)
+    if not norm:
+        return False, None
+    for q, lesson_id in QUIZ_QUESTION_LESSON.items():
+        if not q:
+            continue
+        if q in norm or (len(norm) >= 15 and norm in q):
+            return True, lesson_id
+    return False, None
+
+
+def lesson_review_nudge(lesson_id):
+    if lesson_id is None:
+        return (
+            "I won't give you the answer directly — you've got this! That looks like it comes "
+            "from a Long Quiz. Review the section lessons and their key points, then use the "
+            "answer review after the Long Quiz to see what you should study."
+        )
+    lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
+    if not lesson:
+        return QUIZ_REFUSAL
+    section_lessons = [
+        l for l in LESSONS
+        if l.get("section", "Fundamentals") == lesson.get("section", "Fundamentals")
+    ]
+    num = next(i + 1 for i, l in enumerate(section_lessons) if l["id"] == lesson_id)
+    return (
+        "I won't give you the answer directly — you've got this! That question comes from "
+        f"Lesson {num} - {lesson['title']} in the {lesson.get('section', 'Fundamentals')} "
+        "section. Review that lesson and its key points, and the answer should click."
+    )
+
+
 @app.route("/assistant", methods=["POST"])
 @login_required
 def assistant():
@@ -1789,6 +2028,14 @@ def assistant():
     message = (data.get("message") or "").strip()
     if not message:
         return jsonify({"ok": False, "error": "Please type a message."}), 400
+    if is_quiz_question_request(message):
+        return jsonify({"ok": True, "reply": QUIZ_REFUSAL})
+    quiz_lesson_id = lesson_for_quiz_question(message)
+    if quiz_lesson_id is not None:
+        reply = assistant_reply(message)
+        if "I am not sure about that one yet" in reply or "outside my built-in course notes" in reply:
+            reply = lesson_review_nudge(quiz_lesson_id)
+        return jsonify({"ok": True, "reply": reply})
     history = data.get("history") if isinstance(data.get("history"), list) else None
     reply = gemini_reply(message, history)
     if reply is None:
@@ -1814,9 +2061,14 @@ def lesson(lesson_id):
     ]
     idx = next(i for i, l in enumerate(section_lessons) if l["id"] == lesson_id)
     completed_ids = get_completed_ids(current_user)
-    if idx > 0 and section_lessons[idx - 1]["id"] not in completed_ids:
+    unlocked_ids = get_unlocked_ids(current_user)
+    if (
+        idx > 0
+        and section_lessons[idx - 1]["id"] not in completed_ids
+        and lesson_id not in unlocked_ids
+    ):
         flash(
-            f'Complete Lesson {idx} ({section_lessons[idx - 1]["title"]}) first to unlock this lesson.',
+            f'Complete Lesson {idx} ({section_lessons[idx - 1]["title"]}) first — or unlock this lesson with coins — to access it.',
             "danger",
         )
         return redirect(url_for("lesson", lesson_id=section_lessons[idx - 1]["id"]))
@@ -1848,6 +2100,7 @@ def lesson(lesson_id):
         section_has_quiz=lesson.get("section", "Fundamentals") in LONG_QUIZZES,
         section_lessons=section_lessons,
         completed_ids=completed_ids,
+        unlocked_ids=unlocked_ids,
     )
 
 
@@ -1901,25 +2154,72 @@ def submit_quiz(lesson_id):
     )
 
 
+@app.route("/lesson/<int:lesson_id>/unlock", methods=["POST"])
+@login_required
+def unlock_lesson(lesson_id):
+    lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
+    if lesson is None or lesson.get("coming_soon"):
+        flash("Lesson not found.", "danger")
+        return redirect(url_for("dashboard"))
+    unlocked_ids = get_unlocked_ids(current_user)
+    if lesson_id in unlocked_ids:
+        flash("You already unlocked this lesson.", "info")
+        return redirect(url_for("dashboard"))
+    cost = lesson_unlock_cost(lesson_id)
+    if (current_user.coins or 0) < cost:
+        flash(
+            "You need %d coins to unlock this lesson. Earn coins by taking quizzes and completing lessons."
+            % cost,
+            "warning",
+        )
+        return redirect(url_for("dashboard"))
+    current_user.coins = (current_user.coins or 0) - cost
+    db.session.add(UnlockedLesson(user_id=current_user.id, lesson_id=lesson_id))
+    db.session.commit()
+    log_activity(
+        current_user,
+        "Unlocked lesson with coins",
+        'Unlocked "%s" (-%d coins)' % (lesson["title"], cost),
+    )
+    flash(
+        "Lesson unlocked! You spent %d coins." % cost,
+        "success",
+    )
+    return redirect(url_for("lesson", lesson_id=lesson_id))
+
+
 @app.route("/lesson/<int:lesson_id>/complete", methods=["POST"])
 @login_required
 def complete_lesson(lesson_id):
-    if not any(l["id"] == lesson_id for l in LESSONS):
+    lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
+    if lesson is None:
         flash("Lesson not found.", "danger")
         return redirect(url_for("dashboard"))
+    quiz_row = QuizScore.query.filter_by(
+        user_id=current_user.id, lesson_id=lesson_id
+    ).first()
+    if quiz_row is None:
+        flash(
+            "Take the lesson quiz first before marking it as complete.",
+            "warning",
+        )
+        return redirect(url_for("lesson", lesson_id=lesson_id))
     exists = LessonProgress.query.filter_by(
         user_id=current_user.id, lesson_id=lesson_id
     ).first()
     if not exists:
         db.session.add(LessonProgress(user_id=current_user.id, lesson_id=lesson_id))
+        current_user.coins = (current_user.coins or 0) + COINS_PER_LESSON
         db.session.commit()
-        lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
         log_activity(
             current_user,
             "Completed lesson",
-            "Finished \"%s\"" % (lesson["title"] if lesson else "Lesson %d" % lesson_id),
+            'Finished "%s" (+%d coins)' % (lesson["title"], COINS_PER_LESSON),
         )
-        flash("Lesson marked as complete.", "success")
+        flash(
+            "Lesson marked as complete. +%d coins earned!" % COINS_PER_LESSON,
+            "success",
+        )
     else:
         flash("You already completed this lesson.", "info")
     return redirect(url_for("lesson", lesson_id=lesson_id))
@@ -2061,6 +2361,9 @@ RUN_CONFIGS = {
     "cpp": {
         "source": "main.cpp",
     },
+    "c": {
+        "source": "main.c",
+    },
     "java": {
         "source": "Main.java",
     },
@@ -2068,6 +2371,7 @@ RUN_CONFIGS = {
 
 COMPILER_FALLBACKS = {
     "g++": [r"C:\Users\chris\mingw64\bin\g++.exe"],
+    "gcc": [r"C:\Users\chris\mingw64\bin\gcc.exe"],
     "clang++": [r"C:\Program Files\LLVM\bin\clang++.exe"],
     "javac": [r"C:\Users\chris\jdk21\jdk-21.0.12+8\bin\javac.exe"],
     "java": [r"C:\Users\chris\jdk21\jdk-21.0.12+8\bin\java.exe"],
@@ -2075,9 +2379,10 @@ COMPILER_FALLBACKS = {
 
 MINGW_BIN = r"C:\Users\chris\mingw64\bin"
 
-# C++ online fallback: Compiler Explorer (free, keyless). Optional Judge0 backup
+# C++/C online fallback: Compiler Explorer (free, keyless). Optional Judge0 backup
 # via CODE_API_KEY env var: https://rapidapi.com/judge0-official/api/judge0-ce
 CE_URL = "https://godbolt.org/api/compiler/g122/compile"
+C_CE_URL = "https://godbolt.org/api/compiler/cg122/compile"
 JAVA_CE_URL = "https://godbolt.org/api/compiler/java2102/compile"
 JUDGE0_URL = "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true"
 
@@ -2341,6 +2646,81 @@ def run_cpp(code, stdin=""):
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+def run_ce_compile(ce_url, service_name, code, stdin=""):
+    payload = json.dumps(
+        {
+            "source": code,
+            "options": {
+                "userArguments": "",
+                "filters": {"execute": True},
+                "executeParameters": {"args": [], "stdin": stdin},
+            },
+        }
+    ).encode()
+    req = urllib.request.Request(
+        ce_url,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "CodeFundamentals/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read().decode())
+    except (urllib.error.URLError, OSError):
+        return jsonify(
+            {
+                "ok": False,
+                "error": f"Could not reach the online {service_name} service (Compiler Explorer).",
+            }
+        )
+    if data.get("code") != 0 or data.get("timedOut"):
+        err = "\n".join(item.get("text", "") for item in data.get("stderr", []))
+        err = re.sub(r"\x1b\[[0-9;]*m", "", err)
+        return jsonify(
+            {"ok": False, "compile_error": err or "Compilation failed."}
+        )
+    exec_result = data.get("execResult") or {}
+    out_lines = [item.get("text", "") for item in exec_result.get("stdout", [])]
+    err_lines = [item.get("text", "") for item in exec_result.get("stderr", [])]
+    text = "\n".join([p for p in out_lines + err_lines if p.strip()])
+    if exec_result.get("timedOut"):
+        text = "Error: execution timed out.\n" + text
+    if not text.strip():
+        text = "No output."
+    return jsonify(
+        {"ok": True, "output": text, "exit_code": exec_result.get("code") or 0}
+    )
+
+
+def run_c(code, stdin=""):
+    workdir = tempfile.mkdtemp(prefix="cf_run_")
+    try:
+        with open(os.path.join(workdir, "main.c"), "w", encoding="utf-8") as f:
+            f.write(code)
+
+        compile_errors = []
+        toolchain_broken = False
+
+        gcc = find_tool("gcc")
+        if gcc:
+            outcome = compile_and_run_local(workdir, [gcc, "main.c", "-o", "main.exe"], stdin)
+            if isinstance(outcome, dict):
+                return outcome
+            if outcome == "BLOCKED":
+                toolchain_broken = True
+            elif outcome is not None:
+                if "cannot execute" in outcome or "blocked" in outcome.lower():
+                    toolchain_broken = True
+                compile_errors.append(outcome)
+
+        return run_ce_compile(C_CE_URL, "C", code, stdin)
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
 RUN_SESSIONS = {}
 MAX_RUN_SECONDS = 120
 
@@ -2399,6 +2779,35 @@ def run_start():
                          "Type each value and press Enter."
             }), 400
         result = run_cpp(code, stdin)
+        payload = result.get_json()
+        events = []
+        exit_code = 0
+        if payload.get("ok"):
+            output = payload.get("output", "")
+            if output:
+                events.append({"type": "out", "data": output})
+            exit_code = payload.get("exit_code", 0)
+        else:
+            msg = payload.get("compile_error") or payload.get("error") or "Compilation failed."
+            events.append({"type": "error", "data": msg})
+            exit_code = -1
+        return jsonify({
+            "ok": True,
+            "events": events,
+            "finished": True,
+            "exit_code": exit_code,
+        })
+
+    if lang == "c":
+        stripped = re.sub(r"/\*.*?\*/", "", code, flags=re.S)
+        stripped = re.sub(r"//[^\n]*", "", stripped)
+        if re.search(r"\bscanf\b|\bgets\b|\bfgets\b", stripped) and not stdin.strip():
+            return jsonify({
+                "ok": False,
+                "error": "This C program reads input. "
+                         "Type each value and press Enter."
+            }), 400
+        result = run_c(code, stdin)
         payload = result.get_json()
         events = []
         exit_code = 0
@@ -2738,6 +3147,13 @@ with app.app_context():
                 break
             except Exception:
                 time.sleep(0.5)
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text("ALTER TABLE user ADD COLUMN coins INTEGER DEFAULT 0"))
+                break
+            except Exception:
+                time.sleep(0.5)
     from sqlalchemy import inspect as _inspect
 
     try:
@@ -2771,6 +3187,14 @@ with app.app_context():
                         conn.execute(sa_text("ALTER TABLE user ADD COLUMN last_seen DATETIME"))
                     else:
                         conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN last_seen TIMESTAMP'))
+                break
+            except Exception:
+                time.sleep(0.5)
+    if "coins" not in _cols and not is_sqlite:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN coins INTEGER DEFAULT 0'))
                 break
             except Exception:
                 time.sleep(0.5)

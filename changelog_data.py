@@ -1,5 +1,53 @@
 CHANGELOG = [
     {
+        "version": "1.53",
+        "date": "2026-08-06",
+        "type": "feature",
+        "title": "Like & Heart Reactions on Feedback",
+        "changes": [
+            "Every feedback now has a heart reaction button on the public feedback page - tap it to like a comment",
+            "Admins can see how many likes each feedback received in the admin panel",
+            "Admins can still reply to feedback from the admin panel, and the reply shows on the public feedback page",
+            "Added a Feedback link to the admin navigation so admins can easily find and reply to feedback",
+        ],
+    },
+    {
+        "version": "1.52",
+        "date": "2026-08-06",
+        "type": "fix",
+        "title": "Code Example Tabs Restored & C Channel Credits Added",
+        "changes": [
+            "Fixed the Code Examples section so lessons show all their language tabs (Python, C++, Java, and C) side by side again",
+            "Added the new C tutorial channels to the Video Lesson Credits in the footer",
+        ],
+    },
+    {
+        "version": "1.51",
+        "date": "2026-08-06",
+        "type": "feature",
+        "title": "C Now Taught Side by Side in Every Fundamentals Lesson & C Compiler Support",
+        "changes": [
+            "C is now taught side by side with Python, C++, and Java inside every Fundamentals lesson",
+            "Each lesson gained a C tab with a video tutorial, runnable C code, and key points covering the same concept",
+            "Topics covered in C: first program, history, variables and data types, input/output, operators, logical operators, conditionals, loops, functions, arrays, and problem solving",
+            "C code now runs in the browser through the online Compiler Explorer service (with local GCC when available)",
+            "The standalone Code Compiler page now supports C alongside Python, C++, and Java",
+        ],
+    },
+    {
+        "version": "1.50",
+        "date": "2026-08-06",
+        "type": "feature",
+        "title": "Coins System, Quiz-First Completion & Coin Unlocks",
+        "changes": [
+            "Earn 10 coins for every lesson you complete - your coin balance shows in the navbar and dashboard",
+            "Mark as Complete now requires taking the lesson quiz first; the button stays locked until your score is saved",
+            "Unlock locked lessons with coins: Easy lessons cost 10 coins, Medium cost 20, and Hard cost 30",
+            "Each lesson card now shows a difficulty badge (Easy / Medium / Hard) next to its estimated time",
+            "Coin unlocks persist per user and are recorded in the admin activity log",
+        ],
+    },
+    {
         "version": "1.49",
         "date": "2026-08-06",
         "type": "fix",

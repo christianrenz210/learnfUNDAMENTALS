@@ -31,7 +31,7 @@
           {% elif l.id == lesson.id %}
             {% set state = 'current' %}
           {% else %}
-            {% if i > 1 and section_lessons[i - 2]['id'] not in completed_ids %}
+            {% if i > 1 and section_lessons[i - 2]['id'] not in completed_ids and l.id not in unlocked_ids %}
               {% set state = 'locked' %}
             {% else %}
               {% set state = 'upcoming' %}
@@ -133,7 +133,7 @@
                 {{ video_block(video, loop.last) }}
               {% endfor %}
             {% endif %}
-            {% set video_langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("sql", "SQL"), ("laravel", "Laravel"), ("react", "React")] %}
+            {% set video_langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("c", "C"), ("sql", "SQL"), ("laravel", "Laravel"), ("react", "React")] %}
             <ul class="nav nav-tabs" id="videoTabs" role="tablist">
               {% for key, label in video_langs if lesson.videos.get(key) %}
                 <li class="nav-item" role="presentation">
@@ -197,10 +197,14 @@
               {% set langs = [("shell", "Shell")] %}
             {% elif lesson.code.get('php') %}
               {% set langs = [("php", "Laravel"), ("javascript", "React")] %}
-            {% elif lesson.code.get('javascript') and lesson.code.get('python') %}
-              {% set langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("sql", "SQL")] %}
             {% else %}
-              {% set langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java")] %}
+              {% set langs = [] %}
+              {% for key, label in [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("c", "C")] if lesson.code.get(key) %}
+                {% set _ = langs.append((key, label)) %}
+              {% endfor %}
+              {% if not langs %}
+                {% set langs = [("python", "Python"), ("cpp", "C++"), ("java", "Java")] %}
+              {% endif %}
             {% endif %}
             {% for key, label in langs %}
               <li class="nav-item" role="presentation">
@@ -345,15 +349,29 @@
             <h5 class="text-success">Lesson Completed</h5>
             <p class="text-muted small mb-0">Great job! Keep up the momentum.</p>
           {% else %}
-            <div class="mb-3">
-              <i class="bi bi-journal-check text-primary display-4"></i>
-            </div>
-            <h5>Finished reading?</h5>
-            <p class="text-muted small">Mark this lesson as complete.</p>
-            <button type="button" class="btn btn-success w-100"
-                    data-bs-toggle="modal" data-bs-target="#completeModal">
-              <i class="bi bi-check2 me-1"></i>Mark as Complete
-            </button>
+            {% if quiz_score %}
+              <div class="mb-3">
+                <i class="bi bi-journal-check text-primary display-4"></i>
+              </div>
+              <h5>Finished reading?</h5>
+              <p class="text-muted small">Mark this lesson as complete and earn coins.</p>
+              <button type="button" class="btn btn-success w-100"
+                      data-bs-toggle="modal" data-bs-target="#completeModal">
+                <i class="bi bi-check2 me-1"></i>Mark as Complete
+              </button>
+            {% else %}
+              <div class="mb-3">
+                <i class="bi bi-journal-check text-secondary display-4"></i>
+              </div>
+              <h5>Finished reading?</h5>
+              <p class="text-muted small">
+                <i class="bi bi-lock-fill me-1"></i>Take the quiz above first to unlock
+                Mark as Complete.
+              </p>
+              <button type="button" class="btn btn-secondary w-100" disabled>
+                <i class="bi bi-lock-fill me-1"></i>Mark as Complete
+              </button>
+            {% endif %}
           {% endif %}
         </div>
       </div>
@@ -460,16 +478,26 @@
       </div>
       <div class="modal-body">
         {% if next_lesson_id %}
-          <p class="mb-0">
+          <p class="mb-2">
             You have completed this lesson successfully!
             Do you want to proceed to the next lesson?
           </p>
-        {% else %}
           <p class="mb-0">
+            <span class="badge bg-warning text-dark">
+              <i class="bi bi-coin me-1"></i>+{{ coins_per_lesson }} coins earned
+            </span>
+          </p>
+        {% else %}
+          <p class="mb-2">
             Congratulations! You have successfully completed
             <strong>all the lessons</strong> in {{ lesson.section }}!
           </p>
-          <p class="mb-0 mt-2">
+          <p class="mb-2">
+            <span class="badge bg-warning text-dark">
+              <i class="bi bi-coin me-1"></i>+{{ coins_per_lesson }} coins earned
+            </span>
+          </p>
+          <p class="mb-0">
             {% if section_has_quiz %}
               Do you want to take the <strong>15-question long quiz</strong>
               (20 seconds per question), or review all the lessons first?
@@ -643,7 +671,7 @@
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/shell/shell.min.js"></script>
 <script>
 (function () {
-  const MODES = { python: 'python', cpp: 'text/x-c++src', java: 'text/x-java', sql: 'text/x-sql', php: 'text/x-php', javascript: 'javascript', shell: 'shell' };
+  const MODES = { python: 'python', cpp: 'text/x-c++src', java: 'text/x-java', c: 'text/x-csrc', sql: 'text/x-sql', php: 'text/x-php', javascript: 'javascript', shell: 'shell' };
   const editors = {};
   const sessions = {};
   const pollTimers = {};
@@ -901,6 +929,9 @@
     }
     if (lang === 'java') {
       return code.match(/Scanner|System\.in|BufferedReader/g);
+    }
+    if (lang === 'c') {
+      return code.match(/\bscanf\b|\bgets\b|\bfgets\b/g);
     }
     return null;
   }

@@ -4,6 +4,7 @@ __pycache__/
 
 # Database (contains user data)
 instance/
+students.db
 
 # User avatars
 static/uploads/

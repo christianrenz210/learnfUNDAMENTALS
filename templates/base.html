@@ -68,6 +68,11 @@
           </li>
           {% endif %}
           <li class="nav-item">
+            <span class="nav-link text-white-50 d-none d-lg-inline" title="Coins earned">
+              <i class="bi bi-coin me-1"></i>{{ current_user.coins }}
+            </span>
+          </li>
+          <li class="nav-item">
             <span class="nav-link text-white-50 d-none d-lg-inline">Welcome, {{ current_user.username }}</span>
           </li>
           <li class="nav-item">
@@ -165,8 +170,8 @@
     <div class="row g-4">
       <div class="col-lg-6 col-md-6">
         <h6 class="text-uppercase mb-3 text-white fw-bold"><i class="bi bi-code-slash me-1"></i>CodeFundamentals</h6>
-        <p class="small mb-3">Programming Fundamentals for all levels — 1st year students and up. Learn Python, C++, Java, SQL, and WordPress through
-          26+ lessons in four sections with long quizzes, certificates, and a hands-on SQL Lab.</p>
+        <p class="small mb-3">Programming Fundamentals for all levels — 1st year students and up. Learn Python, C++, Java, C, SQL, and WordPress through
+          27+ lessons in four sections with long quizzes, certificates, and a hands-on SQL Lab.</p>
         <div class="d-flex gap-2">
           <a href="#" class="text-white-50" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
           <a href="#" class="text-white-50" aria-label="Twitter / X"><i class="bi bi-twitter-x"></i></a>
@@ -212,6 +217,16 @@
               <span class="video-credits-dot">•</span>
               <a href="https://www.youtube.com/@BroCodez" target="_blank" rel="noopener">Bro Code</a>
               <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@mycodeschool" target="_blank" rel="noopener">mycodeschool</a>
+              <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@LearningLad" target="_blank" rel="noopener">LearningLad</a>
+              <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@PortfolioCourses" target="_blank" rel="noopener">Portfolio Courses</a>
+              <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@programizstudios" target="_blank" rel="noopener">Programiz</a>
+              <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@cmakzeelanbasha434" target="_blank" rel="noopener">CodeWithBasha (Enjoy Coding)</a>
+              <span class="video-credits-dot">•</span>
               <a href="https://www.youtube.com/@crashcourse" target="_blank" rel="noopener">CrashCourse</a>
               <span class="video-credits-dot">•</span>
               <a href="https://www.youtube.com/@lucid_software" target="_blank" rel="noopener">Lucid Software</a>
@@ -235,6 +250,16 @@
               <a href="https://www.youtube.com/@dojicreates" target="_blank" rel="noopener">Doji Creates</a>
               <span class="video-credits-dot">•</span>
               <a href="https://www.youtube.com/@BroCodez" target="_blank" rel="noopener">Bro Code</a>
+              <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@mycodeschool" target="_blank" rel="noopener">mycodeschool</a>
+              <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@LearningLad" target="_blank" rel="noopener">LearningLad</a>
+              <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@PortfolioCourses" target="_blank" rel="noopener">Portfolio Courses</a>
+              <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@programizstudios" target="_blank" rel="noopener">Programiz</a>
+              <span class="video-credits-dot">•</span>
+              <a href="https://www.youtube.com/@cmakzeelanbasha434" target="_blank" rel="noopener">CodeWithBasha (Enjoy Coding)</a>
               <span class="video-credits-dot">•</span>
               <a href="https://www.youtube.com/@crashcourse" target="_blank" rel="noopener">CrashCourse</a>
               <span class="video-credits-dot">•</span>
@@ -303,7 +328,7 @@
   </div>
 </div>
 
-<div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+<div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" data-version="{{ latest_update.version }}">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
@@ -445,11 +470,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const updateModalEl = document.getElementById('updateModal');
   if (updateModalEl) {
-    let shown = false;
-    try { shown = sessionStorage.getItem('cfUpdateShown') === '1'; } catch (e) {}
-    if (!shown) {
+    let shownVersion = null;
+    try { shownVersion = sessionStorage.getItem('cfUpdateShown'); } catch (e) {}
+    const currentVersion = updateModalEl.dataset.version || '';
+    if (shownVersion !== currentVersion) {
       new bootstrap.Modal(updateModalEl).show();
-      try { sessionStorage.setItem('cfUpdateShown', '1'); } catch (e) {}
+      try { sessionStorage.setItem('cfUpdateShown', currentVersion); } catch (e) {}
     }
   }
 });

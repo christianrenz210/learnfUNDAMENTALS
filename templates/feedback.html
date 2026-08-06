@@ -92,6 +92,17 @@
             </div>
             <p class="mb-3">{{ fb.message }}</p>
 
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <button type="button"
+                      class="btn btn-sm btn-outline-danger rounded-pill feedback-like-btn {% if fb.id in liked_ids %}active{% endif %}"
+                      data-url="{{ url_for('feedback_like', fid=fb.id) }}"
+                      {% if not current_user.is_authenticated %}disabled title="Log in to like this feedback"{% endif %}
+                      aria-pressed="{% if fb.id in liked_ids %}true{% else %}false{% endif %}">
+                <i class="bi {% if fb.id in liked_ids %}bi-heart-fill{% else %}bi-heart{% endif %} me-1"></i>
+                <span class="feedback-like-count">{{ fb.like_count }}</span>
+              </button>
+            </div>
+
             {% if fb.admin_reply %}
               <div class="bg-success bg-opacity-10 border-start border-success border-3 rounded p-3">
                 <div class="d-flex align-items-center mb-1">
@@ -113,4 +124,29 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.feedback-like-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    fetch(btn.dataset.url, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'fetch' },
+      cache: 'no-store'
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.error) return;
+        const icon = btn.querySelector('i');
+        btn.classList.toggle('active', data.liked);
+        icon.classList.toggle('bi-heart-fill', data.liked);
+        icon.classList.toggle('bi-heart', !data.liked);
+        btn.setAttribute('aria-pressed', data.liked ? 'true' : 'false');
+        btn.querySelector('.feedback-like-count').textContent = data.count;
+      })
+      .catch(function () {});
+  });
+});
+</script>
 {% endblock %}

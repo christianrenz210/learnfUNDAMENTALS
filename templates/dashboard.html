@@ -66,6 +66,10 @@
           </div>
           <div class="d-flex justify-content-between small mt-2 border-top pt-2">
             <span>
+              <i class="bi bi-coin me-1 text-warning"></i>
+              Coins: <strong>{{ current_user.coins }}</strong>
+            </span>
+            <span>
               <i class="bi bi-bug-fill me-1 text-danger"></i>
               Labs completed: <strong>{{ lab_count }}</strong>
             </span>
@@ -295,6 +299,10 @@
                           Lesson {{ loop.index }}
                         </span>
                         <span class="d-flex gap-1 align-items-center">
+                          {% set diff = lesson_difficulties[lesson.id] %}
+                          <span class="badge {{ 'bg-success' if diff == 'easy' else ('bg-warning text-dark' if diff == 'medium' else 'bg-danger') }}">
+                            <i class="bi {{ 'bi-emoji-smile' if diff == 'easy' else ('bi-emoji-neutral' if diff == 'medium' else 'bi-fire') }} me-1"></i>{{ diff | capitalize }}
+                          </span>
                           <span class="badge bg-secondary bg-opacity-10 text-secondary">
                             <i class="bi bi-clock me-1"></i>~{{ lesson_estimate_minutes(lesson) }} min
                           </span>
@@ -309,6 +317,10 @@
                         {% elif lesson.id in completed %}
                           <span class="badge bg-success">
                             <i class="bi bi-check2 me-1"></i>Completed
+                          </span>
+                        {% elif lesson.id in unlocked_ids %}
+                          <span class="badge bg-warning text-dark">
+                            <i class="bi bi-coin me-1"></i>Unlocked
                           </span>
                         {% endif %}
                         {% if lesson.id == 19 and 19 in completed_lab_ids %}
@@ -338,13 +350,30 @@
                               <i class="bi bi-hourglass-split me-1"></i>Coming Soon
                             </button>
                           {% elif lesson.id in locked_ids %}
+                            {% set cost = unlock_costs[lesson.id] %}
+                            {% set diff = lesson_difficulties[lesson.id] %}
                             <div class="alert alert-warning py-2 px-2 small mb-3 d-flex align-items-center gap-2">
                               <i class="bi bi-lock-fill"></i>
-                              <span>Complete the previous lesson first to unlock this one.</span>
+                              <span>Complete the previous lesson first — or unlock it with coins.</span>
                             </div>
-                            <button type="button" class="btn btn-secondary btn-sm" disabled>
-                              <i class="bi bi-lock me-1"></i>Locked
-                            </button>
+                            <div class="d-flex gap-2 flex-wrap">
+                              <form method="POST" action="{{ url_for('unlock_lesson', lesson_id=lesson.id) }}"
+                                    onsubmit="return confirm('Spend {{ cost }} coins to unlock this {{ diff }} lesson?');">
+                                <button type="submit" class="btn btn-warning btn-sm"
+                                        {% if current_user.coins < cost %}disabled{% endif %}>
+                                  <i class="bi bi-coin me-1"></i>Unlock with {{ cost }} coins
+                                </button>
+                              </form>
+                              <button type="button" class="btn btn-secondary btn-sm" disabled>
+                                <i class="bi bi-lock me-1"></i>Locked
+                              </button>
+                            </div>
+                            {% if current_user.coins < cost %}
+                              <div class="small text-muted mt-2">
+                                <i class="bi bi-coin me-1 text-warning"></i>
+                                You have {{ current_user.coins }} coins. Need {{ cost }} ({{ diff | capitalize }}) — earn coins by taking quizzes and completing lessons.
+                              </div>
+                            {% endif %}
                           {% else %}
                             <div class="d-flex align-items-center text-muted small mb-3">
                               {% set qs = scores.get(lesson.id) %}

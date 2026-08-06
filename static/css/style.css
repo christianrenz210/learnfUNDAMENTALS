@@ -348,6 +348,21 @@ body {
   object-fit: cover;
 }
 
+.feedback-like-btn.active {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: #fff;
+}
+
+.feedback-like-btn:not(:disabled):hover {
+  transform: scale(1.06);
+}
+
+.feedback-like-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .step-number {
   width: 36px;
   height: 36px;
