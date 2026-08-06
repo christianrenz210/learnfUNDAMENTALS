@@ -106,6 +106,72 @@
     return { text: text, tokens: tokens };
   }
 
+  function assistInline(s) {
+    return s
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+
+  function layoutAssistText(escaped) {
+    var lines = escaped.split('\n');
+    var out = [];
+    var inList = false;
+    function closeList() {
+      if (inList) { out.push('</ul>'); inList = false; }
+    }
+    for (var i = 0; i < lines.length; i++) {
+      var raw = lines[i];
+      var trimmed = raw.trim();
+      if (!trimmed) {
+        closeList();
+        out.push('<div class="assist-gap"></div>');
+        continue;
+      }
+      var heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+      if (heading) {
+        closeList();
+        var level = Math.min(heading[1].length + 3, 6);
+        var hTitle = heading[2]
+          .replace(/^Slide\s*\d+\s*[:.\u2013-]*\s*/i, '')
+          .replace(/^Title\s*:\s*/i, '')
+          .replace(/^\*+\s*/, '');
+        out.push('<h' + level + ' class="assist-heading">' + assistInline(hTitle) + '</h' + level + '>');
+        continue;
+      }
+      var slideNoHash = trimmed.match(/^Slide\s*\d+\s*[:\-.]\s+(.+)$/i);
+      if (slideNoHash) {
+        closeList();
+        out.push('<h6 class="assist-heading">' + assistInline(slideNoHash[1]) + '</h6>');
+        continue;
+      }
+      var bullet = trimmed.match(/^([\-\*\+])\s+(.+)$/);
+      if (bullet) {
+        if (!inList) { out.push('<ul class="assist-list">'); inList = true; }
+        var itemText = bullet[2]
+          .replace(/^Title\s*:\s*/i, '')
+          .replace(/^Bullets?\s*:\s*/i, '');
+        if (!itemText.trim()) continue;
+        var indent = raw.length - raw.replace(/^\s+/, '').length;
+        if (indent > 0) {
+          out.push('<li class="assist-li-sub">' + assistInline(itemText) + '</li>');
+        } else {
+          out.push('<li>' + assistInline(itemText) + '</li>');
+        }
+        continue;
+      }
+      var numbered = trimmed.match(/^(\d+)[\.\)]\s+(.+)$/);
+      if (numbered) {
+        if (!inList) { out.push('<ul class="assist-list">'); inList = true; }
+        out.push('<li><span class="assist-num">' + numbered[1] + '.</span> ' + assistInline(numbered[2]) + '</li>');
+        continue;
+      }
+      closeList();
+      out.push('<div class="assist-line">' + assistInline(trimmed) + '</div>');
+    }
+    closeList();
+    return out.join('\n');
+  }
+
   function appendAssistText(wrapper, txt) {
     var el = document.createElement('div');
     el.className = 'assist-text';
@@ -119,18 +185,16 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    el.innerHTML = layoutAssistText(html);
 
     tokens.forEach(function(item, idx) {
       var token = '___VIDEO_EMBED_' + idx + '___';
       var embedHtml = '<div class="ratio ratio-16x9 my-2 rounded overflow-hidden shadow-sm">' +
         '<iframe src="https://www.youtube.com/embed/' + item.id + '" title="' + (item.title || 'Video Lesson') + '" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>' +
         '</div>';
-      html = html.replace(token, embedHtml);
+      el.innerHTML = el.innerHTML.replace(token, embedHtml);
     });
 
-    el.innerHTML = html;
     wrapper.appendChild(el);
   }
 
@@ -219,15 +283,16 @@
   function appendAssistCode(wrapper, lang, code) {
     var langKey = (lang || '').toLowerCase().trim();
     var runLang = RUN_LANGS[langKey] || null;
+    var isOutput = langKey === 'output' || langKey === 'sample output';
 
     var card = document.createElement('div');
-    card.className = 'assist-code-card';
+    card.className = 'assist-code-card' + (isOutput ? ' assist-code-output' : '');
 
     var head = document.createElement('div');
     head.className = 'assist-code-head';
     var label = document.createElement('span');
     label.className = 'assist-code-lang';
-    label.textContent = runLang || langKey || 'code';
+    label.textContent = isOutput ? 'Sample Output' : (runLang || langKey || 'code');
     head.appendChild(label);
 
     var actions = document.createElement('div');
@@ -293,12 +358,79 @@
     return wrapper;
   }
 
+  function looksLikeSlides(text) {
+    return /(^|\n)\s*#{1,6}\s+\S/.test(text) ||
+      /\bSlide\s*\d+\s*[:.\-]?\s*\S+/i.test(text) ||
+      /(^|\n)\s*Title\s*:/i.test(text);
+  }
+
+  function pptFileName(text) {
+    var m = text.match(/^#{1,6}\s+(?:Slide\s*\d+\s*[:\-.\u2013]?\s*)?([^\n]+)/im) ||
+      text.match(/\bSlide\s*\d+\s*[:\-.\u2013]\s*([^\n]+)/i) ||
+      text.match(/^Title\s*:\s*(.+)$/im);
+    var t = m ? m[1] : '';
+    t = t.replace(/\*\*/g, '').replace(/`/g, '').replace(/[^\w\- ]+/g, '').trim();
+    t = t.replace(/\s+/g, '-');
+    return (t || 'presentation').slice(0, 60) + '.pptx';
+  }
+
+  function addPptButton(bubble, text) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'assist-ppt-btn';
+    btn.innerHTML = '<i class="bi bi-file-ppt"></i> Download PPT';
+    btn.addEventListener('click', function () {
+      if (btn.dataset.busy === '1') return;
+      btn.dataset.busy = '1';
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+      fetch(urls.assistantPpt, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text })
+      })
+        .then(function (res) {
+          if (!res.ok) return res.json().then(function (d) { throw new Error(d.error || 'Could not create the file.'); });
+          return res.blob();
+        })
+        .then(function (blob) {
+          var a = document.createElement('a');
+          var objUrl = URL.createObjectURL(blob);
+          a.href = objUrl;
+          a.download = pptFileName(text);
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function () { URL.revokeObjectURL(objUrl); }, 2000);
+          btn.dataset.busy = '';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-file-ppt"></i> Download PPT';
+        })
+        .catch(function (err) {
+          btn.dataset.busy = '';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-file-ppt"></i> Download PPT';
+          alert(err.message);
+        });
+    });
+    return btn;
+  }
+
   function renderBotContent(bubble, text) {
     bubble.textContent = '';
     if (/```|<iframe|youtube\.com|youtu\.be|\[video:/.test(text)) {
       bubble.appendChild(buildReply(text));
     } else {
-      bubble.textContent = text;
+      var w = document.createElement('div');
+      w.className = 'assist-reply';
+      appendAssistText(w, text);
+      bubble.appendChild(w);
+    }
+    if (urls.assistantPpt && looksLikeSlides(text)) {
+      var bar = document.createElement('div');
+      bar.className = 'assist-ppt-bar';
+      bar.appendChild(addPptButton(bubble, text));
+      bubble.appendChild(bar);
     }
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
@@ -336,7 +468,7 @@
       i += 3;
       if (i >= text.length) {
         clearInterval(timer);
-        bubble.textContent = text;
+        renderBotContent(bubble, text);
       } else {
         bubble.textContent = text.slice(0, i);
       }

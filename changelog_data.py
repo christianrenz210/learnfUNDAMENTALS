@@ -1,5 +1,20 @@
 CHANGELOG = [
     {
+        "version": "1.55",
+        "date": "2026-08-06",
+        "type": "feature",
+        "title": "Slide Layouts & Downloadable PowerPoint from E.R.E.N",
+        "changes": [
+            "E.R.E.N now shows slide outlines and answers with a clean layout - headings, bullet points, and numbered lists are rendered nicely (no more raw ## or ** symbols)",
+            "Added a Download PPT button under presentation-style replies so you can export the outline as a real .pptx file",
+            "The exported PowerPoint is cleanly designed with a title bar, bullet points, and highlighted code boxes",
+            "Every code example now comes with its Sample Output, shown in the chat and included in the PPT inside its own green output box",
+            "The PPT file is named after the topic (for example, Introduction-to-C-Programming.pptx)",
+            "Fixed long presentations being cut off mid-answer so slides always come out complete",
+            "E.R.E.N was taught a consistent slide format, so every requested presentation becomes slides that you can download instantly",
+        ],
+    },
+    {
         "version": "1.54",
         "date": "2026-08-06",
         "type": "fix",

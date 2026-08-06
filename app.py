@@ -1,5 +1,6 @@
 import base64
 import glob
+import io
 import json
 import os
 import queue
@@ -40,6 +41,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     url_for,
 )
 from flask_login import (
@@ -138,7 +140,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.54"
+APP_VERSION = "1.55"
 
 
 @app.context_processor
@@ -1220,6 +1222,20 @@ EREN_SYSTEM_PROMPT = (
     "- Deploying with Netlify: (IH95RG9Y6L4, YUtNzwxOVYY)\n"
     "- SQL Injection Intro: (wcaiKgQU6VE)\n"
     "- How SQL Injection Works: (FwIUkAwKzG8)"
+    "\n\nPresentations / PPT requests:\n"
+    "When a student asks for a presentation, PowerPoint, slide outline, or to 'make this into slides' for any "
+    "topic, produce a clean slide deck using ONLY this format — it renders nicely in chat and can be exported "
+    "to a real .pptx file:\n"
+    "- Start with a title slide heading: `## Slide 1: <Title>`\n"
+    "- Each following slide heading starts with `##` and the slide number, e.g. `## Slide 2: <Topic>`.\n"
+    "- Under each heading add short `-` bullet points (one level, no nested bullets).\n"
+    "- Do NOT use `**`, `*`, `#` (beyond the `##` heading), tables, or other markdown in the outline.\n"
+    "- You may add one short code example per slide inside a triple-backtick ``` fence; it is shown in chat "
+    "and automatically included in the exported PowerPoint.\n"
+    "- After every code example, always include its sample output on its own line as \"Sample Output:\" "
+    "followed by a ```output fence containing the exact printed result, e.g.:\n"
+    "```c\nprintf(\"Hello\");\n```\nSample Output:\n```output\nHello\n```\n"
+    "- Keep it to 6-10 slides with concise bullets, and no closing message after the outline."
 )
 
 
@@ -1257,7 +1273,7 @@ def gemini_reply(message, history=None):
     payload = {
         "system_instruction": {"parts": [{"text": EREN_SYSTEM_PROMPT}]},
         "contents": cleaned,
-        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 1024},
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 4096},
     }
     req = urllib.request.Request(
         url,
@@ -2041,6 +2057,297 @@ def assistant():
     if reply is None:
         reply = assistant_reply(message)
     return jsonify({"ok": True, "reply": reply})
+
+
+def clean_inline_text(s):
+    s = re.sub(r"\*\*(.+?)\*\*", r"\1", s)
+    s = re.sub(r"`([^`]+)`", r"\1", s)
+    s = re.sub(r"^\*+\s*", "", s)
+    s = re.sub(r"^Title\s*:\s*", "", s.strip(), flags=re.IGNORECASE)
+    s = re.sub(r"^Slide\s*\d+\s*[:\-.\u2013]?\s*", "", s.strip(), flags=re.IGNORECASE)
+    return s.strip()
+
+
+def parse_slides_text(text):
+    slides = []
+    current = None
+    in_code = False
+    code_buf = []
+    code_lang = ""
+
+    def ensure_slide(title):
+        nonlocal current
+        current = {"title": clean_inline_text(title) or "Presentation", "items": []}
+        slides.append(current)
+
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        stripped = line.strip()
+
+        if stripped.startswith("```"):
+            if in_code:
+                if current is not None:
+                    code_text = "\n".join(code_buf).strip()
+                    if code_lang == "output":
+                        current["items"].append({"type": "output", "text": code_text})
+                    else:
+                        current["items"].append({"type": "code", "text": code_text})
+                code_buf = []
+                in_code = False
+                code_lang = ""
+            else:
+                in_code = True
+                code_buf = []
+                code_lang = stripped[3:].strip().lower()
+            continue
+
+        if in_code:
+            code_buf.append(raw)
+            continue
+
+        if not stripped:
+            continue
+
+        if re.match(r"^\*{0,2}(sample\s+)?output\s*:\s*\*{0,2}$", stripped, re.IGNORECASE):
+            continue
+
+        hm = re.match(r"^#{1,6}\s+(.*)$", stripped)
+        if hm:
+            ensure_slide(hm.group(1))
+            continue
+
+        sm = re.match(r"^Slide\s*\d+\s*([:\-.\u2013]\s*)?(.*)$", stripped, re.IGNORECASE)
+        if sm and sm.group(2):
+            ensure_slide(sm.group(2))
+            continue
+
+        if current is None:
+            tm = re.match(r"^Title\s*:\s*(.*)$", stripped, re.IGNORECASE)
+            ensure_slide(tm.group(1) if tm else "Overview")
+            if tm:
+                continue
+
+        bm = re.match(r"^([\-\*\+])\s+(.*)$", stripped)
+        if bm:
+            text = bm.group(2)
+            if re.match(r"^(Bullets?|(sample\s+)?output)\s*:\s*$", text, re.IGNORECASE):
+                continue
+            indent = len(line) - len(line.lstrip())
+            current["items"].append(
+                {"text": clean_inline_text(text), "level": min(indent // 2, 3)}
+            )
+            continue
+
+        nm = re.match(r"^(\d+)[\.\)]\s+(.*)$", stripped)
+        if nm:
+            current["items"].append({"text": clean_inline_text(nm.group(2)), "level": 0})
+            continue
+
+        current["items"].append({"text": clean_inline_text(stripped), "level": 0})
+
+    if not slides:
+        slides = [{"title": "Presentation", "items": []}]
+    return slides
+
+
+def build_pptx_export(text):
+    from pptx import Presentation
+    from pptx.enum.shapes import MSO_SHAPE
+    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    from pptx.util import Inches, Pt, Emu
+    from pptx.dml.color import RGBColor
+
+    slides = parse_slides_text(text)
+    prs = Presentation()
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Inches(7.5)
+    layout = prs.slide_layouts[6]
+
+    NAVY = RGBColor(15, 23, 42)
+    SLATE = RGBColor(51, 65, 85)
+    BRAND = RGBColor(14, 165, 233)
+    CODE_BG = RGBColor(15, 23, 42)
+    CODE_FG = RGBColor(148, 210, 255)
+    CODE_NAME = "Consolas"
+    OUT_BG = RGBColor(6, 46, 30)
+    OUT_LINE = RGBColor(16, 185, 129)
+    OUT_FG = RGBColor(167, 243, 208)
+    OUT_HEAD = RGBColor(52, 211, 153)
+    FONT = "Calibri"
+
+    for slide in slides:
+        s = prs.slides.add_slide(layout)
+        bullets = [it for it in slide["items"] if it.get("type") not in ("code", "output")]
+        codes = [it for it in slide["items"] if it.get("type") == "code"]
+        outputs = [it for it in slide["items"] if it.get("type") == "output"]
+
+        title = s.shapes.add_textbox(Inches(0.6), Inches(0.4), Inches(12.1), Inches(1.0))
+        tf = title.text_frame
+        tf.word_wrap = True
+        tf.vertical_anchor = MSO_ANCHOR.TOP
+        tf.margin_left = 0
+        tf.margin_top = 0
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.LEFT
+        r = p.add_run()
+        r.text = slide["title"]
+        r.font.name = FONT
+        r.font.size = Pt(30)
+        r.font.bold = True
+        r.font.color.rgb = NAVY
+
+        bar = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.65), Inches(1.52), Inches(2.2), Inches(0.07))
+        bar.fill.solid()
+        bar.fill.fore_color.rgb = BRAND
+        bar.line.fill.background()
+
+        content_top = Inches(1.95)
+        if codes:
+            content_h = Inches(2.5)
+        else:
+            content_h = Inches(5.2)
+        if bullets:
+            box = s.shapes.add_textbox(Inches(0.65), content_top, Inches(12.05), content_h)
+            btf = box.text_frame
+            btf.word_wrap = True
+            btf.vertical_anchor = MSO_ANCHOR.TOP
+            btf.margin_left = 0
+            btf.margin_top = 0
+            for i, it in enumerate(bullets):
+                bp = btf.paragraphs[0] if i == 0 else btf.add_paragraph()
+                bp.alignment = PP_ALIGN.LEFT
+                marker = "\u2022  " if it["level"] == 0 else "\u2013  "
+                indent = "     " * min(it["level"], 2) if it["level"] > 0 else ""
+                bp.text = marker + indent + it["text"]
+                for br in bp.runs:
+                    br.font.name = FONT
+                    br.font.size = Pt(max(17 - it["level"] * 2, 14))
+                    br.font.color.rgb = SLATE
+
+        if codes:
+            top = Inches(4.55)
+            bottom = Inches(7.3)
+            gap = Inches(0.14)
+            units = []
+            total = 0
+            for i, code in enumerate(codes):
+                out_text = (outputs[i].get("text") if i < len(outputs) else "") or ""
+                code_lines = code["text"].split("\n")
+                out_lines = out_text.split("\n") if out_text.strip() else []
+                cl = len(code_lines)
+                ol = len(out_lines)
+                csize = max(10, min(13, int(210 / max(cl, 1))))
+                osize = max(9, min(12, int(160 / max(ol, 1)))) if ol else 11
+                ch = int(Inches(0.24)) + int(Pt(csize * 1.45) * cl)
+                oh = (int(Inches(0.3)) + int(Pt(osize * 1.45) * (ol + 1))) if ol else 0
+                units.append({
+                    "code_lines": code_lines, "out_lines": out_lines,
+                    "cl": cl, "ol": ol, "csize": csize, "osize": osize,
+                    "ch": ch, "oh": oh,
+                })
+                total += ch + oh + int(gap)
+            avail = int(bottom - top)
+            scale = 1.0
+            if total > avail:
+                scale = (avail - int(gap)) / total if total else 1.0
+            for u in units:
+                ch = Emu(int(u["ch"] * scale))
+                oh = Emu(int(u["oh"] * scale))
+                csize = max(8, int(u["csize"] * scale))
+                osize = max(8, int(u["osize"] * scale))
+                box = s.shapes.add_shape(
+                    MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.65), top, Inches(12.05), ch
+                )
+                try:
+                    box.adjustments[0] = 0.06
+                except Exception:
+                    pass
+                box.fill.solid()
+                box.fill.fore_color.rgb = CODE_BG
+                box.line.fill.background()
+                box.shadow.inherit = False
+                ctf = box.text_frame
+                ctf.word_wrap = True
+                ctf.vertical_anchor = MSO_ANCHOR.TOP
+                ctf.margin_left = Inches(0.25)
+                ctf.margin_right = Inches(0.25)
+                ctf.margin_top = Inches(0.1)
+                ctf.margin_bottom = Inches(0.06)
+                for i, ln in enumerate(u["code_lines"]):
+                    cp = ctf.paragraphs[0] if i == 0 else ctf.add_paragraph()
+                    cp.alignment = PP_ALIGN.LEFT
+                    cp.text = ln or " "
+                    for cr in cp.runs:
+                        cr.font.name = CODE_NAME
+                        cr.font.size = Pt(csize)
+                        cr.font.color.rgb = CODE_FG
+                if u["ol"]:
+                    oy = Emu(int(top) + int(ch) + int(gap))
+                    obox = s.shapes.add_shape(
+                        MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.65), oy, Inches(12.05), oh
+                    )
+                    try:
+                        obox.adjustments[0] = 0.06
+                    except Exception:
+                        pass
+                    obox.fill.solid()
+                    obox.fill.fore_color.rgb = OUT_BG
+                    obox.line.color.rgb = OUT_LINE
+                    obox.line.width = Pt(1)
+                    obox.shadow.inherit = False
+                    otf = obox.text_frame
+                    otf.word_wrap = True
+                    otf.vertical_anchor = MSO_ANCHOR.TOP
+                    otf.margin_left = Inches(0.25)
+                    otf.margin_right = Inches(0.25)
+                    otf.margin_top = Inches(0.1)
+                    otf.margin_bottom = Inches(0.06)
+                    hdr = otf.paragraphs[0]
+                    hdr.alignment = PP_ALIGN.LEFT
+                    hr = hdr.add_run()
+                    hr.text = "Sample Output"
+                    hr.font.name = FONT
+                    hr.font.size = Pt(11)
+                    hr.font.bold = True
+                    hr.font.color.rgb = OUT_HEAD
+                    for i, ln in enumerate(u["out_lines"]):
+                        cp = otf.add_paragraph()
+                        cp.alignment = PP_ALIGN.LEFT
+                        cp.text = ln or " "
+                        for cr in cp.runs:
+                            cr.font.name = CODE_NAME
+                            cr.font.size = Pt(osize)
+                            cr.font.color.rgb = OUT_FG
+                    top = Emu(int(oy) + int(oh))
+                else:
+                    top = Emu(int(top) + int(ch) + int(gap))
+
+    buf = io.BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+    return buf
+
+
+@app.route("/assistant/ppt", methods=["POST"])
+@login_required
+def assistant_ppt():
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return jsonify({"ok": False, "error": "Nothing to export."}), 400
+    try:
+        slides = parse_slides_text(text)
+        topic = (slides[0] or {}).get("title") or "presentation"
+        base = re.sub(r"[^\w \-]+", "", topic).strip().replace(" ", "-") or "presentation"
+        buf = build_pptx_export(text)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": "Could not create the file: %s" % exc}), 500
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=(base[:60] + ".pptx"),
+        mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    )
 
 
 @app.route("/lesson/<int:lesson_id>")

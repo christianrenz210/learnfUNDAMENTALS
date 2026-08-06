@@ -541,13 +541,14 @@ window.EREN = {
   userTotal: {{ user_total }},
   urls: {
     assistant: {{ url_for('assistant') | tojson }},
+    assistantPpt: {{ url_for('assistant_ppt') | tojson }},
     runStart: {{ url_for('run_start') | tojson }},
     runPoll: {{ url_for('run_poll', session_id='SID') | tojson }},
     compiler: {{ url_for('compiler') | tojson }}
   }
 };
 </script>
-<script src="{{ url_for('static', filename='js/eren.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='js/eren.js') }}?v=4"></script>
 {% endif %}
 </body>
 </html>
