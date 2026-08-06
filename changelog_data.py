@@ -1,5 +1,15 @@
 CHANGELOG = [
     {
+        "version": "1.54",
+        "date": "2026-08-06",
+        "type": "fix",
+        "title": "E.R.E.N Assistant Wrongly Refusing Questions Fixed",
+        "changes": [
+            "Fixed a bug that made the AI assistant reply 'looks like a quiz question' to any question it could not answer directly",
+            "E.R.E.N now answers freely again (including in Tagalog) and falls back to the built-in rules only when the AI service is unavailable",
+        ],
+    },
+    {
         "version": "1.53",
         "date": "2026-08-06",
         "type": "feature",

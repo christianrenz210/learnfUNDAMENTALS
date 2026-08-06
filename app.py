@@ -138,7 +138,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.53"
+APP_VERSION = "1.54"
 
 
 @app.context_processor
@@ -2030,8 +2030,8 @@ def assistant():
         return jsonify({"ok": False, "error": "Please type a message."}), 400
     if is_quiz_question_request(message):
         return jsonify({"ok": True, "reply": QUIZ_REFUSAL})
-    quiz_lesson_id = lesson_for_quiz_question(message)
-    if quiz_lesson_id is not None:
+    quiz_hit, quiz_lesson_id = lesson_for_quiz_question(message)
+    if quiz_hit:
         reply = assistant_reply(message)
         if "I am not sure about that one yet" in reply or "outside my built-in course notes" in reply:
             reply = lesson_review_nudge(quiz_lesson_id)
