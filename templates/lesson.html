@@ -75,24 +75,14 @@
                 <i class="bi bi-clock me-1"></i>Estimated: ~{{ est_minutes }} min
               </span>
             </div>
-            {% if lesson.id == 19 %}
+            {% if has_lab %}
               {% if lab_completed %}
-                <a href="{{ url_for('sql_lab') }}" class="btn btn-success ms-auto d-inline-flex align-items-center">
+                <a href="{{ lab_url }}" class="btn btn-success ms-auto d-inline-flex align-items-center">
                   <i class="bi bi-check-circle-fill me-1"></i>Lab Completed
                 </a>
               {% else %}
-                <a href="{{ url_for('sql_lab') }}" class="btn btn-danger ms-auto d-inline-flex align-items-center">
-                  <i class="bi bi-bug-fill me-1"></i>Try the SQL Injection Lab
-                </a>
-              {% endif %}
-            {% elif lesson.id == 20 %}
-              {% if lab_completed %}
-                <a href="{{ url_for('sql_lab_2') }}" class="btn btn-success ms-auto d-inline-flex align-items-center">
-                  <i class="bi bi-check-circle-fill me-1"></i>Lab Completed
-                </a>
-              {% else %}
-                <a href="{{ url_for('sql_lab_2') }}" class="btn btn-danger ms-auto d-inline-flex align-items-center">
-                  <i class="bi bi-pin-angle-fill me-1"></i>Try the Injection Points Lab
+                <a href="{{ lab_url }}" class="btn btn-danger ms-auto d-inline-flex align-items-center">
+                  <i class="bi bi-bug-fill me-1"></i>Try the {{ lab_title }}
                 </a>
               {% endif %}
             {% endif %}
@@ -590,7 +580,7 @@
       result.innerHTML = '<i class="bi bi-star me-2"></i><strong>Good job!</strong> You scored ' + score + ' out of ' + total + '. Review the key points for the ones you missed.';
     } else {
       result.className = 'alert alert-warning mt-4';
-      result.innerHTML = '<i class="bi bi-book me-2"></i><strong>Keep practicing.</strong> You scored ' + score + ' out of ' + total + '. Re-read the lesson and try again.';
+      result.innerHTML = '<i class="bi bi-book me-2"></i><strong>Keep practicing.</strong> You scored ' + score + ' out of ' + total + '. Review the key points for the ones you missed. Remember, each quiz can only be taken once, so this is your final score.';
     }
     submitBtn.disabled = true;
 

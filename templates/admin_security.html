@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Security - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 fade-up">
+    <div>
+      <h2 class="mb-1">
+        <i class="bi bi-shield-exclamation text-danger me-2"></i>Login Security
+      </h2>
+      <p class="text-muted mb-0">
+        Failed login attempts are logged and an IP is automatically blocked after
+        {{ lock_attempts }} failed attempts within {{ lock_minutes }} minutes.
+      </p>
+    </div>
+    <ul class="nav nav-pills">
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_activity') }}">Activity Log</a></li>
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_users') }}">Users</a></li>
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_feedback') }}">Feedback</a></li>
+      <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_security') }}">Security</a></li>
+    </ul>
+  </div>
+
+  <div class="row g-3 mb-4 fade-up">
+    <div class="col-6 col-lg-3">
+      <div class="card card-body text-center shadow-sm h-100">
+        <div class="display-6 fw-bold text-danger">{{ total_24h }}</div>
+        <div class="small text-muted">Failed Logins (24h)</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card card-body text-center shadow-sm h-100">
+        <div class="display-6 fw-bold text-warning">{{ locked_count }}</div>
+        <div class="small text-muted">IPs Blocked Now</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card card-body text-center shadow-sm h-100">
+        <div class="display-6 fw-bold text-secondary">{{ total_all }}</div>
+        <div class="small text-muted">Total Failed Logins</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card card-body text-center shadow-sm h-100">
+        <div class="display-6 fw-bold text-info">{{ ip_rows | length }}</div>
+        <div class="small text-muted">Distinct IPs</div>
+      </div>
+    </div>
+  </div>
+
+  {% if locked_count %}
+    <div class="alert alert-danger fade-up d-flex align-items-center gap-2">
+      <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+      <span><strong>{{ locked_count }} IP address(es)</strong> are currently blocked because they
+        reached {{ lock_attempts }} failed login attempts. Check the list below.</span>
+    </div>
+  {% endif %}
+
+  <div class="card shadow-sm mb-4 fade-up">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <h6 class="mb-0"><i class="bi bi-list-columns-reverse text-danger me-2"></i>By IP Address</h6>
+      <form method="POST" action="{{ url_for('admin_security_clear') }}"
+            onsubmit="return confirm('Clear ALL failed login attempts?');">
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          <i class="bi bi-trash me-1"></i>Clear All
+        </button>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>IP Address</th>
+            <th>Failed Attempts</th>
+            <th>Last Username Tried</th>
+            <th>Last Attempt</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in ip_rows %}
+            <tr>
+              <td class="fw-semibold">{{ entry.ip }}</td>
+              <td class="small">{{ entry.count }}</td>
+              <td class="small text-muted">{{ entry.last_username or '-' }}</td>
+              <td class="small text-muted">
+                {{ entry.last_seen|localtime('%Y-%m-%d %H:%M:%S') }} PHT
+              </td>
+              <td>
+                {% if entry.locked %}
+                  <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>Blocked</span>
+                {% else %}
+                  <span class="badge bg-success">OK</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <form method="POST" action="{{ url_for('admin_security_clear') }}"
+                      onsubmit="return confirm('Clear failed attempts for {{ entry.ip }}?');">
+                  <input type="hidden" name="ip" value="{{ entry.ip }}">
+                  <button type="submit" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle me-1"></i>Clear
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-center text-muted py-4">
+              No failed login attempts recorded yet.
+            </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card shadow-sm fade-up">
+    <div class="card-header bg-white">
+      <h6 class="mb-0"><i class="bi bi-clock-history text-danger me-2"></i>Recent Failed Login Attempts</h6>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Username Tried</th>
+            <th>IP Address</th>
+            <th>User Agent</th>
+            <th>When</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fl in recent %}
+            <tr>
+              <td class="text-muted small">{{ fl.id }}</td>
+              <td class="fw-semibold">{{ fl.username or '-' }}</td>
+              <td class="small text-muted">{{ fl.ip_address or '-' }}</td>
+              <td class="small text-muted" style="max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ fl.user_agent or '-' }}
+              </td>
+              <td class="small text-muted">{{ fl.created_at|localtime('%Y-%m-%d %H:%M:%S') }} PHT</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-4">
+              No failed login attempts recorded yet.
+            </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

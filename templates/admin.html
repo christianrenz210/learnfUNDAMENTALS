@@ -16,8 +16,17 @@
       <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_activity') }}">Activity Log</a></li>
       <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_users') }}">Users</a></li>
       <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_feedback') }}">Feedback</a></li>
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_security') }}">Security</a></li>
     </ul>
   </div>
+
+  {% if failed_24h %}
+    <div class="alert alert-danger fade-up d-flex align-items-center gap-2">
+      <i class="bi bi-shield-exclamation fs-5"></i>
+      <span><strong>{{ failed_24h }} failed login attempt(s)</strong> in the last 24 hours.
+        <a href="{{ url_for('admin_security') }}" class="alert-link">Review login security</a>.</span>
+    </div>
+  {% endif %}
 
   <div class="row g-3 mb-4 fade-up">
     <div class="col-6 col-lg-2">

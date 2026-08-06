@@ -323,13 +323,9 @@
                             <i class="bi bi-coin me-1"></i>Unlocked
                           </span>
                         {% endif %}
-                        {% if lesson.id == 19 and 19 in completed_lab_ids %}
+                        {% if lesson.id in lab_lesson_ids and lesson.id in completed_lab_ids %}
                           <span class="badge bg-success">
                             <i class="bi bi-bug-fill me-1"></i>Lab Completed
-                          </span>
-                        {% elif lesson.id == 20 and 20 in completed_lab_ids %}
-                          <span class="badge bg-success">
-                            <i class="bi bi-pin-angle-fill me-1"></i>Lab Completed
                           </span>
                         {% endif %}
                         </span>
@@ -393,13 +389,9 @@
                               <a href="{{ url_for('lesson', lesson_id=lesson.id) }}" class="btn btn-outline-primary btn-sm">
                                 <i class="bi bi-book me-1"></i>View Lesson
                               </a>
-                              {% if lesson.id == 19 %}
-                                <a href="{{ url_for('sql_lab') }}" class="btn btn-danger btn-sm">
-                                  <i class="bi bi-bug-fill me-1"></i>SQL Lab
-                                </a>
-                              {% elif lesson.id == 20 %}
-                                <a href="{{ url_for('sql_lab_2') }}" class="btn btn-danger btn-sm">
-                                  <i class="bi bi-pin-angle-fill me-1"></i>Injection Points Lab
+                              {% if lesson.id in lab_lesson_ids %}
+                                <a href="{{ lab_urls[lesson.id] }}" class="btn btn-danger btn-sm">
+                                  <i class="bi bi-bug-fill me-1"></i>Practice Lab
                                 </a>
                               {% endif %}
                             </div>

@@ -1,5 +1,47 @@
 CHANGELOG = [
     {
+        "version": "1.58",
+        "date": "2026-08-06",
+        "type": "security",
+        "title": "Feedback Moderation: Automatic Ban for Spam & Bad Words",
+        "changes": [
+            "Feedback is now monitored - submitting feedback that contains inappropriate or vulgar words (English or Filipino) automatically bans the account",
+            "Sending several feedback messages in a very short window is treated as spam and also triggers an automatic ban",
+            "Banned users are logged out immediately, cannot log back in, and are shown the reason on the login page",
+            "Admins can ban or unban any member from the Users page with a one-click Ban / Unban button and an optional reason",
+            "Banned accounts show a Banned badge next to their name, and every ban/unban action is recorded in the Activity Log",
+            "Admins cannot be banned",
+            "Admin accounts always keep access - even when their IP is temporarily blocked, admins can still log in",
+        ],
+    },
+    {
+        "version": "1.57",
+        "date": "2026-08-06",
+        "type": "security",
+        "title": "Login Security: Failed Attempt Detection & Auto-Lockout",
+        "changes": [
+            "Every failed login attempt is now recorded with the username tried, IP address, user agent, and exact time - so you can see when someone is trying to break in",
+            "Auto-lockout: 5 failed login attempts from the same IP within 30 minutes temporarily blocks that IP from logging in (even with the correct password)",
+            "Login messages now tell you how many attempts remain before a block, and show the exact minutes left once blocked",
+            "New Admin > Security page shows failed login statistics, every blocked IP with a Blocked badge, the recent attempts list, and one-click Clear buttons per IP or for everything",
+            "The admin dashboard shows a warning banner whenever there have been failed login attempts in the last 24 hours",
+        ],
+    },
+    {
+        "version": "1.56",
+        "date": "2026-08-06",
+        "type": "feature",
+        "title": "All SQL Injection Lessons Released with a Practice Lab for Every Lesson",
+        "changes": [
+            "Released all 8 previously 'coming soon' SQL Injection lessons: Types of SQL Injection, UNION-Based, Blind, Real-World Queries, Parameterized Queries, Defense in Depth, Testing & Detection, and Real-World Attack Scenarios",
+            "Every SQL Injection lesson now has its own interactive Practice Lab (login bypass, UNION data theft, blind extraction, UPDATE/INSERT/DELETE attacks, second-order injection, safe mode demos, and more)",
+            "All 10 SQL Injection lessons now appear unlocked on the dashboard with a Practice Lab button and a green Lab Completed badge once solved",
+            "Each lab is a safe browser simulation - no real SQL is executed - with objectives, clickable payloads, a live query console, and a Final Challenge with hints",
+            "Each lab still earns 2 leaderboard points and is tracked per lesson in the admin panel",
+            "The lesson count grew from 26 to 34, and the SQL Injection section is now fully complete",
+        ],
+    },
+    {
         "version": "1.55",
         "date": "2026-08-06",
         "type": "feature",

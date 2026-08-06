@@ -58,6 +58,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from lessons_data import LESSONS, LONG_QUIZZES
 from changelog_data import CHANGELOG
+from labs_data import LABS
 SECTION_ORDER = ["Fundamentals", "Advanced Fundamentals", "Advanced Database System", "SQL Injection"]
 SECTION_LESSON_MINUTES = {"Fundamentals": 40, "Advanced Database System": 45}
 AVAILABLE_LESSONS = [l for l in LESSONS if not l.get("coming_soon")]
@@ -80,8 +81,8 @@ def lesson_estimate_minutes(lesson):
     return base + video_minutes
 
 LAB_POINTS_PER_LAB = 2
-LAB_LESSON_IDS = {19, 20}
-LAB_ROUTES = {19: "sql_lab", 20: "sql_lab_2"}
+LAB_LESSON_IDS = set(LABS.keys())
+CUSTOM_LAB_ROUTES = {19: "sql_lab", 20: "sql_lab_2"}
 COINS_PER_LESSON = 10
 DIFFICULTY_UNLOCK_COST = {
     "easy": 10,
@@ -110,6 +111,14 @@ LESSON_DIFFICULTY = {
     18: "hard",
     19: "hard",
     20: "hard",
+    21: "hard",
+    22: "hard",
+    23: "hard",
+    24: "hard",
+    25: "medium",
+    26: "medium",
+    27: "hard",
+    28: "medium",
     30: "medium",
     31: "medium",
     32: "medium",
@@ -140,7 +149,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.55"
+APP_VERSION = "1.58"
 
 
 @app.context_processor
@@ -196,6 +205,8 @@ class User(UserMixin, db.Model):
     avatar = db.Column(db.Text, nullable=True)
     lab_completed = db.Column(db.Integer, default=0)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    is_banned = db.Column(db.Boolean, default=False, nullable=False)
+    ban_reason = db.Column(db.String(200), nullable=True)
     coins = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
@@ -258,6 +269,15 @@ class ActivityLog(db.Model):
     user = db.relationship("User", backref=db.backref("activity_logs", lazy="dynamic"))
 
 
+class FailedLogin(db.Model):
+    __tablename__ = "failed_login"
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(120), nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True, index=True)
+    user_agent = db.Column(db.String(250), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+
 class Feedback(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
@@ -301,6 +321,143 @@ def log_activity(user, action, details=""):
                 ip_address=request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip() or None,
             )
         )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+LOGIN_LOCK_ATTEMPTS = 5
+LOGIN_LOCK_MINUTES = 30
+
+
+def _client_ip():
+    return (
+        request.headers.get("X-Forwarded-For", request.remote_addr or "")
+        .split(",")[0]
+        .strip()
+        or None
+    )
+
+
+def failed_login_count(ip, minutes=LOGIN_LOCK_MINUTES):
+    if not ip:
+        return 0
+    since = datetime.utcnow() - timedelta(minutes=minutes)
+    return FailedLogin.query.filter(
+        FailedLogin.ip_address == ip, FailedLogin.created_at >= since
+    ).count()
+
+
+def is_ip_locked(ip):
+    return failed_login_count(ip) >= LOGIN_LOCK_ATTEMPTS
+
+
+def ip_lock_remaining_minutes(ip):
+    if not is_ip_locked(ip):
+        return 0
+    since = datetime.utcnow() - timedelta(minutes=LOGIN_LOCK_MINUTES)
+    recent = (
+        FailedLogin.query.filter(
+            FailedLogin.ip_address == ip, FailedLogin.created_at >= since
+        )
+        .order_by(FailedLogin.created_at.asc())
+        .all()
+    )
+    if len(recent) < LOGIN_LOCK_ATTEMPTS:
+        return 0
+    fifth = recent[LOGIN_LOCK_ATTEMPTS - 1]
+    expires = fifth.created_at + timedelta(minutes=LOGIN_LOCK_MINUTES)
+    seconds = max(0, int((expires - datetime.utcnow()).total_seconds()))
+    return (seconds + 59) // 60 or 1
+
+
+BADWORDS = {
+    "fuck", "fucking", "fucked", "fuckin", "fck", "motherfucker", "mf",
+    "shit", "shitt", "bullshit", "bitch", "bitchy", "bastard", "asshole",
+    "a$$hole", "arsehole", "dick", "dickhead", "cunt", "pussy", "twat",
+    "wanker", "bollocks", "retard", "retarded", "nigger", "nigga", "faggot",
+    "fag", "dyke", "whore", "slut", "hoe", "prostitute", "porn", "porno",
+    "pornography", "sex", "sexy", "xxx", "penis", "vagina", "dildo",
+    "crap", "damn", "damnit", "hell", "piss", "pissed", "douche", "douchebag",
+    "jackass", "jerk", "idiot", "moron", "stupid", "dumbass", "dumb",
+    "bobo", "bobo mo", "tangina", "tang ina", "putangina", "putang ina",
+    "puta", "puta ka", "ulol", "gago", "gaga", "bwisit", "bwisit ka",
+    "tarantado", "bobo", "tanga", "inutil", "walang kwenta", "hayop",
+    "hayup", "kupal", "sira ulo", "bobo ka", "animal ka", "peste",
+    "unggoy", "baboy", "tamad", "bobo inutil", "epal", "mapangmata",
+    "buwisit", "sira", "lintik", "leche", "peste ka", "gagong", "ulol ka",
+    "pakingshet", "pakyu", "puking ina", "pokpok", "bading", "bakla",
+    "bading ka", "bayot", "puti ng", "inutil ka", "walanghiya",
+    "walang hiya", "sira ulo ka", "kainin mo", "mamatay ka", "mamatay",
+    "tarantado ka", "demonyo", "demonyo ka", "impakto", "halimaw",
+    "palalo", "manyak", "manyak", "manyakis", "pervert", "malibog",
+    "libog", "kantot", "kantutin", "kantutan", "tite", "titi", "pekpek",
+    "puke", "betlog", "itlog mo", "hinayupak", "anak ng puta", "pota",
+    "punyeta", "punyemas", "bilat", "puday", "poyet", "yawa", "yawa ka",
+    "pisting yawa", "giatay", "gago ka", "bogo", "hanggaw", "piste",
+    "burikat", "landi", "malandi", "makati", "pasaway", "sutil", "astig ka",
+}
+
+BADWORD_PATTERN = re.compile(
+    r"(?<![a-zA-Z0-9])("
+    + "|".join(re.escape(w) for w in sorted(BADWORDS, key=len, reverse=True))
+    + r")(?![a-zA-Z0-9])",
+    re.IGNORECASE,
+)
+
+FEEDBACK_SPAM_LIMIT = 3
+FEEDBACK_SPAM_MINUTES = 5
+
+
+def contains_badword(text):
+    return bool(BADWORD_PATTERN.search(text or ""))
+
+
+def detected_badword(text):
+    m = BADWORD_PATTERN.search(text or "")
+    return m.group(1) if m else None
+
+
+def ban_user(user, reason):
+    if user is None or user.is_banned or user.is_admin:
+        return False
+    user.is_banned = True
+    user.ban_reason = (reason or "Violation of community rules")[:200]
+    db.session.commit()
+    log_activity(user, "Account banned", "Reason: %s" % user.ban_reason)
+    return True
+
+
+def unban_user(user):
+    if user is None or not user.is_banned:
+        return False
+    user.is_banned = False
+    user.ban_reason = None
+    db.session.commit()
+    log_activity(user, "Account unbanned", "Restored by admin")
+    return True
+
+
+def record_failed_login(username):
+    try:
+        db.session.add(
+            FailedLogin(
+                username=(username or "")[:120],
+                ip_address=_client_ip(),
+                user_agent=(request.user_agent.string[:250] if request.user_agent else None),
+            )
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+def clear_failed_logins(ip=None):
+    try:
+        if ip:
+            FailedLogin.query.filter_by(ip_address=ip).delete(synchronize_session=False)
+        else:
+            FailedLogin.query.delete(synchronize_session=False)
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -537,6 +694,18 @@ def no_cache_html(response):
     return response
 
 
+@app.before_request
+def block_banned_users():
+    if current_user.is_authenticated and getattr(current_user, "is_banned", False):
+        logout_user()
+        flash(
+            "Your account has been banned (%s). Contact an admin to get unbanned."
+            % (getattr(current_user, "ban_reason", None) or "violation of community rules"),
+            "danger",
+        )
+        return redirect(url_for("login"))
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -567,6 +736,42 @@ def feedback():
         if not name or not email or not message:
             flash("Please fill in all required fields.", "warning")
             return redirect(url_for("feedback"))
+
+        bad = detected_badword(message)
+        if bad:
+            ban_user(
+                current_user,
+                "Used inappropriate language (\"%s\") in feedback" % bad,
+            )
+            log_activity(current_user, "Banned by system", "Bad word detected in feedback: \"%s\"" % bad)
+            logout_user()
+            flash(
+                "Your feedback was removed because it contained inappropriate language. "
+                "Your account has been banned. Contact an admin to get unbanned.",
+                "danger",
+            )
+            return redirect(url_for("login"))
+
+        since = datetime.utcnow() - timedelta(minutes=FEEDBACK_SPAM_MINUTES)
+        recent_count = Feedback.query.filter(
+            Feedback.user_id == current_user.id,
+            Feedback.created_at >= since,
+        ).count()
+        if recent_count >= FEEDBACK_SPAM_LIMIT:
+            ban_user(
+                current_user,
+                "Feedback spam (%d submissions in %d minutes)" % (
+                    recent_count + 1, FEEDBACK_SPAM_MINUTES,
+                ),
+            )
+            log_activity(current_user, "Banned by system", "Spam: %d feedbacks in %d minutes" % (recent_count + 1, FEEDBACK_SPAM_MINUTES))
+            logout_user()
+            flash(
+                "You are submitting feedback too quickly. This looks like spam, "
+                "so your account has been banned. Contact an admin to get unbanned.",
+                "danger",
+            )
+            return redirect(url_for("login"))
 
         fb = Feedback(
             user_id=current_user.id,
@@ -668,8 +873,30 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        ip = _client_ip()
         user = User.query.filter_by(username=username).first()
+        if is_ip_locked(ip) and not (user and user.is_admin):
+            flash(
+                "Too many failed login attempts from your IP address. "
+                "You are blocked for about %d more minute%s." % (
+                    ip_lock_remaining_minutes(ip),
+                    "" if ip_lock_remaining_minutes(ip) == 1 else "s",
+                ),
+                "danger",
+            )
+            return render_template(
+                "login.html", registered=request.args.get("registered") == "1"
+            )
         if user and check_password_hash(user.password_hash, password):
+            if user.is_banned:
+                flash(
+                    "Your account has been banned (%s). Contact an admin to get unbanned."
+                    % (user.ban_reason or "violation of community rules"),
+                    "danger",
+                )
+                return render_template(
+                    "login.html", registered=request.args.get("registered") == "1"
+                )
             login_user(user)
             log_activity(user, "Logged in", "Successful sign-in")
             flash(
@@ -679,7 +906,24 @@ def login():
             if user.is_admin:
                 return redirect(url_for("admin_dashboard"))
             return redirect(url_for("dashboard"))
-        flash("Invalid username or password.", "danger")
+        record_failed_login(username)
+        attempts_left = max(0, LOGIN_LOCK_ATTEMPTS - failed_login_count(ip))
+        if attempts_left <= 0:
+            flash(
+                "Too many failed login attempts. Your IP address is now blocked "
+                "from logging in for about %d more minute%s." % (
+                    ip_lock_remaining_minutes(ip),
+                    "" if ip_lock_remaining_minutes(ip) == 1 else "s",
+                ),
+                "danger",
+            )
+        else:
+            flash(
+                "Invalid username or password. "
+                + ("1 attempt remaining" if attempts_left == 1 else "%d attempts remaining" % attempts_left)
+                + " before your IP is blocked for %d minutes." % LOGIN_LOCK_MINUTES,
+                "danger",
+            )
     return render_template("login.html", registered=request.args.get("registered") == "1")
 
 
@@ -808,6 +1052,14 @@ def dashboard():
                 "has_quiz": name in LONG_QUIZZES,
             }
         )
+    lab_urls = {
+        lid: (
+            url_for(CUSTOM_LAB_ROUTES[lid])
+            if lid in CUSTOM_LAB_ROUTES
+            else url_for("lesson_lab", lesson_id=lid)
+        )
+        for lid in LAB_LESSON_IDS
+    }
     return render_template(
         "dashboard.html",
         sections=sections,
@@ -832,6 +1084,8 @@ def dashboard():
         unlocked_ids=unlocked_ids,
         unlock_costs={l["id"]: lesson_unlock_cost(l["id"]) for l in LESSONS},
         lesson_difficulties={l["id"]: lesson_difficulty(l["id"]) for l in LESSONS},
+        lab_lesson_ids=LAB_LESSON_IDS,
+        lab_urls=lab_urls,
     )
 
 
@@ -850,6 +1104,9 @@ def admin_dashboard():
     total_quizzes = QuizScore.query.count()
     total_labs = LabProgress.query.count()
     total_logs = ActivityLog.query.count()
+    failed_24h = FailedLogin.query.filter(
+        FailedLogin.created_at >= now - timedelta(hours=24)
+    ).count()
     recent_logs = (
         ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(15).all()
     )
@@ -863,6 +1120,7 @@ def admin_dashboard():
         total_quizzes=total_quizzes,
         total_labs=total_labs,
         total_logs=total_logs,
+        failed_24h=failed_24h,
         recent_logs=recent_logs,
         recent_users=recent_users,
         now=now,
@@ -891,6 +1149,70 @@ def admin_activity():
         current_action=action,
         log_count=len(logs),
     )
+
+
+@app.route("/admin/security")
+@login_required
+@admin_required
+def admin_security():
+    now = datetime.utcnow()
+    since_24h = now - timedelta(hours=24)
+    total_24h = FailedLogin.query.filter(
+        FailedLogin.created_at >= since_24h
+    ).count()
+    total_all = FailedLogin.query.count()
+    ip_rows = {}
+    for fl in FailedLogin.query.order_by(FailedLogin.created_at.desc()).all():
+        if not fl.ip_address:
+            continue
+        entry = ip_rows.setdefault(
+            fl.ip_address,
+            {
+                "ip": fl.ip_address,
+                "count": 0,
+                "last_username": None,
+                "last_seen": None,
+                "locked": False,
+            },
+        )
+        entry["count"] += 1
+        if entry["last_username"] is None and fl.username:
+            entry["last_username"] = fl.username
+        if entry["last_seen"] is None or fl.created_at > entry["last_seen"]:
+            entry["last_seen"] = fl.created_at
+    for entry in ip_rows.values():
+        entry["locked"] = failed_login_count(entry["ip"]) >= LOGIN_LOCK_ATTEMPTS
+    locked_count = sum(1 for e in ip_rows.values() if e["locked"])
+    recent = (
+        FailedLogin.query.order_by(FailedLogin.created_at.desc()).limit(100).all()
+    )
+    return render_template(
+        "admin_security.html",
+        total_24h=total_24h,
+        total_all=total_all,
+        locked_count=locked_count,
+        ip_rows=sorted(
+            ip_rows.values(), key=lambda e: e["count"], reverse=True
+        ),
+        recent=recent,
+        lock_attempts=LOGIN_LOCK_ATTEMPTS,
+        lock_minutes=LOGIN_LOCK_MINUTES,
+        now=now,
+    )
+
+
+@app.route("/admin/security/clear", methods=["POST"])
+@login_required
+@admin_required
+def admin_security_clear():
+    ip = (request.form.get("ip") or "").strip()
+    if ip:
+        clear_failed_logins(ip)
+        flash("Cleared failed login attempts for %s." % ip, "success")
+    else:
+        clear_failed_logins()
+        flash("Cleared all failed login attempts.", "success")
+    return redirect(url_for("admin_security"))
 
 
 @app.route("/admin/feedback")
@@ -970,6 +1292,40 @@ def admin_users():
             }
         )
     return render_template("admin_users.html", rows=rows, total=len(rows), total_lessons=len(AVAILABLE_LESSONS), online_count=online_count)
+
+
+@app.route("/admin/user/<int:uid>/ban", methods=["POST"])
+@login_required
+@admin_required
+def admin_ban_user(uid):
+    user = db.session.get(User, uid)
+    if user is None:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin_users"))
+    if user.is_admin:
+        flash("You cannot ban an admin account.", "danger")
+        return redirect(url_for("admin_users"))
+    reason = (request.form.get("reason") or "").strip() or "Violation of community rules"
+    if ban_user(user, reason):
+        flash("Banned %s." % user.username, "success")
+    else:
+        flash("%s is already banned." % user.username, "warning")
+    return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/user/<int:uid>/unban", methods=["POST"])
+@login_required
+@admin_required
+def admin_unban_user(uid):
+    user = db.session.get(User, uid)
+    if user is None:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin_users"))
+    if unban_user(user):
+        flash("Unbanned %s." % user.username, "success")
+    else:
+        flash("%s is not banned." % user.username, "warning")
+    return redirect(url_for("admin_users"))
 
 
 @app.route("/admin/api/online-users")
@@ -1190,7 +1546,11 @@ EREN_SYSTEM_PROMPT = (
     "- Advanced Fundamentals: Introduction to GitHub, Web Deployment Fundamentals, Deploying with Render, Deploying with Netlify, Building Websites with WordPress.\n"
     "- Advanced Database System: DBMS overview, ER model and keys, Normalization (1NF-3NF), "
     "SQL DDL, DML, SELECT and filtering, JOINs, Subqueries and Aggregates.\n"
-    "- SQL Injection: introduction and how it works.\n\n"
+    "- SQL Injection: Introduction to SQL Injection, How SQL Injection Works, Types of SQL Injection, "
+    "UNION-Based SQL Injection, Blind SQL Injection, SQL Injection in Real-World Queries, "
+    "Preventing SQL Injection: Parameterized Queries, Defense in Depth, SQL Injection Testing and Detection, "
+    "and Real-World Attack Scenarios. Every SQL Injection lesson has its own interactive Practice Lab "
+    "(2 points each, marked green on the dashboard).\n\n"
     "Rules: each lesson ends with a quiz (one attempt). Each section ends with a Long Quiz "
     "(15 questions, 20 seconds each, 2 attempts). The leaderboard ranks users by total points: "
     "quiz scores plus 2 points per SQL Injection lab.\n\n"
@@ -2384,7 +2744,14 @@ def lesson(lesson_id):
     has_lab = lesson_id in LAB_LESSON_IDS
     labs_leaderboard = get_lesson_labs_leaderboard(lesson_id) if has_lab else []
     lab_completed = is_lab_completed(current_user, lesson_id) if has_lab else False
-    lab_route = LAB_ROUTES.get(lesson_id)
+    lab_url = None
+    lab_title = None
+    if has_lab:
+        if lesson_id in CUSTOM_LAB_ROUTES:
+            lab_url = url_for(CUSTOM_LAB_ROUTES[lesson_id])
+        else:
+            lab_url = url_for("lesson_lab", lesson_id=lesson_id)
+        lab_title = LABS[lesson_id]["title"]
     prev_lesson_id = section_lessons[idx - 1]["id"] if idx > 0 else None
     next_lesson_id = section_lessons[idx + 1]["id"] if idx < len(section_lessons) - 1 else None
     return render_template(
@@ -2399,7 +2766,8 @@ def lesson(lesson_id):
         has_lab=has_lab,
         labs_leaderboard=labs_leaderboard,
         lab_completed=lab_completed,
-        lab_route=lab_route,
+        lab_url=lab_url,
+        lab_title=lab_title,
         total_lessons=len(AVAILABLE_LESSONS),
         prev_lesson_id=prev_lesson_id,
         next_lesson_id=next_lesson_id,
@@ -2581,6 +2949,52 @@ def sql_lab_2_complete():
 def sql_lab_2_reset():
     unmark_lab_completed(current_user, 20)
     log_activity(current_user, "Reset lab", "Reset SQL Injection Lab 2")
+    return jsonify({"ok": True})
+
+
+@app.route("/lab/<int:lesson_id>")
+@login_required
+def lesson_lab(lesson_id):
+    if lesson_id in CUSTOM_LAB_ROUTES:
+        return redirect(url_for(CUSTOM_LAB_ROUTES[lesson_id]))
+    lab = LABS.get(lesson_id)
+    if lab is None:
+        flash("Lab not found.", "danger")
+        return redirect(url_for("dashboard"))
+    lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
+    if lesson is None:
+        flash("Lesson not found.", "danger")
+        return redirect(url_for("dashboard"))
+    lab_json = json.dumps(lab).replace("</", "<\\/")
+    return render_template(
+        "lab.html",
+        lab=lab,
+        lab_json=lab_json,
+        lesson=lesson,
+        lesson_id=lesson_id,
+        lab_completed=is_lab_completed(current_user, lesson_id),
+    )
+
+
+@app.route("/lab/<int:lesson_id>/complete", methods=["POST"])
+@login_required
+def lesson_lab_complete(lesson_id):
+    lab = LABS.get(lesson_id)
+    if lab is None:
+        return jsonify({"ok": False, "error": "Lab not found."}), 404
+    mark_lab_completed(current_user, lesson_id)
+    log_activity(current_user, "Completed lab", "Finished \"%s\"" % lab["title"])
+    return jsonify({"ok": True})
+
+
+@app.route("/lab/<int:lesson_id>/reset", methods=["POST"])
+@login_required
+def lesson_lab_reset(lesson_id):
+    lab = LABS.get(lesson_id)
+    if lab is None:
+        return jsonify({"ok": False, "error": "Lab not found."}), 404
+    unmark_lab_completed(current_user, lesson_id)
+    log_activity(current_user, "Reset lab", "Reset \"%s\"" % lab["title"])
     return jsonify({"ok": True})
 
 
@@ -3461,6 +3875,20 @@ with app.app_context():
                 break
             except Exception:
                 time.sleep(0.5)
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text("ALTER TABLE user ADD COLUMN is_banned BOOLEAN DEFAULT 0"))
+                break
+            except Exception:
+                time.sleep(0.5)
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text("ALTER TABLE user ADD COLUMN ban_reason VARCHAR(200)"))
+                break
+            except Exception:
+                time.sleep(0.5)
     from sqlalchemy import inspect as _inspect
 
     try:
@@ -3502,6 +3930,22 @@ with app.app_context():
             try:
                 with db.engine.begin() as conn:
                     conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN coins INTEGER DEFAULT 0'))
+                break
+            except Exception:
+                time.sleep(0.5)
+    if "is_banned" not in _cols:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN is_banned BOOLEAN DEFAULT FALSE'))
+                break
+            except Exception:
+                time.sleep(0.5)
+    if "ban_reason" not in _cols:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN ban_reason VARCHAR(200)'))
                 break
             except Exception:
                 time.sleep(0.5)

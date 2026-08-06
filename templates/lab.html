@@ -1,0 +1,663 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lab.title }} - CodeFundamentals{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('lesson', lesson_id=lesson_id) }}">{{ lesson.title }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ lab.title }}</li>
+    </ol>
+  </nav>
+
+  <div class="card shadow-sm mb-4 border-danger fade-up">
+    <div class="card-header bg-white">
+      <h4 class="mb-0">
+        <i class="bi {{ lab.icon }} text-danger me-2"></i>{{ lab.title }}
+        {% if lab_completed %}
+          <span class="badge bg-success align-middle ms-2">
+            <i class="bi bi-check-circle-fill me-1"></i>Lab Completed
+          </span>
+        {% endif %}
+      </h4>
+    </div>
+    <div class="card-body">
+      <p class="mb-1">{{ lab.description }}</p>
+      <p class="mb-0 small text-muted">
+        Objectives:
+        {% for obj in lab.objectives %}
+          ({{ loop.index }}) {{ obj }}
+        {% endfor %}
+        {% if lab_completed %}
+          <span class="badge bg-success text-white ms-1">
+            <i class="bi bi-trophy-fill me-1"></i>+2 leaderboard points claimed
+          </span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    {% for ch in lab.challenges %}
+      {% set ch_idx = loop.index0 %}
+      <div class="col-lg-6">
+        <div class="card shadow-sm h-100 fade-up">
+          <div class="card-header bg-white">
+            <h5 class="mb-0">
+              <i class="bi {{ ch.icon }} text-primary me-2"></i>{{ loop.index }}. {{ ch.title }}
+              <span class="badge bg-success align-middle ms-2 d-none" id="chDone{{ ch_idx }}">
+                <i class="bi bi-check-circle-fill me-1"></i>Objective Complete
+              </span>
+            </h5>
+          </div>
+          <div class="card-body">
+            <pre class="lab-query small mb-3">{{ ch.query_template }}</pre>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">{{ ch.input_label }}</label>
+              <input type="text" class="form-control form-control-sm" id="ch{{ ch_idx }}-input"
+                     placeholder="{{ ch.placeholder }}" autocomplete="off">
+            </div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              <button type="button" class="btn btn-success btn-sm" id="ch{{ ch_idx }}-run">
+                <i class="bi bi-play-fill me-1"></i>Run
+              </button>
+              {% for p in ch.payloads %}
+                <button type="button" class="btn btn-outline-danger btn-sm payload-btn"
+                        data-target="{{ ch_idx }}" data-payload="{{ p.value }}">{{ p.label }}</button>
+              {% endfor %}
+            </div>
+            <div id="ch{{ ch_idx }}-query" class="lab-query small d-none"></div>
+            <div id="ch{{ ch_idx }}-result" class="mt-2"></div>
+            <div class="alert alert-light border py-2 px-3 small mb-0 mt-3">
+              <i class="bi bi-question-circle me-1"></i>{{ ch.explain }}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="card shadow-sm mt-4 fade-up">
+    <div class="card-header bg-white d-flex align-items-center">
+      <h5 class="mb-0"><i class="bi bi-shield-check text-success me-2"></i>The Fix: Parameterized Queries</h5>
+      <div class="form-check form-switch ms-auto">
+        <input class="form-check-input" type="checkbox" id="safeMode">
+        <label class="form-check-label small" for="safeMode">Safe mode (parameterized)</label>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p class="small fw-semibold text-danger mb-1">VULNERABLE (string concatenation)</p>
+          <pre class="lab-query small">{{ lab.fix.vulnerable }}</pre>
+          <div class="alert alert-danger py-2 px-3 small mb-0">
+            <i class="bi bi-x-circle me-1"></i>The payload becomes part of the SQL itself.
+          </div>
+        </div>
+        <div class="col-md-6">
+          <p class="small fw-semibold text-success mb-1">SAFE (parameterized / prepared statement)</p>
+          <pre class="lab-query small">{{ lab.fix.safe }}</pre>
+          <div class="alert alert-success py-2 px-3 small mb-0">
+            <i class="bi bi-check-circle me-1"></i>The payload stays plain text - it can never change the SQL.
+          </div>
+        </div>
+      </div>
+      <div id="safeDemo" class="mt-3"></div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4 border-warning fade-up">
+    <div class="card-header bg-white">
+      <h5 class="mb-0"><i class="bi bi-flag-fill text-warning me-2"></i>{{ lab.final.title }}
+        <span class="badge bg-success align-middle ms-2 d-none" id="finalDoneBadge">
+          <i class="bi bi-check-circle-fill me-1"></i>Task Completed
+        </span>
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-warning py-2 px-3 small mb-3">
+        <i class="bi bi-shield-lock me-1"></i>
+        <strong>Copy-paste is disabled here.</strong> Type your SQL injection payload yourself.
+        You have <strong>3 hints</strong> if you get stuck.
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Your payload (type it yourself)</label>
+        <input type="text" class="form-control form-control-sm" id="finalInput"
+               placeholder="{{ lab.final.placeholder }}" autocomplete="off">
+      </div>
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <button type="button" class="btn btn-warning btn-sm" id="finalRunBtn"><i class="bi bi-fire me-1"></i>Attempt Attack</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="finalReplayBtn"><i class="bi bi-arrow-counterclockwise me-1"></i>Replay Challenge</button>
+        <span class="small text-muted" id="finalAttempts">Attempts: 0</span>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mb-2">
+        <button type="button" class="btn btn-outline-warning btn-sm hint-btn" id="finalHint1"><i class="bi bi-lightbulb me-1"></i>Hint 1</button>
+        <button type="button" class="btn btn-outline-warning btn-sm hint-btn" id="finalHint2" disabled><i class="bi bi-lightbulb me-1"></i>Hint 2</button>
+        <button type="button" class="btn btn-outline-warning btn-sm hint-btn" id="finalHint3" disabled><i class="bi bi-lightbulb me-1"></i>Hint 3</button>
+        <span class="small text-muted align-self-center" id="finalHintsUsed">Hints used: 0/3</span>
+      </div>
+      <div id="finalHints" class="small"></div>
+      <div id="finalQuery" class="lab-query small d-none mt-2"></div>
+      <div id="finalResult" class="mt-2"></div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4 fade-up">
+    <div class="card-header bg-white">
+      <h5 class="mb-0"><i class="bi bi-terminal text-primary me-2"></i>Lab Console</h5>
+    </div>
+    <div class="card-body p-0">
+      <pre class="lab-console mb-0" id="labConsole"># Welcome to the lab. Every query you run appears here.</pre>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mt-4 fade-up">
+    <div class="card-header bg-white">
+      <h5 class="mb-0"><i class="bi bi-database text-primary me-2"></i>The Simulated Database</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        {% for name, t in lab.tables.items() %}
+          <div class="col-md-6">
+            <p class="small fw-semibold mb-1">{{ name }}</p>
+            <table class="table table-sm table-bordered lab-table">
+              <thead><tr>{% for c in t.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+              <tbody>
+                {% for row in t.rows %}
+                  <tr>{% for v in row %}<td>{{ v }}</td>{% endfor %}</tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.lab-query { background: #170C79; color: #e6f7ff; border-radius: 6px; padding: 10px 12px; margin-bottom: 0; font-size: 0.82rem; overflow-x: auto; white-space: pre-wrap; }
+.lab-query mark { background: #ffdd57; color: #111; padding: 0 3px; border-radius: 3px; }
+.lab-console { background: #0f1020; color: #9ff3a8; font-size: 0.78rem; padding: 12px 14px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; }
+.lab-console .dbg { color: #f4f4f4; }
+.lab-console .err { color: #ff6b6b; }
+.lab-console .ok { color: #7dff8a; }
+.lab-table { font-size: 0.8rem; margin-bottom: 0; }
+.lab-table thead th { background: #f2f5ff; }
+</style>
+
+<script>
+const LAB = {{ lab_json | safe }};
+</script>
+
+<script>
+const T = {};
+Object.keys(LAB.tables).forEach(function (name) {
+  const t = LAB.tables[name];
+  T[name] = {
+    columns: t.columns,
+    rows: t.rows.map(function (r) {
+      const o = {};
+      t.columns.forEach(function (c, i) { o[c] = r[i]; });
+      return o;
+    }),
+  };
+});
+
+let safeMode = false;
+const consoleEl = document.getElementById('labConsole');
+
+function logLine(text, cls) {
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = text;
+  consoleEl.appendChild(line);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+function stripComment(s) {
+  const i = s.indexOf('--');
+  return i >= 0 ? s.slice(0, i) : s;
+}
+
+function unquote(s) {
+  let v = s.trim();
+  if (v.startsWith("'") && v.endsWith("'") && v.length >= 2) v = v.slice(1, -1);
+  return v.replace(/''/g, "'");
+}
+
+function splitTop(s, op) {
+  const parts = [];
+  let cur = '', inQ = false;
+  const token = ' ' + op + ' ';
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === "'") inQ = !inQ;
+    if (!inQ && c === ' ' && s.substr(i, token.length).toUpperCase() === token) {
+      parts.push(cur);
+      cur = '';
+      i += token.length - 1;
+      continue;
+    }
+    cur += c;
+  }
+  parts.push(cur);
+  return parts;
+}
+
+function splitOr(s) { return splitTop(s, 'OR'); }
+function splitAnd(s) { return splitTop(s, 'AND'); }
+
+function evalTerm(term, row) {
+  term = term.trim();
+  const like = term.match(/^(.+?)\s+LIKE\s+(.+)$/i);
+  if (like) {
+    const col = like[1].trim();
+    const val = String(row[col] || '').toLowerCase();
+    const pat = unquote(like[2]).replace(/%/g, '').toLowerCase();
+    return pat === '' ? true : val.indexOf(pat) >= 0;
+  }
+  const m = term.match(/^(.+?)\s*(!=|<=|>=|=)\s*(.+)$/);
+  if (!m) return false;
+  const op = m[2];
+  const a = (m[1].trim() in row) ? String(row[m[1].trim()]) : unquote(m[1]);
+  const b = (m[3].trim() in row) ? String(row[m[3].trim()]) : unquote(m[3]);
+  const na = Number(a), nb = Number(b);
+  const numA = (a.trim() !== '' && !isNaN(na)), numB = (b.trim() !== '' && !isNaN(nb));
+  const av = (numA && numB) ? na : a;
+  const bv = (numA && numB) ? nb : b;
+  if (op === '=') return av == bv;
+  if (op === '!=') return av != bv;
+  if (op === '>') return av > bv;
+  if (op === '>=') return av >= bv;
+  if (op === '<') return av < bv;
+  if (op === '<=') return av <= bv;
+  return false;
+}
+
+function evalWhere(where, row) {
+  return splitOr(where).some(function (orPart) {
+    return splitAnd(orPart).every(function (term) {
+      const t = term.trim();
+      if (t === '') return true;
+      if (/^(true|1)$/i.test(t)) return true;
+      if (/^(false|0)$/i.test(t)) return false;
+      return evalTerm(t, row);
+    });
+  });
+}
+
+function findTable(name) {
+  return T[name] || null;
+}
+
+function isInjection(input) {
+  return /--|\bOR\b|\bUNION\b|\bSELECT\b|\bAND\b/i.test(input);
+}
+
+function buildQuery(template, input) {
+  return template.split('{input}').join(input);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function highlightPayload(query, payload) {
+  if (!payload) return query;
+  const esc = query.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hay = payload.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\ /g, ' ');
+  const re = new RegExp(hay.replace(/\s+/g, '\\s+'), 'i');
+  return esc.replace(re, '<mark>$&</mark>');
+}
+
+function showQuery(el, query, payload) {
+  el.classList.remove('d-none');
+  el.innerHTML = '<i class="bi bi-terminal me-1"></i>Executed query:<br>' + highlightPayload(query, payload);
+}
+
+function resultBox(cls, html) {
+  const div = document.createElement('div');
+  div.className = 'alert ' + cls + ' py-2 px-3 small mb-2';
+  div.innerHTML = html;
+  return div;
+}
+
+function executeQuery(query, table) {
+  const commented = stripComment(query);
+  const union = commented.match(/UNION\s+SELECT\s+([\w\s,]+?)\s+FROM\s+(\w+)/i);
+  if (union) {
+    const cols = union[1].split(',').map(function (c) { return c.trim(); });
+    const t2 = findTable(union[2]);
+    const rows = t2 ? t2.rows.map(function (r) {
+      return cols.map(function (c) { return (c in r) ? String(r[c]) : 'null'; });
+    }) : [];
+    return { type: 'union', cols: cols, table: union[2], rows: rows };
+  }
+  const wm = commented.match(/WHERE\s+(.+)$/i);
+  const rows = (wm && table) ? table.rows.filter(function (r) { return evalWhere(wm[1], r); }) : [];
+  return { type: 'rows', rows: rows };
+}
+
+function displayTable(container, res, table) {
+  let html;
+  if (res.type === 'union') {
+    html = '<table class="table table-sm table-bordered lab-table"><thead><tr>';
+    res.cols.forEach(function (c) { html += '<th>' + escapeHtml(c) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    if (!res.rows.length) {
+      html += '<tr><td colspan="' + res.cols.length + '" class="text-muted">No rows returned</td></tr>';
+    }
+    res.rows.forEach(function (row) {
+      html += '<tr>';
+      res.cols.forEach(function (c, i) { html += '<td>' + escapeHtml(row[i]) + '</td>'; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html = '<table class="table table-sm table-bordered lab-table"><thead><tr>';
+    table.columns.forEach(function (c) { html += '<th>' + escapeHtml(c) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    if (!res.rows.length) {
+      html += '<tr><td colspan="' + table.columns.length + '" class="text-muted">No rows returned</td></tr>';
+    }
+    res.rows.forEach(function (r) {
+      html += '<tr>';
+      table.columns.forEach(function (c) { html += '<td>' + escapeHtml(r[c]) + '</td>'; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+  container.appendChild(document.createRange().createContextualFragment(html));
+}
+
+function matchesPatterns(raw, patterns) {
+  if (!patterns || !patterns.length) return false;
+  return patterns.every(function (p) { return new RegExp(p, 'i').test(raw); });
+}
+
+function safeColumn(template) {
+  const m = template.match(/WHERE\s+(\w+)/i);
+  return m ? m[1] : null;
+}
+
+function isLikeTemplate(template) {
+  return /LIKE/i.test(template);
+}
+
+function doneChallenge(i, msg) {
+  const badge = document.getElementById('chDone' + i);
+  if (badge.classList.contains('d-none') === false) return;
+  badge.classList.remove('d-none');
+  const resultEl = document.getElementById('ch' + i + '-result');
+  resultEl.appendChild(resultBox('alert-success', '<i class="bi bi-trophy-fill me-1"></i><strong>OBJECTIVE COMPLETE:</strong> ' + msg));
+  document.getElementById('ch' + i + '-input').disabled = true;
+  document.getElementById('ch' + i + '-run').disabled = true;
+  document.querySelectorAll('[data-target="' + i + '"]').forEach(function (b) { b.disabled = true; });
+}
+
+function runChallenge(ch, i) {
+  const inputEl = document.getElementById('ch' + i + '-input');
+  const queryEl = document.getElementById('ch' + i + '-query');
+  const resultEl = document.getElementById('ch' + i + '-result');
+  const input = inputEl.value;
+  resultEl.innerHTML = '';
+  const raw = buildQuery(ch.query_template, input);
+
+  if (ch.requires_safe && !safeMode) {
+    showQuery(queryEl, ch.query_template.replace('{input}', '?'), '');
+    resultEl.appendChild(resultBox('alert-warning', '<i class="bi bi-exclamation-triangle me-1"></i>Safe mode is OFF. Turn on the Safe mode switch in the Fix card, then run this again.'));
+    return;
+  }
+
+  if (ch.mode === 'reject') {
+    showQuery(queryEl, raw, input);
+    if (new RegExp(ch.reject_pattern, 'i').test(input)) {
+      logLine(raw + '  [REJECTED by validation]', 'err');
+      resultEl.appendChild(resultBox('alert-danger', '<i class="bi bi-x-circle me-1"></i>' + ch.reject_message));
+      if (matchesPatterns(raw, ch.success_patterns)) doneChallenge(i, ch.success_message);
+    } else {
+      logLine(raw + '  [passed validation]', 'dbg');
+      resultEl.appendChild(resultBox('alert-success', '<i class="bi bi-check-circle me-1"></i>Input passed validation - it contains only allowed characters.'));
+    }
+    return;
+  }
+
+  if (ch.mode === 'neutralize') {
+    const param = ch.query_template.replace('{input}', '?');
+    showQuery(queryEl, param, '');
+    if (isInjection(input)) {
+      logLine('SAFE MODE: ' + param + '  - payload stayed a string', 'ok');
+      resultEl.appendChild(resultBox('alert-success', '<i class="bi bi-shield-check me-1"></i>Access denied - the payload was bound as one data value and could not change the query. <strong>Objective complete.</strong>'));
+      doneChallenge(i, ch.success_message || 'The parameterized query neutralized the injection payload.');
+    } else {
+      resultEl.appendChild(resultBox('alert-secondary', '<i class="bi bi-info-circle me-1"></i>No injection payload detected. Try a payload like <code>\' OR \'1\'=\'1\' --</code>.'));
+    }
+    return;
+  }
+
+  if (safeMode && ch.mode === 'where') {
+    const param = ch.query_template.replace('{input}', '?');
+    showQuery(queryEl, param, '');
+    const col = safeColumn(ch.query_template);
+    const like = isLikeTemplate(ch.query_template);
+    const table = findTable(ch.table);
+    const matched = table.rows.filter(function (r) {
+      const val = String(r[col] || '');
+      return like ? val.toLowerCase().indexOf(input.toLowerCase()) >= 0 : val === input;
+    });
+    if (isInjection(input)) {
+      logLine('SAFE MODE: ' + param + '  - payload had no effect', 'ok');
+      resultEl.appendChild(resultBox('alert-danger', '<i class="bi bi-x-circle me-1"></i>Access denied. In safe mode the payload is treated as plain text and cannot change the query.'));
+      if (ch.requires_safe) doneChallenge(i, ch.success_message || 'The parameterized query neutralized the payload.');
+    } else if (matched.length) {
+      resultEl.appendChild(resultBox('alert-success', '<i class="bi bi-check-circle me-1"></i>' + matched.length + ' row(s) matched in safe mode.'));
+      displayTable(resultEl, { type: 'rows', rows: matched }, table);
+    } else {
+      resultEl.appendChild(resultBox('alert-danger', '<i class="bi bi-x-circle me-1"></i>No rows matched in safe mode.'));
+    }
+    return;
+  }
+
+  if (ch.error_when && new RegExp(ch.error_when, 'i').test(raw)) {
+    showQuery(queryEl, raw, input);
+    logLine(raw + '  [ERROR]', 'err');
+    resultEl.appendChild(resultBox('alert-danger', '<i class="bi bi-x-circle me-1"></i>' + ch.error_message));
+    if (matchesPatterns(raw, ch.success_patterns)) doneChallenge(i, ch.success_message);
+    return;
+  }
+
+  if (ch.mode === 'where') {
+    showQuery(queryEl, raw, input);
+    const table = findTable(ch.table);
+    const res = executeQuery(raw, table);
+    if (res.type === 'union') {
+      logLine(raw + '  [UNION attack: ' + res.cols.join(', ') + ' from ' + res.table + ']', 'err');
+      resultEl.appendChild(resultBox('alert-danger', '<i class="bi bi-exclamation-triangle me-1"></i>UNION injection detected - you read data from the <strong>' + res.table + '</strong> table.'));
+      displayTable(resultEl, res, table);
+    } else {
+      logLine(raw + '  [' + res.rows.length + ' row(s)]', isInjection(input) ? 'err' : 'dbg');
+      if (res.rows.length) {
+        resultEl.appendChild(resultBox('alert-success', '<i class="bi bi-check-circle me-1"></i>' + res.rows.length + ' row(s) returned.'));
+        displayTable(resultEl, res, table);
+      } else {
+        resultEl.appendChild(resultBox('alert-danger', '<i class="bi bi-x-circle me-1"></i>No rows returned.'));
+      }
+    }
+    if (matchesPatterns(raw, ch.success_patterns)) doneChallenge(i, ch.success_message);
+    return;
+  }
+
+  showQuery(queryEl, raw, input);
+  logLine(raw, 'dbg');
+  if (matchesPatterns(raw, ch.success_patterns)) {
+    doneChallenge(i, ch.success_message);
+  } else {
+    resultEl.appendChild(resultBox('alert-secondary', '<i class="bi bi-info-circle me-1"></i>No objective detected for this input yet - keep probing.'));
+  }
+}
+
+LAB.challenges.forEach(function (ch, i) {
+  document.getElementById('ch' + i + '-run').addEventListener('click', function () {
+    if (!document.getElementById('ch' + i + '-input').disabled) runChallenge(ch, i);
+  });
+});
+
+document.querySelectorAll('.payload-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    const payload = btn.getAttribute('data-payload');
+    const target = btn.getAttribute('data-target');
+    const inputEl = document.getElementById('ch' + target + '-input');
+    inputEl.value = payload;
+    inputEl.focus();
+    document.getElementById('ch' + target + '-run').click();
+  });
+});
+
+document.getElementById('safeMode').addEventListener('change', function () {
+  safeMode = this.checked;
+  const demo = document.getElementById('safeDemo');
+  demo.innerHTML = '';
+  if (safeMode) {
+    logLine('SAFE MODE ON: queries now use ? placeholders - payloads become data', 'ok');
+    demo.appendChild(resultBox('alert-success', '<i class="bi bi-shield-check me-1"></i>Safe mode is ON. Run any challenge again - payloads will be passed as plain data values and the SQL will stay fixed.'));
+  } else {
+    logLine('SAFE MODE OFF: queries built with string concatenation', 'err');
+  }
+});
+
+const finalInput = document.getElementById('finalInput');
+const f = LAB.final;
+const serverDone = {{ 'true' if lab_completed else 'false' }};
+let finalDone = serverDone || localStorage.getItem('sqlLabDone' + LAB.lesson_id) === '1';
+let finalAttempts = 0;
+let finalHintsShown = 0;
+
+function finalMarkBadge() {
+  document.getElementById('finalDoneBadge').classList.remove('d-none');
+}
+
+const finalNoteBox = document.createElement('div');
+finalNoteBox.className = 'alert alert-danger py-1 px-2 small d-none mt-1';
+document.getElementById('finalInput').parentElement.appendChild(finalNoteBox);
+
+function finalNote(msg) {
+  finalNoteBox.textContent = msg;
+  finalNoteBox.classList.remove('d-none');
+  setTimeout(function () { finalNoteBox.classList.add('d-none'); }, 2500);
+}
+
+finalInput.addEventListener('paste', function (e) {
+  e.preventDefault();
+  finalNote('Copy-paste is disabled! Type the payload yourself.');
+});
+finalInput.addEventListener('drop', function (e) {
+  e.preventDefault();
+  finalNote('Copy-paste is disabled! Type the payload yourself.');
+});
+
+function unlockFinalHints() {
+  if (finalHintsShown >= 1) document.getElementById('finalHint2').disabled = false;
+  if (finalHintsShown >= 2) document.getElementById('finalHint3').disabled = false;
+}
+
+[['finalHint1', 1], ['finalHint2', 2], ['finalHint3', 3]].forEach(function (pair) {
+  document.getElementById(pair[0]).addEventListener('click', function () {
+    if (finalDone) return;
+    finalHintsShown = Math.max(finalHintsShown, pair[1]);
+    const box = document.getElementById('finalHints');
+    box.innerHTML = '';
+    for (let i = 0; i < finalHintsShown; i++) {
+      const div = document.createElement('div');
+      div.className = 'alert alert-warning py-1 px-2 small mb-1';
+      div.innerHTML = '<i class="bi bi-lightbulb me-1"></i><strong>Hint ' + (i + 1) + ':</strong> ' + f.hints[i];
+      box.appendChild(div);
+    }
+    document.getElementById('finalHintsUsed').textContent = 'Hints used: ' + finalHintsShown + '/3';
+    unlockFinalHints();
+  });
+});
+
+function finalFinish(html) {
+  finalDone = true;
+  localStorage.setItem('sqlLabDone' + LAB.lesson_id, '1');
+  finalMarkBadge();
+  finalInput.disabled = true;
+  document.getElementById('finalRunBtn').disabled = true;
+  document.querySelectorAll('.hint-btn').forEach(function (b) { b.disabled = true; });
+  document.getElementById('finalReplayBtn').classList.remove('d-none');
+  const out = document.getElementById('finalResult');
+  out.innerHTML = '';
+  out.appendChild(resultBox('alert-success', '<h6 class="mb-1"><i class="bi bi-trophy-fill me-1"></i>TASK COMPLETED!</h6>' + html));
+  logLine('TASK COMPLETED: ' + f.title + '!', 'ok');
+  fetch('/lab/' + LAB.lesson_id + '/complete', { method: 'POST' }).catch(function () {});
+}
+
+document.getElementById('finalRunBtn').addEventListener('click', function () {
+  if (finalDone) return;
+  const input = finalInput.value;
+  finalAttempts++;
+  document.getElementById('finalAttempts').textContent = 'Attempts: ' + finalAttempts;
+  const out = document.getElementById('finalResult');
+  out.innerHTML = '';
+
+  if (f.mode === 'neutralize' && !safeMode) {
+    const param = f.query_template.replace('{input}', '?');
+    showQuery(document.getElementById('finalQuery'), param, '');
+    out.appendChild(resultBox('alert-warning', '<i class="bi bi-exclamation-triangle me-1"></i>Turn on Safe mode first - the goal is to watch the payload get neutralized by a parameterized query.'));
+    return;
+  }
+
+  const raw = buildQuery(f.query_template, input);
+  showQuery(document.getElementById('finalQuery'), raw, input);
+
+  let solved = false;
+  let why = '';
+  if (f.mode === 'neutralize') {
+    const param = f.query_template.replace('{input}', '?');
+    document.getElementById('finalQuery').innerHTML = '<i class="bi bi-terminal me-1"></i>Executed query:<br>' + escapeHtml(param);
+    solved = isInjection(input);
+    why = 'The parameterized query treated the payload as one data value and denied access.';
+  } else if (f.mode === 'row') {
+    const table = findTable(f.table);
+    const res = executeQuery(raw, table);
+    const rows = res.rows || [];
+    solved = rows.some(function (r) {
+      return Object.keys(f.target).every(function (k) { return String(r[k]) === String(f.target[k]); });
+    }) && f.forbidden.indexOf(input.trim()) === -1;
+    why = 'Your payload returned the target row without typing the answer literally.';
+  } else {
+    solved = matchesPatterns(raw, f.success_patterns) && f.forbidden.indexOf(input.trim()) === -1;
+    why = 'Your payload matched the objective patterns.';
+  }
+
+  if (solved) {
+    logLine('TASK ATTEMPT: ' + raw + '  [SOLVED]', 'ok');
+    finalFinish('You completed it in ' + finalAttempts + ' attempt(s) using only ' + finalHintsShown + '/3 hints. ' + why + ' Payload: <code>' + escapeHtml(input) + '</code>');
+  } else {
+    logLine('TASK ATTEMPT: ' + raw + '  [not solved]', isInjection(input) ? 'err' : 'dbg');
+    out.appendChild(resultBox('alert-danger', '<i class="bi bi-x-circle me-1"></i>Not solved yet (attempt ' + finalAttempts + '). The payload did not achieve the objective. Hint ' + (finalHintsShown < 3 ? (finalHintsShown + 1) : '3') + ' is waiting for you.'));
+  }
+});
+
+if (finalDone) {
+  finalMarkBadge();
+  finalInput.disabled = true;
+  finalInput.value = 'task solved';
+  document.getElementById('finalRunBtn').disabled = true;
+  document.querySelectorAll('.hint-btn').forEach(function (b) { b.disabled = true; });
+  document.getElementById('finalReplayBtn').classList.remove('d-none');
+  const out = document.getElementById('finalResult');
+  out.appendChild(resultBox('alert-success', '<i class="bi bi-trophy-fill me-1"></i><strong>Task already completed</strong> on this browser.'));
+}
+
+document.getElementById('finalReplayBtn').addEventListener('click', function () {
+  localStorage.removeItem('sqlLabDone' + LAB.lesson_id);
+  fetch('/lab/' + LAB.lesson_id + '/reset', { method: 'POST' })
+    .catch(function () {})
+    .finally(function () { window.location.reload(); });
+});
+</script>
+{% endblock %}

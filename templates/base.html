@@ -498,8 +498,18 @@ document.addEventListener('DOMContentLoaded', function () {
       entry.target.classList.add('in-view');
       obs.unobserve(entry.target);
     });
-  }, { threshold: 0.12 });
+  }, { threshold: 0.01 });
   animEls.forEach(el => io.observe(el));
+  setTimeout(function () {
+    animEls.forEach(function (el) {
+      if (el.classList.contains('in-view')) return;
+      const r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight && r.bottom > 0) {
+        el.classList.add('in-view');
+        io.unobserve(el);
+      }
+    });
+  }, 1200);
 })();
 function togglePassword(inputId, iconId) {
   const input = document.getElementById(inputId);
