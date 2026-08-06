@@ -75,4 +75,74 @@ window.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 {% endif %}
+
+{% if database_reset %}
+<div class="modal fade" id="databaseResetModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h4 class="modal-title">
+          <i class="bi bi-exclamation-triangle me-2"></i>Important Notice - Account Reset Required
+        </h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="alert alert-danger">
+          <h5 class="alert-heading">
+            <i class="bi bi-database-fill-x me-2"></i>Database Reset Alert
+          </h5>
+          <p class="mb-0">
+            <strong>A system update has just completed and reset the database.</strong> 
+            All user accounts and progress data have been wiped.
+          </p>
+        </div>
+        
+        <h5>What this means for you:</h5>
+        <ul class="list-unstyled">
+          <li class="mb-2">
+            <i class="bi bi-x-circle text-danger me-2"></i>
+            <strong>Your old account is gone</strong> - you cannot log in with previous credentials
+          </li>
+          <li class="mb-2">
+            <i class="bi bi-plus-circle text-success me-2"></i>
+            <strong>You need to create a new account</strong> to access the course
+          </li>
+          <li class="mb-2">
+            <i class="bi bi-clipboard-data text-warning me-2"></i>
+            <strong>All previous progress is lost</strong> - lessons, quizzes, leaderboard, etc.
+          </li>
+          <li class="mb-2">
+            <i class="bi bi-clock-fill text-info me-2"></i>
+            <strong>New registrations will work normally</strong> - no restrictions
+          </li>
+        </ul>
+        
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          <strong>Why this happened:</strong> The system needed to migrate to a new database infrastructure (PostgreSQL) to ensure better data persistence and reliability.
+        </div>
+        
+        <div class="d-grid gap-2 mt-4">
+          <a href="{{ url_for('register') }}" class="btn btn-danger btn-lg">
+            <i class="bi bi-person-plus me-2"></i>Register a New Account Now
+          </a>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Got it - I'll register
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  var warningShown = sessionStorage.getItem('databaseResetWarningShown');
+  if (!warningShown) {
+    var databaseResetModal = new bootstrap.Modal(document.getElementById('databaseResetModal'));
+    databaseResetModal.show();
+    sessionStorage.setItem('databaseResetWarningShown', 'true');
+  }
+});
+</script>
+{% endif %}
 {% endblock %}

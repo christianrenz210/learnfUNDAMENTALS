@@ -1572,11 +1572,137 @@ body {
   --cf-muted: #23242f;
   --cf-muted-bg: #23242f;
   --cf-locked: #23242f;
+
+  --bs-body-bg: #1f2937;
+  --bs-body-color: #cbd5e1;
+  --bs-secondary-color: #94a3b8;
+  --bs-tertiary-color: #64748b;
+  --bs-border-color: #374151;
+  --bs-border-color-translucent: #374151;
+
+  --bs-primary: #c4b5fd;
+  --bs-primary-rgb: 196, 181, 253;
+  --bs-link-color: #c4b5fd;
+  --bs-link-color-rgb: 196, 181, 253;
+  --bs-link-hover-color: #ddd6fe;
+  --bs-link-hover-color-rgb: 221, 214, 254;
+  --bs-focus-ring-color: rgba(196, 181, 253, 0.35);
+}
+
+[data-bs-theme="dark"] .text-primary {
+  color: #c4b5fd !important;
+}
+
+[data-bs-theme="dark"] a:not(.nav-link):not(.navbar-brand):not(.btn) {
+  color: #c4b5fd;
+}
+
+[data-bs-theme="dark"] a:not(.nav-link):not(.navbar-brand):not(.btn):hover {
+  color: #ddd6fe;
+}
+
+[data-bs-theme="dark"] .navbar.bg-primary {
+  background-color: var(--brand-primary) !important;
+}
+
+[data-bs-theme="dark"] .btn-primary {
+  --bs-btn-bg: #8b5cf6;
+  --bs-btn-border-color: #8b5cf6;
+  --bs-btn-color: #ffffff;
+  --bs-btn-hover-bg: #7c3aed;
+  --bs-btn-hover-border-color: #7c3aed;
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-active-bg: #7c3aed;
+  --bs-btn-active-border-color: #7c3aed;
+  --bs-btn-active-color: #ffffff;
+  --bs-btn-disabled-bg: #8b5cf6;
+  --bs-btn-disabled-border-color: #8b5cf6;
+  --bs-btn-disabled-color: #ffffff;
+}
+
+[data-bs-theme="dark"] .badge.bg-primary:not(.bg-opacity-10) {
+  color: #170c79 !important;
+}
+
+[data-bs-theme="dark"] .progress-bar {
+  background-color: #c4b5fd;
+  color: #170c79;
+}
+
+[data-bs-theme="dark"] .nav-pills .nav-link.active {
+  background-color: #c4b5fd;
+  color: #170c79;
+}
+
+[data-bs-theme="dark"] .nav-pills .nav-link.active:hover {
+  color: #170c79;
+}
+
+[data-bs-theme="dark"] .pagination .page-item.active .page-link {
+  background-color: #c4b5fd;
+  border-color: #c4b5fd;
+  color: #170c79;
+}
+
+[data-bs-theme="dark"] .form-check-input:checked {
+  background-color: #c4b5fd;
+  border-color: #c4b5fd;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+  --bs-btn-color: #c4b5fd;
+  --bs-btn-border-color: #c4b5fd;
+  --bs-btn-hover-color: #170c79;
+  --bs-btn-hover-bg: #c4b5fd;
+  --bs-btn-hover-border-color: #c4b5fd;
+  --bs-btn-active-color: #170c79;
+  --bs-btn-active-bg: #c4b5fd;
+  --bs-btn-active-border-color: #c4b5fd;
+  --bs-btn-disabled-color: #c4b5fd;
+  --bs-btn-disabled-border-color: #c4b5fd;
+}
+
+[data-bs-theme="dark"] .nav-tabs .nav-link.active {
+  color: #c4b5fd;
+  border-color: var(--bs-border-color) var(--bs-border-color) #c4b5fd;
+}
+
+[data-bs-theme="dark"] .progress-step.current .progress-step-label {
+  color: #c4b5fd;
+}
+
+[data-bs-theme="dark"] .assist-chip,
+[data-bs-theme="dark"] .assist-text .assist-heading,
+[data-bs-theme="dark"] .assist-text .assist-num,
+[data-bs-theme="dark"] .assist-text strong,
+[data-bs-theme="dark"] .assist-text code,
+[data-bs-theme="dark"] .assist-history-clear {
+  color: #c4b5fd;
+}
+
+[data-bs-theme="dark"] .assist-ppt-btn {
+  border-color: #c4b5fd;
+  color: #c4b5fd;
+}
+
+[data-bs-theme="dark"] .assist-ppt-btn:hover,
+[data-bs-theme="dark"] .assist-code-btn.assist-code-run {
+  background: #c4b5fd;
+  color: #170c79;
+}
+
+[data-bs-theme="dark"] .maintenance-title {
+  color: #c4b5fd;
+}
+
+[data-bs-theme="dark"] .maintenance-btn-secondary {
+  color: #c4b5fd;
+  border-color: #c4b5fd;
 }
 
 [data-bs-theme="dark"] body {
   background-color: var(--cf-bg);
-  color: #e2e4ee;
+  color: #cbd5e1;
 }
 
 [data-bs-theme="dark"] .bg-white {
@@ -1602,7 +1728,7 @@ body {
 
 [data-bs-theme="dark"] .lesson-card-locked .card-title,
 [data-bs-theme="dark"] .lesson-card-locked .card-text {
-  color: #85879b !important;
+  color: #64748b !important;
 }
 
 [data-bs-theme="dark"] .coming-soon {
@@ -1724,7 +1850,33 @@ body {
 }
 
 [data-bs-theme="dark"] .text-muted {
-  color: #9b9eb3 !important;
+  color: #94a3b8 !important;
+}
+
+[data-bs-theme="dark"] h1,
+[data-bs-theme="dark"] h2,
+[data-bs-theme="dark"] h3,
+[data-bs-theme="dark"] .h1,
+[data-bs-theme="dark"] .h2,
+[data-bs-theme="dark"] .h3 {
+  color: #f8fafc;
+}
+
+[data-bs-theme="dark"] h4,
+[data-bs-theme="dark"] h5,
+[data-bs-theme="dark"] h6,
+[data-bs-theme="dark"] .h4,
+[data-bs-theme="dark"] .h5,
+[data-bs-theme="dark"] .h6 {
+  color: #e5e7eb;
+}
+
+[data-bs-theme="dark"] .card-title {
+  color: #f8fafc;
+}
+
+[data-bs-theme="dark"] .card-subtitle {
+  color: #94a3b8;
 }
 
 /* Changelog Timeline */

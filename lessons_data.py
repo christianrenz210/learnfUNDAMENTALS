@@ -979,6 +979,78 @@ LESSONS = [
         ],
     },
     {
+        "section": "Advanced Fundamentals",
+        "id": 35,
+        "minutes": 45,
+        "title": "TypeScript Fundamentals",
+        "icon": "bi-filetype-tsx",
+        "description": "TypeScript is JavaScript with superpowers — it adds static types that catch bugs before your code ever runs. This lesson revisits every core programming fundamental you learned earlier — variables and constants, primitive types, arrays and tuples, functions, objects, interfaces, classes, conditionals, loops, and more — this time in TypeScript. Learn how to annotate types, design object shapes with interfaces, and run .ts files directly with Node.js.",
+        "videos": {
+            "general": [
+                {"id": "d56mG7DezGs", "channel": "Programming with Mosh", "title": "TypeScript Tutorial for Beginners"},
+            ],
+        },
+        "key_points": [
+            "TypeScript is a superset of JavaScript — everything from JavaScript still works, plus you get static types.",
+            "Static types let the compiler catch bugs like passing a number where a string is expected — before the code ever runs.",
+            "Node.js can run TypeScript directly with node --experimental-strip-types; real projects also use tsc to type-check and build.",
+            "let declares a changeable variable; const declares a constant that cannot be reassigned.",
+            "Annotate types with a colon — name: string, age: number, isDone: boolean.",
+            "TypeScript infers types automatically, but explicit annotations document your intent and catch mistakes early.",
+            "Arrays are written string[] or Array<string>; tuples are fixed-length arrays with a type per position, like [string, number].",
+            "Union types (number | string) let a value be one of several types; literal unions like \"Easy\" | \"Hard\" restrict it to exact choices.",
+            "Interfaces describe the shape of an object; classes add implementation with private, public, and static members.",
+            "Functions declare parameter and return types; arrow functions, default parameters, and template literals keep code concise.",
+            "Control flow (if/else, ternary, switch) and loops (for, for...of, while) work exactly like JavaScript.",
+            "The TypeScript compiler catches bugs at compile time, which is why big teams adopt it — this lesson maps every fundamental you already know in Python, C++, and Java.",
+        ],
+        "code": {
+            "typescript": "// ==============================================\n// TYPESCRIPT FUNDAMENTALS - EVERYTHING IN ONE FILE\n// Run with: node --experimental-strip-types main.ts\n// ==============================================\n\n// ---------- 1. VARIABLES & CONSTANTS ----------\nlet topic: string = \"TypeScript Fundamentals\";\nconst version: number = 5.4;\ntopic = \"Advanced TypeScript\";      // let can change\n// version = 6;                     // ERROR - const cannot be reassigned\n\n// ---------- 2. PRIMITIVES & TYPE INFERENCE ----------\nconst teacher = \"Mosh\";             // string (inferred)\nconst students = 2500000;           // number (inferred)\nconst isBeginner = true;            // boolean (inferred)\nlet maybe: string | null = null;    // union type: string OR null\n\n// ---------- 3. ARRAYS, TUPLES & LITERAL UNIONS ----------\nconst skills: string[] = [\"typing\", \"logic\", \"testing\"];\nconst scores: number[] = [98, 87, 91];\nconst pair: [string, number] = [\"Alice\", 92];     // tuple: fixed length + types\nlet difficulty: \"Easy\" | \"Medium\" | \"Hard\" = \"Easy\"; // literal union\n\n// ---------- 4. FUNCTIONS ----------\nfunction average(nums: number[]): number {\n  let total = 0;\n  for (const n of nums) {          // for...of loop\n    total += n;\n  }\n  return total / nums.length;\n}\n\nconst greet = (name: string, emoji = \"!\"): string =>\n  `Hello, ${name}${emoji}`;        // arrow fn + default param + template literal\n\n// ---------- 5. OBJECTS & INTERFACES ----------\ninterface Student {\n  name: string;\n  score: number;\n  passed: boolean;\n}\n\nconst alice: Student = { name: \"Alice\", score: 92, passed: true };\n\n// ---------- 6. CLASSES ----------\nclass Course {\n  title: string;\n  private lessons: number;\n  static platform = \"CodeFundamentals\";\n\n  constructor(title: string, lessons: number) {\n    this.title = title;\n    this.lessons = lessons;\n  }\n\n  summary(): string {\n    const status = this.lessons > 10 ? \"advanced\" : \"starter\"; // ternary\n    return `${Course.platform} - ${this.title} (${status})`;\n  }\n}\n\n// ---------- 7. CONTROL FLOW ----------\nfunction grade(score: number): string {\n  if (score >= 90) return \"A\";\n  else if (score >= 75) return \"B\";\n  else if (score >= 60) return \"C\";\n  else return \"Fail\";\n}\n\n// ---------- RUN EVERYTHING ----------\nconsole.log(\"=== TypeScript Fundamentals ===\");\nconsole.log(`${topic} (v${version}) - taught by ${teacher}`);\nconsole.log(\"Skills:\", skills.join(\", \"));\nconsole.log(\"Average score:\", average(scores));\nconsole.log(\"Grade for 88:\", grade(88));\nconsole.log(greet(\"Student\", \"!\"));\nconsole.log(`${alice.name} passed:`, alice.passed);\n\nswitch (difficulty) {              // switch statement\n  case \"Easy\":\n    console.log(\"Difficulty: perfect for beginners\");\n    break;\n  default:\n    console.log(\"Difficulty:\", difficulty);\n}\n\nconst course = new Course(\"TypeScript\", 12);\nconsole.log(course.summary());\n\nlet total = 0;\nfor (let i = 1; i <= 5; i++) {     // classic for loop\n  total += i;\n}\nconsole.log(\"Sum 1..5 =\", total);\n",
+        },
+        "quiz": [
+            {
+                "question": "What is TypeScript?",
+                "options": ["A superset of JavaScript that adds static types", "A Python library for web apps", "A database query language", "A CSS framework"],
+                "correct": 0,
+            },
+            {
+                "question": "Which keyword declares a constant that cannot be reassigned?",
+                "options": ["let", "const", "var", "static"],
+                "correct": 1,
+            },
+            {
+                "question": "What type does TypeScript infer for `let x = 5;`?",
+                "options": ["string", "boolean", "number", "any"],
+                "correct": 2,
+            },
+            {
+                "question": "How do you declare an array that only holds numbers?",
+                "options": ["let nums = numbers[]", "let nums: number[]", "let nums: int[]", "let nums: array<numbers>"],
+                "correct": 1,
+            },
+            {
+                "question": "Which syntax creates a union type?",
+                "options": ["number & string", "number or string", "number | string", "number : string"],
+                "correct": 2,
+            },
+            {
+                "question": "What is a tuple in TypeScript?",
+                "options": ["A function that never returns", "An array with a fixed length and a fixed type for each position", "A type that can hold any value", "A constant object"],
+                "correct": 1,
+            },
+            {
+                "question": "Which command runs a TypeScript file directly in Node.js 22+?",
+                "options": ["node main.ts", "node --experimental-strip-types main.ts", "tsc main.ts", "npm run ts"],
+                "correct": 1,
+            },
+            {
+                "question": "What does an interface describe in TypeScript?",
+                "options": ["The shape of an object", "How loops work", "A database table", "The browser's DOM"],
+                "correct": 0,
+            },
+        ],
+    },
+    {
         "section": "Advanced Database System",
         "id": 11,
         "minutes": 35,

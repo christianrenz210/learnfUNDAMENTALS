@@ -1,5 +1,30 @@
 CHANGELOG = [
     {
+        "version": "1.60",
+        "date": "2026-08-06",
+        "type": "feature",
+        "title": "New Lesson: TypeScript Fundamentals (Advanced Fundamentals)",
+        "changes": [
+            "Added a brand-new TypeScript lesson to Advanced Fundamentals - every core fundamental (variables, data types, arrays, tuples, unions, functions, interfaces, classes, conditionals, and loops) re-taught in TypeScript",
+            "The lesson's code examples are fully interactive - run them right in the browser with Node.js type-stripping",
+            "The lesson includes key points and an 8-question quiz, and counts toward your Advanced Fundamentals progress",
+            "Updated the landing page, FAQ, and About page to reflect the new 35th lesson",
+        ],
+    },
+    {
+        "version": "1.59",
+        "date": "2026-08-06",
+        "type": "feature",
+        "title": "Certificates Need the Long Quiz + Cisco-Style Topic Rating",
+        "changes": [
+            "Section certificates now also require finishing that section's Long Quiz, not just its lessons - complete the quiz to unlock the certificate",
+            "The Full Course certificate now requires every lesson AND every Long Quiz to be finished",
+            "After you finish a Long Quiz, a summary screen appears where you rate how tricky each topic was (Very Easy to Very Hard) - just like Cisco's post-assessment survey",
+            "Ratings are saved to your account and recorded in the Activity Log, so we can improve the harder lessons",
+            "The dashboard shows a lock with a hint on certificate buttons whenever a Long Quiz is still missing",
+        ],
+    },
+    {
         "version": "1.58",
         "date": "2026-08-06",
         "type": "security",

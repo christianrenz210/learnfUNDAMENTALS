@@ -187,6 +187,8 @@
               {% set langs = [("shell", "Shell")] %}
             {% elif lesson.code.get('php') %}
               {% set langs = [("php", "Laravel"), ("javascript", "React")] %}
+            {% elif lesson.code.get('typescript') %}
+              {% set langs = [("typescript", "TypeScript")] %}
             {% else %}
               {% set langs = [] %}
               {% for key, label in [("python", "Python"), ("cpp", "C++"), ("java", "Java"), ("c", "C")] if lesson.code.get(key) %}
@@ -661,7 +663,7 @@
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/shell/shell.min.js"></script>
 <script>
 (function () {
-  const MODES = { python: 'python', cpp: 'text/x-c++src', java: 'text/x-java', c: 'text/x-csrc', sql: 'text/x-sql', php: 'text/x-php', javascript: 'javascript', shell: 'shell' };
+  const MODES = { python: 'python', cpp: 'text/x-c++src', java: 'text/x-java', c: 'text/x-csrc', sql: 'text/x-sql', php: 'text/x-php', javascript: 'javascript', shell: 'shell', typescript: 'javascript' };
   const editors = {};
   const sessions = {};
   const pollTimers = {};

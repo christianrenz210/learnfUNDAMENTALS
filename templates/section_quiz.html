@@ -100,6 +100,29 @@
         </div>
       </div>
 
+      <div class="card shadow-sm border-0 d-none" id="ratingCard">
+        <div class="card-body">
+          <div class="text-center mb-3">
+            <i class="bi bi-clipboard2-heart text-primary display-4"></i>
+            <h4 class="mt-2 mb-1">Quiz Complete!</h4>
+            <p class="text-muted mb-0" id="ratingScore"></p>
+          </div>
+          <p class="small text-muted mb-3">
+            <i class="bi bi-lightbulb me-1 text-warning"></i>
+            Rate how tricky each topic was for you. This helps us improve the lessons.
+          </p>
+          <div id="ratingList" class="d-grid gap-2 mb-3"></div>
+          <div class="d-flex justify-content-center gap-2 flex-wrap">
+            <button type="button" class="btn btn-primary" id="ratingSubmitBtn">
+              <i class="bi bi-check2-circle me-1"></i>Submit Rating &amp; View Results
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="ratingSkipBtn">
+              Skip for now
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="card shadow-sm border-0 d-none mt-3" id="reviewCard">
         <div class="card-header bg-white fw-semibold" id="reviewCardHeader">
           <i class="bi bi-check2-circle text-success me-1"></i>Answer Review
@@ -121,6 +144,9 @@
   let idx = 0;
   let timer = null;
   let remaining = TIME_LIMIT;
+  let lastResult = null;
+  let ratings = [];
+  const RATING_LABELS = ['', 'Very Easy', 'Easy', 'Normal', 'Hard', 'Very Hard'];
 
   const qText = document.getElementById('qText');
   const qOptions = document.getElementById('qOptions');
@@ -181,7 +207,7 @@
       body: JSON.stringify({ answers: answers })
     })
       .then(function (res) { return res.json(); })
-      .then(function (data) { showResult(data); })
+      .then(function (data) { lastResult = data; showRating(data); })
       .catch(function () {
         showResult({ ok: false, error: 'Could not submit your answers. Please try again.' });
       });
@@ -218,6 +244,85 @@
       msg.textContent = 'Review the lessons and try again later.';
     }
     buildReview(answers);
+  }
+
+  function showRating(data) {
+    if (!data.ok) { showResult(data); return; }
+    document.getElementById('quizCard').classList.add('d-none');
+    const card = document.getElementById('ratingCard');
+    card.classList.remove('d-none');
+    let scoreText = 'You scored ' + data.score + ' / ' + data.total_questions + ' this attempt';
+    if (data.best_score > data.score) {
+      scoreText += ' (best: ' + data.best_score + '/' + data.total_questions + ')';
+    }
+    scoreText += ' — attempt ' + data.attempts + ' of 2.';
+    document.getElementById('ratingScore').textContent = scoreText;
+    ratings = QUESTIONS.map(function () { return 3; });
+    const list = document.getElementById('ratingList');
+    list.innerHTML = '';
+    QUESTIONS.forEach(function (q, qi) {
+      const item = document.createElement('div');
+      item.className = 'border rounded p-3 rating-item';
+      const head = document.createElement('div');
+      head.className = 'fw-semibold small mb-2';
+      head.textContent = 'Q' + (qi + 1) + '. ' + q.question;
+      const row = document.createElement('div');
+      row.className = 'd-flex align-items-center gap-2 flex-wrap';
+      const stars = document.createElement('div');
+      stars.className = 'rating-stars';
+      stars.dataset.qi = qi;
+      for (let s = 1; s <= 5; s++) {
+        const star = document.createElement('i');
+        star.className = 'bi bi-star rating-star';
+        star.dataset.v = s;
+        stars.appendChild(star);
+      }
+      const label = document.createElement('span');
+      label.className = 'small text-muted rating-label';
+      row.appendChild(stars);
+      row.appendChild(label);
+      item.appendChild(head);
+      item.appendChild(row);
+      list.appendChild(item);
+    });
+    renderStars();
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function renderStars() {
+    document.querySelectorAll('.rating-item').forEach(function (item, qi) {
+      const stars = item.querySelector('.rating-stars');
+      const label = item.querySelector('.rating-label');
+      Array.from(stars.children).forEach(function (star) {
+        const v = parseInt(star.dataset.v, 10);
+        star.className = v <= ratings[qi]
+          ? 'bi bi-star-fill rating-star text-warning'
+          : 'bi bi-star rating-star';
+      });
+      label.textContent = 'Difficulty: ' + RATING_LABELS[ratings[qi]];
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    const star = e.target.closest('.rating-star');
+    if (!star || !star.closest('#ratingCard')) return;
+    const stars = star.closest('.rating-stars');
+    const qi = parseInt(stars.dataset.qi, 10);
+    ratings[qi] = parseInt(star.dataset.v, 10);
+    renderStars();
+  });
+
+  function submitRating(data) {
+    fetch('{{ url_for("rate_section_quiz", section=section) }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ratings: QUESTIONS.map(function (q, i) {
+          return { topic: q.question, rating: ratings[i] };
+        })
+      })
+    }).catch(function () {});
+    showResult(data);
   }
 
   function buildReview(chosenAnswers) {
@@ -344,6 +449,19 @@
     });
   } else {
     render();
+  }
+
+  const ratingSubmitBtn = document.getElementById('ratingSubmitBtn');
+  if (ratingSubmitBtn) {
+    ratingSubmitBtn.addEventListener('click', function () {
+      if (lastResult) { submitRating(lastResult); }
+    });
+  }
+  const ratingSkipBtn = document.getElementById('ratingSkipBtn');
+  if (ratingSkipBtn) {
+    ratingSkipBtn.addEventListener('click', function () {
+      if (lastResult) { showResult(lastResult); }
+    });
   }
 })();
 </script>

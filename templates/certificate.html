@@ -3,110 +3,351 @@
 {% block title %}Certificate - CodeFundamentals{% endblock %}
 
 {% block head_extra %}
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-  body { background: #f7f8fb; }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { background: #f7f8fb; margin: 0; padding: 0; }
+  .cert-controls { text-align: center; padding: 1rem 1rem 0; }
   .cert-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: calc(100vh - 8rem);
-    padding: 1rem 0;
+    display: flex; align-items: center; justify-content: center;
+    min-height: calc(100vh - 6rem); padding: 1rem;
   }
-  .cert-sheet {
-    max-width: 1000px;
-    width: 100%;
-    margin: 0 auto;
-    background: #ffffff;
+
+  /* ===== CERTIFICATE SHELL ===== */
+  .cert {
+    position: relative; width: 100%; max-width: 1050px;
+    background: #fff;
+    aspect-ratio: 297 / 210; /* A4 landscape ratio */
+    font-family: 'Inter', Arial, Helvetica, sans-serif;
+    overflow: hidden;
   }
-  .cert-inner {
-    border: 8px double #170C79;
-    padding: 3rem;
-    position: relative;
-  }
-  .cert-inner::before {
+
+  /* background wave pattern */
+  .cert::before {
     content: "";
-    position: absolute;
-    inset: 10px;
-    border: 1px solid #56B6C6;
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 80% at 0% 50%, rgba(86,182,198,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 80% at 100% 50%, rgba(86,182,198,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(23,12,121,0.02) 0%, transparent 60%);
+    pointer-events: none;
   }
-  .cert-logo {
-    width: 84px;
-    height: 84px;
-    border-radius: 50%;
-    background: #170C79;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-    font-weight: bold;
+
+  /* outer double border */
+  .cert-border-outer {
+    position: absolute; inset: 0;
+    border: 10px solid #170C79;
+    pointer-events: none;
   }
-  .cert-kicker { letter-spacing: 4px; text-transform: uppercase; color: #56B6C6; font-weight: bold; }
-  .cert-name {
-    font-family: "Great Vibes", cursive;
-    font-size: 4rem;
-    color: #170C79;
-    line-height: 1.2;
+  .cert-border-outer::after {
+    content: "";
+    position: absolute; inset: 4px;
+    border: 3px solid #170C79;
+    pointer-events: none;
   }
-  .cert-subtitle { color: #170C79; font-weight: 600; }
-  .cert-meta { font-size: 0.9rem; color: #6c757d; }
-  .sign-line { width: 240px; border-top: 2px solid #170C79; }
+
+  /* inner cyan border */
+  .cert-border-inner {
+    position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px;
+    border: 1.5px solid #56B6C6;
+    pointer-events: none;
+  }
+
+  /* corner ornaments */
+  .corner {
+    position: absolute; width: 60px; height: 60px;
+    pointer-events: none; z-index: 2;
+  }
+  .corner svg { width: 100%; height: 100%; }
+  .corner-tl { top: 14px; left: 14px; }
+  .corner-tr { top: 14px; right: 14px; transform: scaleX(-1); }
+  .corner-bl { bottom: 14px; left: 14px; transform: scaleY(-1); }
+  .corner-br { bottom: 14px; right: 14px; transform: scale(-1,-1); }
+
+  /* decorative diamonds on sides */
+  .diamond {
+    position: absolute; width: 8px; height: 8px;
+    background: #56B6C6; transform: rotate(45deg);
+    pointer-events: none; z-index: 2;
+  }
+  .diamond.left   { left: 24px; top: 50%; margin-top: -4px; }
+  .diamond.right  { right: 24px; top: 50%; margin-top: -4px; }
+  .diamond.top    { top: 24px; left: 50%; margin-left: -4px; }
+  .diamond.bottom { bottom: 24px; left: 50%; margin-left: -4px; }
+
+  /* side accent lines */
+  .side-line {
+    position: absolute; background: #56B6C6; pointer-events: none; z-index: 1;
+  }
+  .side-line.left-v   { left: 27px; top: 30%; height: 40%; width: 1.5px; }
+  .side-line.right-v  { right: 27px; top: 30%; height: 40%; width: 1.5px; }
+  .side-line.top-h    { top: 27px; left: 30%; width: 40%; height: 1.5px; }
+  .side-line.bottom-h { bottom: 27px; left: 30%; width: 40%; height: 1.5px; }
+
+  /* ===== CONTENT ===== */
+  .cert-content {
+    position: absolute; inset: 30px;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center;
+    padding: 1.5rem 3.5rem;
+    z-index: 3;
+  }
+
+  /* CF logo */
+  .cf-logo {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: #170C79; color: #fff; display: flex;
+    align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1.6rem; flex-shrink: 0;
+    box-shadow: 0 2px 12px rgba(23,12,121,0.2);
+  }
+
+  /* kicker */
+  .kicker {
+    letter-spacing: 6px; text-transform: uppercase;
+    color: #56B6C6; font-weight: 700; font-size: 0.8rem; margin-top: 0.5rem;
+  }
+
+  /* decorative divider */
+  .divider {
+    display: flex; align-items: center; gap: 12px; margin: 0.4rem 0;
+  }
+  .divider-line { width: 80px; height: 1px; background: #56B6C6; }
+  .divider-diamond { width: 6px; height: 6px; background: #56B6C6; transform: rotate(45deg); flex-shrink: 0; }
+
+  /* editable inputs */
+  .cert-input {
+    border: none; outline: none; background: transparent;
+    text-align: center; width: 100%; color: #170C79;
+    padding: 2px 4px; margin: 0; font-family: inherit;
+    transition: background 0.2s;
+  }
+  .cert-input::placeholder { opacity: 0.3; }
+  .cert-input:focus {
+    background: rgba(86,182,198,0.08);
+    border-radius: 4px;
+  }
+
+  .title-input {
+    font-size: clamp(2rem, 5vw, 3.6rem); font-weight: 900;
+    color: #170C79; margin-top: 0.2rem; letter-spacing: -0.01em;
+  }
+  .subtitle-input {
+    font-size: clamp(0.7rem, 1.4vw, 1rem); font-weight: 600;
+    color: #170C79; margin-top: 0.1rem;
+  }
+  .presented-text {
+    font-size: clamp(0.75rem, 1.2vw, 0.95rem); color: #555; margin-top: 0.7rem;
+  }
+  .name-input {
+    font-family: 'Great Vibes', cursive;
+    font-size: clamp(2.5rem, 7vw, 5.2rem); color: #170C79;
+    line-height: 1.15; margin-top: 0.05rem;
+  }
+  .completing-text {
+    font-size: clamp(0.65rem, 1.1vw, 0.9rem); color: #555; margin-top: 0.2rem;
+  }
+
+  /* ===== BOTTOM ROW ===== */
+  .cert-bottom {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    width: 100%; margin-top: auto; padding-top: 0.3rem;
+  }
+  .cert-bottom-col { flex: 1; }
+  .cert-bottom-col:last-child { text-align: right; }
+  .cert-bottom-col:nth-child(2) { text-align: center; flex: 0 0 auto; }
+
+  .sign-line {
+    width: 80%; height: 2px; background: #170C79; margin: 0 auto 0.25rem;
+  }
+  .cert-bottom-col:first-child .sign-line { margin-left: 0; }
+  .cert-bottom-col:last-child .sign-line { margin-right: 0; margin-left: auto; }
+
+  .meta-label { font-size: clamp(0.5rem, 0.9vw, 0.7rem); color: #6c757d; }
+  .date-input, .certno-input {
+    font-size: clamp(0.6rem, 1vw, 0.85rem); font-weight: 700;
+    color: #170C79; max-width: 200px;
+  }
+
+  /* verified seal */
+  .verified-seal { flex-shrink: 0; }
+
+  /* edit hints */
+  .edit-hint {
+    font-size: 0.65rem; color: #56B6C6; text-align: center;
+    pointer-events: none;
+  }
+
+  /* ===== PRINT ===== */
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
   @media print {
-    body { background: #ffffff; }
-    .navbar, .no-print, footer, .assist-toggle, .assist-panel, .modal { display: none !important; }
-    .cert-wrap { display: block; min-height: 0; padding: 0; }
-    .cert-sheet { margin: 0 auto; max-width: 100%; }
-    .cert-inner { border: 6px double #170C79; padding: 1.5rem; }
-    .cert-name { font-size: 3rem; }
+    *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: #fff !important; margin: 0; padding: 0; }
+    .cert-controls, .no-print, .navbar, footer,
+    .assist-toggle, .assist-panel, .modal { display: none !important; }
+    .cert-wrap { padding: 0; min-height: auto; display: block; }
+    .cert {
+      max-width: none; width: 277mm; height: 190mm;
+      margin: 0; page-break-inside: avoid; overflow: hidden;
+    }
+    .cert-input { background: transparent !important; }
+    .edit-hint { display: none !important; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-4 no-print">
-  <div class="text-center mb-4">
-    <button type="button" class="btn btn-primary btn-lg" onclick="window.print()">
-      <i class="bi bi-printer me-2"></i>Print / Save as PDF
-    </button>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg ms-2">
-      <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
-    </a>
-  </div>
+<div class="cert-controls no-print">
+  <button type="button" class="btn btn-primary btn-lg" onclick="window.print()">
+    <i class="bi bi-printer me-2"></i>Print / Save as PDF
+  </button>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg ms-2">
+    <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+  </a>
+  <p class="text-muted mt-2" style="font-size:0.85rem;">
+    <i class="bi bi-pencil-square me-1"></i>Edit any text directly on the certificate before printing.
+  </p>
 </div>
 
 <div class="cert-wrap">
-    <div class="cert-sheet shadow-sm fade-up">
-    <div class="cert-inner text-center">
-    <div class="cert-logo">CF</div>
-    <div class="cert-kicker">Certificate of Completion</div>
-    <h1 class="display-4 fw-bold text-primary mt-2 mb-0">{{ cert_title }}</h1>
-    <p class="text-muted mt-1">{{ cert_subtitle }}</p>
+  <div class="cert">
+    <!-- borders -->
+    <div class="cert-border-outer"></div>
+    <div class="cert-border-inner"></div>
 
-    <p class="mt-4 mb-0">This certificate is proudly presented to</p>
-    <div class="cert-name">{{ current_user.username }}</div>
-    <p class="text-muted">for successfully completing all required lessons on CodeFundamentals.</p>
-
-    <div class="row mt-4 align-items-end">
-      <div class="col-4 text-start">
-        <div class="sign-line mb-1"></div>
-        <div class="cert-meta">Date Issued</div>
-        <div class="fw-semibold">{{ issued.strftime("%B %d, %Y") }}</div>
-      </div>
-      <div class="col-4">
-        <svg width="90" height="90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="46" fill="none" stroke="#56B6C6" stroke-width="3"/>
-          <circle cx="50" cy="50" r="40" fill="none" stroke="#170C79" stroke-width="2"/>
-          <text x="50" y="52" text-anchor="middle" font-size="11" fill="#170C79" font-weight="bold">CodeFundamentals</text>
-          <text x="50" y="66" text-anchor="middle" font-size="9" fill="#170C79">verified</text>
-        </svg>
-      </div>
-      <div class="col-4 text-end">
-        <div class="sign-line mb-1"></div>
-        <div class="cert-meta">Certificate No.</div>
-        <div class="fw-semibold">{{ cert_no }}</div>
-      </div>
+    <!-- corner ornaments -->
+    <div class="corner corner-tl">
+      <svg viewBox="0 0 60 60" fill="none">
+        <path d="M4 4 L4 30" stroke="#56B6C6" stroke-width="1.5"/>
+        <path d="M4 4 L30 4" stroke="#56B6C6" stroke-width="1.5"/>
+        <path d="M4 4 L20 20" stroke="#170C79" stroke-width="1" opacity="0.4"/>
+        <circle cx="4" cy="4" r="3" fill="#56B6C6"/>
+      </svg>
     </div>
+    <div class="corner corner-tr">
+      <svg viewBox="0 0 60 60" fill="none">
+        <path d="M4 4 L4 30" stroke="#56B6C6" stroke-width="1.5"/>
+        <path d="M4 4 L30 4" stroke="#56B6C6" stroke-width="1.5"/>
+        <path d="M4 4 L20 20" stroke="#170C79" stroke-width="1" opacity="0.4"/>
+        <circle cx="4" cy="4" r="3" fill="#56B6C6"/>
+      </svg>
+    </div>
+    <div class="corner corner-bl">
+      <svg viewBox="0 0 60 60" fill="none">
+        <path d="M4 4 L4 30" stroke="#56B6C6" stroke-width="1.5"/>
+        <path d="M4 4 L30 4" stroke="#56B6C6" stroke-width="1.5"/>
+        <path d="M4 4 L20 20" stroke="#170C79" stroke-width="1" opacity="0.4"/>
+        <circle cx="4" cy="4" r="3" fill="#56B6C6"/>
+      </svg>
+    </div>
+    <div class="corner corner-br">
+      <svg viewBox="0 0 60 60" fill="none">
+        <path d="M4 4 L4 30" stroke="#56B6C6" stroke-width="1.5"/>
+        <path d="M4 4 L30 4" stroke="#56B6C6" stroke-width="1.5"/>
+        <path d="M4 4 L20 20" stroke="#170C79" stroke-width="1" opacity="0.4"/>
+        <circle cx="4" cy="4" r="3" fill="#56B6C6"/>
+      </svg>
+    </div>
+
+    <!-- side accent lines -->
+    <div class="side-line left-v"></div>
+    <div class="side-line right-v"></div>
+    <div class="side-line top-h"></div>
+    <div class="side-line bottom-h"></div>
+
+    <!-- diamonds -->
+    <div class="diamond left"></div>
+    <div class="diamond right"></div>
+    <div class="diamond top"></div>
+    <div class="diamond bottom"></div>
+
+    <!-- content -->
+    <div class="cert-content">
+      <div class="cf-logo">CF</div>
+      <div class="kicker">Certificate of Completion</div>
+
+      <div class="divider">
+        <div class="divider-line"></div>
+        <div class="divider-diamond"></div>
+        <div class="divider-line"></div>
+      </div>
+
+      <input type="text" class="cert-input title-input" id="certTitle"
+             value="{{ cert_title }}" maxlength="80" placeholder="Certificate Title">
+      <div class="edit-hint no-print">edit title</div>
+
+      <input type="text" class="cert-input subtitle-input" id="certSubtitle"
+             value="{{ cert_subtitle }}" maxlength="120" placeholder="Subtitle">
+
+      <div class="divider" style="margin:0.5rem 0;">
+        <div class="divider-line" style="width:50px;"></div>
+        <div class="divider-diamond" style="width:5px;height:5px;"></div>
+        <div class="divider-line" style="width:50px;"></div>
+      </div>
+
+      <div class="presented-text">This certificate is proudly presented to</div>
+
+      <input type="text" class="cert-input name-input" id="certName"
+             value="{{ current_user.username }}" maxlength="60" placeholder="Recipient Name">
+      <div class="edit-hint no-print">edit name</div>
+
+      <div class="divider" style="margin:0.3rem 0;">
+        <div class="divider-line" style="width:40px;"></div>
+        <div class="divider-diamond" style="width:4px;height:4px;"></div>
+        <div class="divider-line" style="width:40px;"></div>
+      </div>
+
+      <div class="completing-text">for successfully completing all required lessons on CodeFundamentals.</div>
+
+      <div class="cert-bottom">
+        <div class="cert-bottom-col">
+          <div class="sign-line"></div>
+          <div class="meta-label">Date Issued</div>
+          <input type="text" class="cert-input date-input" id="certDate"
+                 value="{{ issued.strftime('%B %d, %Y') }}" maxlength="30">
+          <div class="edit-hint no-print">edit date</div>
+        </div>
+
+        <div class="cert-bottom-col">
+          <svg class="verified-seal" width="100" height="100" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="56" fill="none" stroke="#56B6C6" stroke-width="2.5"/>
+            <circle cx="60" cy="60" r="48" fill="none" stroke="#170C79" stroke-width="2"/>
+            <!-- laurel left -->
+            <g fill="#56B6C6" opacity="0.85">
+              <ellipse cx="23" cy="80" rx="5" ry="11" transform="rotate(-20 23 80)"/>
+              <ellipse cx="19" cy="64" rx="5" ry="11" transform="rotate(-10 19 64)"/>
+              <ellipse cx="18" cy="48" rx="5" ry="11" transform="rotate(0 18 48)"/>
+              <ellipse cx="22" cy="33" rx="5" ry="11" transform="rotate(12 22 33)"/>
+              <ellipse cx="30" cy="21" rx="5" ry="11" transform="rotate(25 30 21)"/>
+            </g>
+            <!-- laurel right -->
+            <g fill="#56B6C6" opacity="0.85">
+              <ellipse cx="97" cy="80" rx="5" ry="11" transform="rotate(20 97 80)"/>
+              <ellipse cx="101" cy="64" rx="5" ry="11" transform="rotate(10 101 64)"/>
+              <ellipse cx="102" cy="48" rx="5" ry="11" transform="rotate(0 102 48)"/>
+              <ellipse cx="98" cy="33" rx="5" ry="11" transform="rotate(-12 98 33)"/>
+              <ellipse cx="90" cy="21" rx="5" ry="11" transform="rotate(-25 90 21)"/>
+            </g>
+            <text x="60" y="57" text-anchor="middle" font-size="11" fill="#170C79"
+                  font-weight="bold" font-family="Arial, sans-serif">CodeFundamentals</text>
+            <text x="60" y="72" text-anchor="middle" font-size="9.5" fill="#170C79"
+                  font-family="Arial, sans-serif">verified</text>
+            <polygon points="60,80 62.5,86 69,86.5 64,90.5 65.5,97 60,93.5 54.5,97 56,90.5 51,86.5 57.5,86"
+                     fill="#56B6C6"/>
+          </svg>
+        </div>
+
+        <div class="cert-bottom-col">
+          <div class="sign-line"></div>
+          <div class="meta-label">Certificate No.</div>
+          <input type="text" class="cert-input certno-input" id="certNo"
+                 value="{{ cert_no }}" maxlength="30">
+          <div class="edit-hint no-print">edit cert no.</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -174,9 +174,9 @@
             <i class="bi bi-book fs-2 text-primary"></i>
             <h5 class="card-title mt-3">Read the Lessons</h5>
             <p class="card-text">
-              Work through 26+ lessons in four sections: programming fundamentals
+              Work through 35 lessons in four sections: programming fundamentals
               (Python, C++, Java), advanced fundamentals (GitHub, deployment,
-              WordPress), advanced database systems, and SQL injection security.
+              WordPress, TypeScript), advanced database systems, and SQL injection security.
             </p>
           </div>
         </div>
@@ -249,14 +249,15 @@
       {% endfor %}
 
       <div class="col-12 fade-up">
-        <h5 class="mb-3 mt-2"><i class="bi bi-cloud-arrow-up text-primary me-2"></i>Advanced Fundamentals <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">5 lessons</span></h5>
+        <h5 class="mb-3 mt-2"><i class="bi bi-cloud-arrow-up text-primary me-2"></i>Advanced Fundamentals <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">6 lessons</span></h5>
       </div>
       {% for lesson in [
         {"icon": "bi-github", "title": "Introduction to GitHub", "desc": "Version control and collaboration with Git."},
         {"icon": "bi-globe", "title": "Web Deployment Fundamentals", "desc": "Deploying web apps to the internet."},
         {"icon": "bi-cloud-arrow-up", "title": "Deploying with Render", "desc": "Deploy Laravel and React apps to Render."},
         {"icon": "bi-cloud-arrow-up", "title": "Deploying with Netlify", "desc": "Deploy static sites and SPAs to Netlify."},
-        {"icon": "bi-wordpress", "title": "Building Websites with WordPress", "desc": "Create and manage a website with WordPress — no coding needed."}
+        {"icon": "bi-wordpress", "title": "Building Websites with WordPress", "desc": "Create and manage a website with WordPress — no coding needed."},
+        {"icon": "bi-filetype-tsx", "title": "TypeScript Fundamentals", "desc": "All the fundamentals, re-taught in TypeScript."}
       ] %}
         <div class="col-md-4 col-sm-6 fade-up">
           <div class="card h-100 shadow-sm">
@@ -298,11 +299,19 @@
       {% endfor %}
 
       <div class="col-12 fade-up">
-        <h5 class="mb-3 mt-2"><i class="bi bi-shield-exclamation text-primary me-2"></i>SQL Injection <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">2 lessons</span></h5>
+        <h5 class="mb-3 mt-2"><i class="bi bi-shield-exclamation text-primary me-2"></i>SQL Injection <span class="badge bg-primary bg-opacity-10 text-primary align-middle ms-1">10 lessons</span></h5>
       </div>
       {% for lesson in [
         {"icon": "bi-shield-exclamation", "title": "Introduction to SQL Injection", "desc": "How attackers abuse user input."},
-        {"icon": "bi-terminal", "title": "How SQL Injection Works", "desc": "Injection points and string concatenation."}
+        {"icon": "bi-terminal", "title": "How SQL Injection Works", "desc": "Injection points and string concatenation."},
+        {"icon": "bi-diagram-3", "title": "Types of SQL Injection", "desc": "In-band, blind, and out-of-band attacks."},
+        {"icon": "bi-collection", "title": "UNION-Based SQL Injection", "desc": "Stealing extra data with UNION queries."},
+        {"icon": "bi-eye-slash", "title": "Blind SQL Injection", "desc": "Extracting data when errors are hidden."},
+        {"icon": "bi-database", "title": "SQL Injection in Real-World Queries", "desc": "Attacks in INSERT, UPDATE, DELETE, and login flows."},
+        {"icon": "bi-shield-check", "title": "Preventing SQL Injection: Parameterized Queries", "desc": "Prepared statements that stop the attack."},
+        {"icon": "bi-shield-lock", "title": "Defense in Depth", "desc": "Layered security beyond parameterized queries."},
+        {"icon": "bi-search", "title": "SQL Injection Testing and Detection", "desc": "Finding and confirming injection points."},
+        {"icon": "bi-exclamation-triangle", "title": "Real-World Attack Scenarios", "desc": "Famous attacks and how they were stopped."}
       ] %}
         <div class="col-md-4 col-sm-6 fade-up">
           <div class="card h-100 shadow-sm">

@@ -149,7 +149,8 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.58"
+APP_VERSION = "1.60"
+EREN_VERSION = "2.1"
 
 
 @app.context_processor
@@ -161,7 +162,7 @@ def inject_avatar():
             return user.avatar
         return url_for("static", filename="uploads/" + user.avatar)
 
-    return {"avatar_src": avatar_src, "app_version": APP_VERSION, "latest_update": CHANGELOG[0]}
+    return {"avatar_src": avatar_src, "app_version": APP_VERSION, "eren_version": EREN_VERSION, "latest_update": CHANGELOG[0]}
 
 
 @app.context_processor
@@ -248,6 +249,7 @@ class SectionQuizScore(db.Model):
     total_questions = db.Column(db.Integer, nullable=False)
     attempts = db.Column(db.Integer, default=1, nullable=False)
     last_answers = db.Column(db.Text, nullable=True)
+    topic_ratings = db.Column(db.Text, nullable=True)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
@@ -870,6 +872,14 @@ def register():
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
+    
+    # Check if this might be the first login after database reset
+    # Only show warning if no users exist in the database
+    if User.query.count() == 0:
+        show_database_reset_warning = True
+    else:
+        show_database_reset_warning = False
+    
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -885,7 +895,7 @@ def login():
                 "danger",
             )
             return render_template(
-                "login.html", registered=request.args.get("registered") == "1"
+                "login.html", registered=request.args.get("registered") == "1", database_reset=show_database_reset_warning
             )
         if user and check_password_hash(user.password_hash, password):
             if user.is_banned:
@@ -895,7 +905,7 @@ def login():
                     "danger",
                 )
                 return render_template(
-                    "login.html", registered=request.args.get("registered") == "1"
+                    "login.html", registered=request.args.get("registered") == "1", database_reset=show_database_reset_warning
                 )
             login_user(user)
             log_activity(user, "Logged in", "Successful sign-in")
@@ -1031,6 +1041,7 @@ def dashboard():
         q.section: q
         for q in SectionQuizScore.query.filter_by(user_id=current_user.id).all()
     }
+    all_quizzes_done = all(s in section_quiz_map for s in LONG_QUIZZES)
     section_stats = []
     for name in SECTION_ORDER:
         sec_lessons = [l for l in sections.get(name, []) if not l.get("coming_soon")]
@@ -1086,6 +1097,7 @@ def dashboard():
         lesson_difficulties={l["id"]: lesson_difficulty(l["id"]) for l in LESSONS},
         lab_lesson_ids=LAB_LESSON_IDS,
         lab_urls=lab_urls,
+        all_quizzes_done=all_quizzes_done,
     )
 
 
@@ -1132,10 +1144,23 @@ def admin_dashboard():
 @admin_required
 def admin_activity():
     action = (request.args.get("action") or "").strip()
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except (TypeError, ValueError):
+        page = 1
+    per_page = 20
     q = ActivityLog.query
     if action:
         q = q.filter(ActivityLog.action == action)
-    logs = q.order_by(ActivityLog.created_at.desc()).limit(300).all()
+    total = q.count()
+    pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, pages)
+    logs = (
+        q.order_by(ActivityLog.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
     actions = (
         db.session.query(ActivityLog.action)
         .distinct()
@@ -1147,7 +1172,9 @@ def admin_activity():
         logs=logs,
         actions=[a[0] for a in actions],
         current_action=action,
-        log_count=len(logs),
+        log_count=total,
+        page=page,
+        pages=pages,
     )
 
 
@@ -1483,10 +1510,23 @@ def admin_reset_all(uid):
 @login_required
 def certificate(name):
     completed = set(get_completed_ids(current_user))
+    quiz_map = {
+        q.section: q
+        for q in SectionQuizScore.query.filter_by(user_id=current_user.id).all()
+    }
     if name == "Full Course":
         if len(completed) < len(AVAILABLE_LESSONS):
             flash(
                 f"Complete all {len(AVAILABLE_LESSONS)} lessons to unlock your full course certificate.",
+                "warning",
+            )
+            return redirect(url_for("dashboard"))
+        missing_quizzes = [s for s in LONG_QUIZZES if s not in quiz_map]
+        if missing_quizzes:
+            flash(
+                "Finish every long quiz to unlock your full course certificate: "
+                + ", ".join(missing_quizzes)
+                + ".",
                 "warning",
             )
             return redirect(url_for("dashboard"))
@@ -1505,6 +1545,12 @@ def certificate(name):
         done_count = len([l for l in sec_lessons if l["id"] in completed])
         if done_count < len(sec_lessons):
             flash(f"Complete all {len(sec_lessons)} lessons in the {name} section to unlock this certificate.", "warning")
+            return redirect(url_for("dashboard"))
+        if name in LONG_QUIZZES and name not in quiz_map:
+            flash(
+                f"Finish the {name} long quiz to unlock this certificate.",
+                "warning",
+            )
             return redirect(url_for("dashboard"))
         cert_title = f"{name} Completion"
         cert_subtitle = f"All {len(sec_lessons)} lessons in the {name} section"
@@ -3068,11 +3114,45 @@ def submit_section_quiz(section):
     return jsonify(
         {
             "ok": True,
+            "score": score,
             "best_score": row.best_score,
             "total_questions": row.total_questions,
             "attempts": row.attempts,
         }
     )
+
+
+@app.route("/section-quiz/<section>/rate", methods=["POST"])
+@login_required
+def rate_section_quiz(section):
+    questions = LONG_QUIZZES.get(section)
+    if not questions:
+        return jsonify({"ok": False, "error": "Long quiz not found."}), 404
+    row = SectionQuizScore.query.filter_by(
+        user_id=current_user.id, section=section
+    ).first()
+    if not row:
+        return jsonify({"ok": False, "error": "Complete the long quiz first."}), 400
+    data = request.get_json(silent=True) or {}
+    ratings = data.get("ratings")
+    if not isinstance(ratings, list) or len(ratings) != len(questions):
+        return jsonify({"ok": False, "error": "Invalid ratings."}), 400
+    cleaned = []
+    for r in ratings:
+        if not isinstance(r, dict):
+            return jsonify({"ok": False, "error": "Invalid ratings."}), 400
+        rating = r.get("rating")
+        if not isinstance(rating, int) or rating < 1 or rating > 5:
+            return jsonify({"ok": False, "error": "Rate every topic between 1 and 5."}), 400
+        cleaned.append({"topic": str(r.get("topic", "")), "rating": rating})
+    row.topic_ratings = json.dumps(cleaned)
+    db.session.commit()
+    log_activity(
+        current_user,
+        "Rated long quiz topics",
+        "Submitted topic difficulty ratings for the %s quiz" % section,
+    )
+    return jsonify({"ok": True, "count": len(cleaned)})
 
 
 RUN_CONFIGS = {
@@ -3087,6 +3167,9 @@ RUN_CONFIGS = {
     },
     "java": {
         "source": "Main.java",
+    },
+    "typescript": {
+        "source": "main.ts",
     },
 }
 
@@ -3579,6 +3662,16 @@ def run_start():
             if compiled.returncode != 0:
                 return jsonify({"ok": False, "compile_error": compiled.stderr[:4000]})
             run_cmd = [find_tool("java") or "java", "Main"]
+        elif lang == "typescript":
+            node = shutil.which("node")
+            if not node:
+                return jsonify(
+                    {
+                        "ok": False,
+                        "compile_error": "TypeScript needs Node.js on the server, but it was not found.",
+                    }
+                ), 502
+            run_cmd = [node, "--experimental-strip-types", "--no-warnings", "main.ts"]
         else:
             run_cmd = [sys.executable, "main.py"]
 
@@ -3865,6 +3958,13 @@ with app.app_context():
             try:
                 with db.engine.begin() as conn:
                     conn.execute(sa_text("ALTER TABLE section_quiz_score ADD COLUMN last_answers TEXT"))
+                break
+            except Exception:
+                time.sleep(0.5)
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(sa_text("ALTER TABLE section_quiz_score ADD COLUMN topic_ratings TEXT"))
                 break
             except Exception:
                 time.sleep(0.5)
