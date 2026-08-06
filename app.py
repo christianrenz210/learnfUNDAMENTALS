@@ -3907,7 +3907,61 @@ def run_playground():
         conn.close()
 
 
+# ==================== DATABASE FIX FUNCTION ====================
+def fix_database_schema():
+    """Fix missing columns in the database schema."""
+    from sqlalchemy import inspect as _inspect
+    
+    with app.app_context():
+        inspector = _inspect(db.engine)
+        is_sqlite = db.engine.dialect.name == "sqlite"
+        
+        try:
+            # Check if section_quiz_score table exists
+            tables = inspector.get_table_names()
+            if "section_quiz_score" not in tables:
+                print("[FIX] section_quiz_score table does not exist, creating...")
+                db.create_all()
+                return
+            
+            # Get existing columns
+            columns = [col['name'] for col in inspector.get_columns('section_quiz_score')]
+            
+            # Add topic_ratings column if missing
+            if 'topic_ratings' not in columns:
+                print("[FIX] Adding topic_ratings column to section_quiz_score...")
+                with db.engine.begin() as conn:
+                    if is_sqlite:
+                        conn.execute(sa_text("ALTER TABLE section_quiz_score ADD COLUMN topic_ratings TEXT"))
+                    else:
+                        conn.execute(sa_text("ALTER TABLE section_quiz_score ADD COLUMN topic_ratings TEXT"))
+                print("[FIX] topic_ratings column added successfully!")
+            else:
+                print("[FIX] topic_ratings column already exists.")
+                
+        except Exception as e:
+            print(f"[FIX ERROR] Failed to fix database schema: {e}")
+
+
+# ==================== FIX ROUTE ====================
+@app.route("/fix-db")
+@login_required
+@admin_required
+def fix_db_route():
+    """Admin route to fix database schema issues."""
+    try:
+        fix_database_schema()
+        flash("Database schema fixed successfully! topic_ratings column has been added.", "success")
+    except Exception as e:
+        flash(f"Error fixing database: {e}", "danger")
+    return redirect(url_for("admin_dashboard"))
+
+
+# ==================== STARTUP ====================
 with app.app_context():
+    # Fix database schema first
+    fix_database_schema()
+    
     db.create_all()
     os.makedirs(AVATAR_DIR, exist_ok=True)
     is_sqlite = db.engine.dialect.name == "sqlite"
