@@ -1,5 +1,15 @@
 CHANGELOG = [
     {
+        "version": "1.62",
+        "date": "2026-08-07",
+        "type": "fix",
+        "title": "Mobile Fix: E.R.E.N Fullscreen Sidebar & Keyboard",
+        "changes": [
+            "Fixed the history sidebar on phones - it no longer gets stuck open, and can now be closed with the X button or by tapping the dimmed background",
+            "Fixed typing in the assistant on mobile - what you type is now visible while the phone keyboard is open (dynamic viewport height + keyboard-aware resizing)",
+        ],
+    },
+    {
         "version": "1.61",
         "date": "2026-08-07",
         "type": "feature",

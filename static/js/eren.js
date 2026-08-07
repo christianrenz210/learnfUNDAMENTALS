@@ -753,5 +753,20 @@
     }
   }
 
+  if (window.visualViewport && document.querySelector('.assist-layout')) {
+    var layoutEl = document.querySelector('.assist-layout');
+    var lastLayoutH = 0;
+    function syncLayoutHeight() {
+      var h = window.visualViewport.height;
+      if (Math.abs(h - lastLayoutH) > 1) {
+        lastLayoutH = h;
+        layoutEl.style.height = h + 'px';
+      }
+    }
+    window.visualViewport.addEventListener('resize', syncLayoutHeight);
+    window.visualViewport.addEventListener('scroll', syncLayoutHeight);
+    syncLayoutHeight();
+  }
+
   renderMessages(activeConvo());
 })();
