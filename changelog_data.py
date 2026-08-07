@@ -1,15 +1,5 @@
 CHANGELOG = [
     {
-        "version": "1.64",
-        "date": "2026-08-07",
-        "type": "fix",
-        "title": "April Fools' Prank: Image Upload Is 'Pro-Only'... or Is It?",
-        "changes": [
-            "Tapping the image button now shows a 'You need to be a Pro to access this feature' modal as a prank",
-            "Clicking 'Upgrade to Pro' reveals it was a joke - the image picker opens and you can use it for free",
-        ],
-    },
-    {
         "version": "1.63",
         "date": "2026-08-07",
         "type": "feature",
