@@ -519,27 +519,42 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   const updateModalEl = document.getElementById('updateModal');
+  const erenUpdateModalEl = document.getElementById('erenUpdateModal');
+
+  let needShowEren = false;
+  if (erenUpdateModalEl) {
+    let shownErenVersion = null;
+    try { shownErenVersion = sessionStorage.getItem('cfErenUpdateShown'); } catch (e) {}
+    const currentErenVersion = erenUpdateModalEl.dataset.version || '';
+    needShowEren = shownErenVersion !== currentErenVersion;
+  }
+
   if (updateModalEl) {
     let shownVersion = null;
     try { shownVersion = sessionStorage.getItem('cfUpdateShown'); } catch (e) {}
     const currentVersion = updateModalEl.dataset.version || '';
     if (shownVersion !== currentVersion) {
-      new bootstrap.Modal(updateModalEl).show();
+      const systemModal = new bootstrap.Modal(updateModalEl);
+      systemModal.show();
       try { sessionStorage.setItem('cfUpdateShown', currentVersion); } catch (e) {}
-    }
-  }
 
-  const erenUpdateModalEl = document.getElementById('erenUpdateModal');
-  if (erenUpdateModalEl) {
-    let shownErenVersion = null;
-    try { shownErenVersion = sessionStorage.getItem('cfErenUpdateShown'); } catch (e) {}
-    const currentErenVersion = erenUpdateModalEl.dataset.version || '';
-    if (shownErenVersion !== currentErenVersion) {
-      setTimeout(() => {
-        new bootstrap.Modal(erenUpdateModalEl).show();
-      }, 500);
-      try { sessionStorage.setItem('cfErenUpdateShown', currentErenVersion); } catch (e) {}
+      if (needShowEren) {
+        updateModalEl.addEventListener('hidden.bs.modal', function onSystemClose() {
+          updateModalEl.removeEventListener('hidden.bs.modal', onSystemClose);
+          const erenCurrentVersion = erenUpdateModalEl.dataset.version || '';
+          new bootstrap.Modal(erenUpdateModalEl).show();
+          try { sessionStorage.setItem('cfErenUpdateShown', erenCurrentVersion); } catch (e) {}
+        });
+      }
+    } else if (needShowEren) {
+      const erenCurrentVersion = erenUpdateModalEl.dataset.version || '';
+      new bootstrap.Modal(erenUpdateModalEl).show();
+      try { sessionStorage.setItem('cfErenUpdateShown', erenCurrentVersion); } catch (e) {}
     }
+  } else if (needShowEren) {
+    const erenCurrentVersion = erenUpdateModalEl.dataset.version || '';
+    new bootstrap.Modal(erenUpdateModalEl).show();
+    try { sessionStorage.setItem('cfErenUpdateShown', erenCurrentVersion); } catch (e) {}
   }
 });
 
