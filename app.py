@@ -162,7 +162,7 @@ def inject_avatar():
             return user.avatar
         return url_for("static", filename="uploads/" + user.avatar)
 
-    return {"avatar_src": avatar_src, "app_version": APP_VERSION, "eren_version": EREN_VERSION, "latest_update": CHANGELOG[0]}
+    return {"avatar_src": avatar_src, "app_version": APP_VERSION, "eren_version": EREN_VERSION, "latest_update": CHANGELOG[0], "latest_eren_update": EREN_CHANGELOG[0]}
 
 
 @app.context_processor
