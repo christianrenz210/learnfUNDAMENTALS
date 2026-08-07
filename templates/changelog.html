@@ -5,50 +5,100 @@
 {% block content %}
 <div class="container py-4">
   <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-12">
       <h2 class="mb-1 fade-up">
         <i class="bi bi-journal-code text-primary me-2"></i>Updates & Version History
       </h2>
       <p class="text-muted mb-4">
-        Everything new, changed, and fixed in CodeFundamentals — current version
-        <span class="badge bg-primary-subtle text-primary-emphasis"><i class="bi bi-tag me-1"></i>v{{ app_version }}</span>
+        Everything new, changed, and fixed in CodeFundamentals
       </p>
 
-      <div class="changelog-timeline">
-        {% for entry in changelog %}
-        <div class="changelog-item fade-up {% if loop.first %}changelog-item-current{% endif %}">
-          <div class="changelog-marker">
-            {% if entry.type == "fix" %}
-              <i class="bi bi-tools"></i>
-            {% elif entry.type == "launch" %}
-              <i class="bi bi-rocket-takeoff"></i>
-            {% elif entry.type == "notice" %}
-              <i class="bi bi-exclamation-triangle"></i>
-            {% else %}
-              <i class="bi bi-stars"></i>
-            {% endif %}
-          </div>
-          <div class="changelog-body">
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-              <span class="badge bg-primary changelog-version">v{{ entry.version }}</span>
-              <span class="badge
-                {% if entry.type == 'fix' %}bg-warning text-dark
-                {% elif entry.type == 'launch' %}bg-success
-                {% elif entry.type == 'notice' %}bg-danger
-                {% else %}bg-info text-dark{% endif %}">
-                {{ entry.type | capitalize }}
-              </span>
-              <span class="changelog-date small text-muted">{{ entry.date }}</span>
+      <div class="row">
+        <div class="col-lg-6 mb-4">
+          <h4 class="mb-3 fade-up">
+            <i class="bi bi-robot text-info me-2"></i>E.R.E.N AI Assistant
+            <span class="badge bg-info-subtle text-info-emphasis ms-2"><i class="bi bi-tag me-1"></i>v{{ eren_version }}</span>
+          </h4>
+          <div class="changelog-timeline">
+            {% for entry in eren_changelog %}
+            <div class="changelog-item fade-up {% if loop.first %}changelog-item-current{% endif %}">
+              <div class="changelog-marker changelog-marker-ai">
+                {% if entry.type == "fix" %}
+                  <i class="bi bi-tools"></i>
+                {% elif entry.type == "launch" %}
+                  <i class="bi bi-rocket-takeoff"></i>
+                {% else %}
+                  <i class="bi bi-stars"></i>
+                {% endif %}
+              </div>
+              <div class="changelog-body">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                  <span class="badge bg-info changelog-version">ERE{{ entry.version }}</span>
+                  <span class="badge
+                    {% if entry.type == 'fix' %}bg-warning text-dark
+                    {% elif entry.type == 'launch' %}bg-success
+                    {% else %}bg-info text-dark{% endif %}">
+                    {{ entry.type | capitalize }}
+                  </span>
+                  <span class="changelog-date small text-muted">{{ entry.date }}</span>
+                </div>
+                <h5 class="mb-2">{{ entry.title }}</h5>
+                <ul class="changelog-list mb-0">
+                  {% for change in entry.changes %}
+                  <li>{{ change }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
             </div>
-            <h5 class="mb-2">{{ entry.title }}</h5>
-            <ul class="changelog-list mb-0">
-              {% for change in entry.changes %}
-              <li>{{ change }}</li>
-              {% endfor %}
-            </ul>
+            {% endfor %}
           </div>
         </div>
-        {% endfor %}
+
+        <div class="col-lg-6 mb-4">
+          <h4 class="mb-3 fade-up">
+            <i class="bi bi-code-slash text-primary me-2"></i>System Updates
+            <span class="badge bg-primary-subtle text-primary-emphasis ms-2"><i class="bi bi-tag me-1"></i>v{{ app_version }}</span>
+          </h4>
+          <div class="changelog-timeline">
+            {% for entry in changelog %}
+            <div class="changelog-item fade-up {% if loop.first %}changelog-item-current{% endif %}">
+              <div class="changelog-marker">
+                {% if entry.type == "fix" %}
+                  <i class="bi bi-tools"></i>
+                {% elif entry.type == "launch" %}
+                  <i class="bi bi-rocket-takeoff"></i>
+                {% elif entry.type == "notice" %}
+                  <i class="bi bi-exclamation-triangle"></i>
+                {% elif entry.type == "security" %}
+                  <i class="bi bi-shield-lock"></i>
+                {% else %}
+                  <i class="bi bi-stars"></i>
+                {% endif %}
+              </div>
+              <div class="changelog-body">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                  <span class="badge bg-primary changelog-version">v{{ entry.version }}</span>
+                  <span class="badge
+                    {% if entry.type == 'fix' %}bg-warning text-dark
+                    {% elif entry.type == 'launch' %}bg-success
+                    {% elif entry.type == 'notice' %}bg-danger
+                    {% elif entry.type == 'security' %}bg-dark
+                    {% else %}bg-info text-dark{% endif %}">
+                    {{ entry.type | capitalize }}
+                  </span>
+                  <span class="changelog-date small text-muted">{{ entry.date }}</span>
+                </div>
+                <h5 class="mb-2">{{ entry.title }}</h5>
+                <ul class="changelog-list mb-0">
+                  {% for change in entry.changes %}
+                  <li>{{ change }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     </div>
   </div>

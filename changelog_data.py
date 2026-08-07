@@ -1,6 +1,6 @@
-CHANGELOG = [
+EREN_CHANGELOG = [
     {
-        "version": "1.63",
+        "version": "2.2",
         "date": "2026-08-07",
         "type": "feature",
         "title": "E.R.E.N Can Now See Images",
@@ -11,7 +11,7 @@ CHANGELOG = [
         ],
     },
     {
-        "version": "1.62",
+        "version": "2.1",
         "date": "2026-08-07",
         "type": "fix",
         "title": "Mobile Fix: E.R.E.N Fullscreen Sidebar & Keyboard",
@@ -21,16 +21,53 @@ CHANGELOG = [
         ],
     },
     {
+        "version": "2.0",
+        "date": "2026-08-07",
+        "type": "feature",
+        "title": "YouTube Summaries & Slide Downloads",
+        "changes": [
+            "E.R.E.N can now summarize YouTube videos - just paste a link and get a beginner-friendly summary (English or Filipino) with headers and bullet points",
+            "YouTube summaries download as a .txt file instead of a PowerPoint, so it is easy to save and submit",
+            "E.R.E.N now shows slide outlines and answers with a clean layout - headings, bullet points, and numbered lists are rendered nicely",
+            "Added a Download PPT button under presentation-style replies so you can export the outline as a real .pptx file",
+            "Every code example now comes with its Sample Output, shown in the chat and included in the PPT",
+        ],
+    },
+    {
+        "version": "1.1",
+        "date": "2026-08-06",
+        "type": "fix",
+        "title": "E.R.E.N Assistant Wrongly Refusing Questions Fixed",
+        "changes": [
+            "Fixed a bug that made the AI assistant reply 'looks like a quiz question' to any question it could not answer directly",
+            "E.R.E.N now answers freely again (including in Tagalog) and falls back to the built-in rules only when the AI service is unavailable",
+        ],
+    },
+    {
+        "version": "1.0",
+        "date": "2026-08-04",
+        "type": "launch",
+        "title": "E.R.E.N AI Assistant Launch",
+        "changes": [
+            "Integrated the Google Gemini API into the E.R.E.N assistant with a rule-engine fallback",
+            "Added full-page /aiassist view with history and new-chat buttons",
+            "Added conversation history persisted in localStorage",
+            "Added general knowledge, runnable code blocks, and textarea input",
+            "Replies in English and Tagalog only",
+        ],
+    },
+]
+
+CHANGELOG = [
+    {
         "version": "1.61",
         "date": "2026-08-07",
         "type": "feature",
-        "title": "Angular Lesson, Editable Activity, Admin Coins & AI YouTube Summaries",
+        "title": "Angular Lesson, Editable Activity & Admin Coins",
         "changes": [
             "New lesson: Angular (Advanced Fundamentals) - watch the official 'Angular: An Origin Story' documentary, with key points, an interactive TypeScript component example, and a quiz",
             "Activities are now answered online: type your Name, Section, and essay answers right on the lesson page, then Download - a neatly formatted DOCX is generated with your answers indented under every question, ready to submit to Google Classroom",
             "Admins can now view and set the coin balance of any user (including their own account) directly from the Users page, with every change recorded in the Activity Log",
-            "E.R.E.N can now summarize YouTube videos - just paste a link and get a beginner-friendly summary (English or Filipino) with headers and bullet points",
-            "YouTube summaries download as a .txt file instead of a PowerPoint, so it is easy to save and submit",
             "Fixed answer indentation and formatting (Times New Roman, spacing) in generated activity documents",
         ],
     },
@@ -99,31 +136,6 @@ CHANGELOG = [
             "Each lab is a safe browser simulation - no real SQL is executed - with objectives, clickable payloads, a live query console, and a Final Challenge with hints",
             "Each lab still earns 2 leaderboard points and is tracked per lesson in the admin panel",
             "The lesson count grew from 26 to 34, and the SQL Injection section is now fully complete",
-        ],
-    },
-    {
-        "version": "1.55",
-        "date": "2026-08-06",
-        "type": "feature",
-        "title": "Slide Layouts & Downloadable PowerPoint from E.R.E.N",
-        "changes": [
-            "E.R.E.N now shows slide outlines and answers with a clean layout - headings, bullet points, and numbered lists are rendered nicely (no more raw ## or ** symbols)",
-            "Added a Download PPT button under presentation-style replies so you can export the outline as a real .pptx file",
-            "The exported PowerPoint is cleanly designed with a title bar, bullet points, and highlighted code boxes",
-            "Every code example now comes with its Sample Output, shown in the chat and included in the PPT inside its own green output box",
-            "The PPT file is named after the topic (for example, Introduction-to-C-Programming.pptx)",
-            "Fixed long presentations being cut off mid-answer so slides always come out complete",
-            "E.R.E.N was taught a consistent slide format, so every requested presentation becomes slides that you can download instantly",
-        ],
-    },
-    {
-        "version": "1.54",
-        "date": "2026-08-06",
-        "type": "fix",
-        "title": "E.R.E.N Assistant Wrongly Refusing Questions Fixed",
-        "changes": [
-            "Fixed a bug that made the AI assistant reply 'looks like a quiz question' to any question it could not answer directly",
-            "E.R.E.N now answers freely again (including in Tagalog) and falls back to the built-in rules only when the AI service is unavailable",
         ],
     },
     {
@@ -313,29 +325,6 @@ CHANGELOG = [
             "Added admin online/offline tracking",
             "Added admin user progress management",
             "Added auto-migration for the last_seen column on startup",
-        ],
-    },
-    {
-        "version": "1.36",
-        "date": "2026-08-04",
-        "type": "feature",
-        "title": "E.R.E.N AI Assistant Enhancements",
-        "changes": [
-            "Added full-page /aiassist view with history and new-chat buttons",
-            "Added conversation history persisted in localStorage",
-            "Added general knowledge, runnable code blocks, and textarea input",
-            "Replies in English and Tagalog only",
-        ],
-    },
-    {
-        "version": "1.35",
-        "date": "2026-08-04",
-        "type": "feature",
-        "title": "Google Gemini Integration",
-        "changes": [
-            "Integrated the Google Gemini API into the E.R.E.N assistant with a rule-engine fallback",
-            "Load GEMINI_API_KEY from .env and read it at request time",
-            "Default to gemini-3.5-flash-lite model",
         ],
     },
     {

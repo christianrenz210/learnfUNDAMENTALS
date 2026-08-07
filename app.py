@@ -57,7 +57,7 @@ from sqlalchemy import text as sa_text
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from lessons_data import LESSONS, LONG_QUIZZES
-from changelog_data import CHANGELOG
+from changelog_data import CHANGELOG, EREN_CHANGELOG
 from labs_data import LABS
 SECTION_ORDER = ["Fundamentals", "Advanced Fundamentals", "Advanced Database System", "SQL Injection"]
 SECTION_LESSON_MINUTES = {"Fundamentals": 40, "Advanced Database System": 45}
@@ -715,7 +715,7 @@ def index():
 
 @app.route("/changelog")
 def changelog():
-    return render_template("changelog.html", changelog=CHANGELOG)
+    return render_template("changelog.html", changelog=CHANGELOG, eren_changelog=EREN_CHANGELOG, eren_version=EREN_VERSION)
 
 
 @app.route("/faq")

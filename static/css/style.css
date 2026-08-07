@@ -1997,6 +1997,17 @@ body {
   animation: changelogPulse 2s ease-in-out infinite;
 }
 
+.changelog-marker-ai {
+  background: var(--bs-info);
+  box-shadow: 0 0 0 4px var(--cf-bg), 0 0 0 6px var(--bs-info);
+}
+
+.changelog-item-current .changelog-marker-ai {
+  background: var(--bs-info);
+  box-shadow: 0 0 0 4px var(--cf-bg), 0 0 0 6px var(--bs-info);
+  animation: changelogPulse 2s ease-in-out infinite;
+}
+
 @keyframes changelogPulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.12); }
