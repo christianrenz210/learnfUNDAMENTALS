@@ -74,11 +74,21 @@
       </div>
 
       <form id="assistForm" class="assist-form">
-        <textarea id="assistInput" class="form-control" rows="1" maxlength="500"
-                  placeholder="Message E.R.E.N... (paste a YouTube link to get a summary)" autocomplete="off"></textarea>
-        <button type="submit" class="btn btn-primary" aria-label="Send">
-          <i class="bi bi-send"></i>
-        </button>
+        <input type="file" id="assistImageInput" accept="image/png,image/jpeg,image/webp,image/gif" class="d-none">
+        <div id="assistImagePreview" class="assist-img-preview d-none">
+          <img id="assistImageThumb" alt="Attached image">
+          <button type="button" id="assistImageClear" class="assist-img-clear" aria-label="Remove image">&times;</button>
+        </div>
+        <div class="assist-input-row">
+          <button type="button" id="assistImageBtn" class="assist-img-btn" aria-label="Attach image" title="Attach an image">
+            <i class="bi bi-image"></i>
+          </button>
+          <textarea id="assistInput" class="form-control" rows="1" maxlength="500"
+                    placeholder="Message E.R.E.N... (paste a YouTube link to get a summary)" autocomplete="off"></textarea>
+          <button type="submit" class="btn btn-primary" aria-label="Send">
+            <i class="bi bi-send"></i>
+          </button>
+        </div>
       </form>
     </div>
   </main>

@@ -149,7 +149,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.62"
+APP_VERSION = "1.63"
 EREN_VERSION = "2.2"
 
 
@@ -1680,7 +1680,7 @@ EREN_SYSTEM_PROMPT = (
 )
 
 
-def gemini_reply(message, history=None):
+def gemini_reply(message, history=None, image_data_url=None):
     api_key = _gemini_api_key()
     if not api_key:
         print("[E.R.E.N] No GEMINI_API_KEY set, using offline rules.", file=sys.stderr)
@@ -1698,13 +1698,24 @@ def gemini_reply(message, history=None):
                 "parts": [{"text": content}],
             }
         )
-    contents.append({"role": "user", "parts": [{"text": message}]})
+    user_parts = [{"text": message}]
+    inline_image = _parse_image_data_url(image_data_url)
+    if inline_image:
+        user_parts.append({
+            "inline_data": {
+                "mime_type": inline_image[0],
+                "data": inline_image[1],
+            }
+        })
+    contents.append({"role": "user", "parts": user_parts})
     cleaned = []
     for entry in contents:
         if cleaned and cleaned[-1]["role"] == entry["role"]:
             cleaned[-1]["parts"][0]["text"] += "\n\n" + entry["parts"][0]["text"]
         else:
             cleaned.append(entry)
+    if image_data_url:
+        cleaned[-1]["parts"] = user_parts
     while cleaned and cleaned[0]["role"] != "user":
         cleaned.pop(0)
     url = (
@@ -2360,36 +2371,91 @@ def extract_youtube_id(text):
 
 
 def fetch_youtube_transcript(video_id, max_chars=120000):
-    try:
-        from youtube_transcript_api import YouTubeTranscriptApi
+    def _clean(parts):
+        text = " ".join(p for p in parts if p)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text[:max_chars] if text else None
 
-        def _part_text(part):
-            if isinstance(part, dict):
-                return part.get("text", "")
-            return getattr(part, "text", "") or ""
-
+    def _try_transcript_api():
         try:
-            api = YouTubeTranscriptApi()
-            fetched = api.fetch(
-                video_id,
-                languages=["en", "en-US", "en-GB", "fil", "tl", "es"],
-            )
-        except Exception:
+            from youtube_transcript_api import YouTubeTranscriptApi
+
+            def _part_text(part):
+                if isinstance(part, dict):
+                    return part.get("text", "")
+                return getattr(part, "text", "") or ""
+
             try:
                 api = YouTubeTranscriptApi()
+                fetched = api.fetch(
+                    video_id,
+                    languages=["en", "en-US", "en-GB", "fil", "tl", "es"],
+                )
+            except Exception:
+                api = YouTubeTranscriptApi()
                 fetched = api.fetch(video_id)
-            except AttributeError:
-                fetched = YouTubeTranscriptApi.get_transcript(video_id)
-        text = " ".join(_part_text(p) for p in fetched)
-        text = re.sub(r"\s+", " ", text).strip()
-        if not text:
+            return _clean([_part_text(p) for p in fetched])
+        except Exception as exc:
+            print(
+                "[E.R.E.N] Transcript API failed for %s: %s" % (video_id, exc),
+                file=sys.stderr,
+            )
             return None
-        return text[:max_chars]
+
+    def _try_ytdlp():
+        try:
+            import yt_dlp
+
+            opts = {
+                "skip_download": True,
+                "writeautomaticsub": True,
+                "subtitleslangs": ["en", "en-US", "en-GB", "fil", "tl", "es", "en-orig"],
+                "subtitlesformat": "vtt",
+                "quiet": True,
+                "no_warnings": True,
+                "noplaylist": True,
+                "socket_timeout": 30,
+            }
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info("https://www.youtube.com/watch?v=" + video_id, download=False)
+            subs = info.get("subtitles") or {}
+            auto = info.get("automatic_captions") or {}
+            for key in ("en", "en-US", "en-GB", "en-orig", "fil", "tl", "es", "en-fx"):
+                for src in (subs, auto):
+                    for fmt in src.get(key) or []:
+                        if fmt.get("url"):
+                            text = _fetch_subtitle_url(fmt["url"])
+                            if text:
+                                return _clean([text])
+        except Exception as exc:
+            print(
+                "[E.R.E.N] yt-dlp transcript failed for %s: %s" % (video_id, exc),
+                file=sys.stderr,
+            )
+        return None
+
+    text = _try_transcript_api()
+    if text:
+        return text
+    return _try_ytdlp()
+
+
+def _fetch_subtitle_url(url, max_chars=120000):
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+        lines = [l.strip() for l in raw.splitlines() if l.strip()]
+        chunks = []
+        for l in lines:
+            if "<" in l and "</" in l:
+                continue
+            if "--> " in l or l.isdigit() or l.lower().startswith(("webvtt", "kind:", "language:", "note:")):
+                continue
+            chunks.append(l)
+        return " ".join(chunks)[:max_chars]
     except Exception as exc:
-        print(
-            "[E.R.E.N] Transcript fetch failed for %s: %s" % (video_id, exc),
-            file=sys.stderr,
-        )
+        print("[E.R.E.N] Subtitle URL fetch failed: %s" % exc, file=sys.stderr)
         return None
 
 
@@ -2458,19 +2524,38 @@ def youtube_summary_reply(video_id, user_message):
     )
 
 
+def _parse_image_data_url(data_url):
+    if not data_url or not isinstance(data_url, str):
+        return None
+    m = re.match(r"^data:image/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=]+)$", data_url)
+    if not m:
+        return None
+    mime, b64 = ("image/" + ("jpeg" if m.group(1) == "jpg" else m.group(1))), m.group(2)
+    if len(b64) > 6 * 1024 * 1024:
+        return None
+    try:
+        base64.b64decode(b64, validate=True)
+    except Exception:
+        return None
+    return mime, b64
+
+
 @app.route("/assistant", methods=["POST"])
 @login_required
 def assistant():
     data = request.get_json(silent=True) or {}
     message = (data.get("message") or "").strip()
-    if not message:
-        return jsonify({"ok": False, "error": "Please type a message."}), 400
+    image = (data.get("image") or "").strip()
+    if not message and not image:
+        return jsonify({"ok": False, "error": "Please type a message or attach an image."}), 400
     video_id = extract_youtube_id(message)
-    if video_id:
+    if video_id and not image:
         return jsonify({"ok": True, "reply": youtube_summary_reply(video_id, message), "yt_summary": True})
     history = data.get("history") if isinstance(data.get("history"), list) else None
-    reply = gemini_reply(message, history)
+    reply = gemini_reply(message, history, image)
     if reply is None:
+        if image and (_gemini_api_key()):
+            return jsonify({"ok": False, "error": "The image could not be read. Please try a smaller JPEG or PNG."}), 400
         reply = assistant_reply(message)
     return jsonify({"ok": True, "reply": reply})
 

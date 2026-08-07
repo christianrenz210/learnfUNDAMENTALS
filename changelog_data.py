@@ -1,5 +1,16 @@
 CHANGELOG = [
     {
+        "version": "1.63",
+        "date": "2026-08-07",
+        "type": "feature",
+        "title": "E.R.E.N Can Now See Images",
+        "changes": [
+            "You can now attach an image (PNG, JPEG, WEBP, or GIF) to your chat with E.R.E.N - tap the image icon next to the message box",
+            "E.R.E.N analyzes the image (with or without a text question) and explains what it sees",
+            "The image shows as a thumbnail in the chat and is kept in your conversation history",
+        ],
+    },
+    {
         "version": "1.62",
         "date": "2026-08-07",
         "type": "fix",

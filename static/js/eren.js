@@ -468,7 +468,14 @@
     bubble.className = 'assist-bubble ' + (isUser ? 'assist-user' : 'assist-bot');
     msgsEl.appendChild(bubble);
     if (isUser) {
-      bubble.textContent = content;
+      if (opts && opts.image) {
+        var img = document.createElement('img');
+        img.className = 'assist-user-img';
+        img.src = opts.image;
+        img.alt = 'Attached image';
+        bubble.appendChild(img);
+      }
+      if (content) bubble.appendChild(document.createTextNode(content));
     } else {
       renderBotContent(bubble, content, opts);
     }
@@ -636,11 +643,74 @@
     document.body.style.overflow = '';
   }
 
+  var pendingImage = null;
+  var imageInputEl = document.getElementById('assistImageInput');
+  var imageBtn = document.getElementById('assistImageBtn');
+  var imagePreview = document.getElementById('assistImagePreview');
+  var imageThumb = document.getElementById('assistImageThumb');
+  var imageClear = document.getElementById('assistImageClear');
+
+  function clearPendingImage() {
+    pendingImage = null;
+    if (imagePreview) imagePreview.classList.add('d-none');
+    if (imageInputEl) imageInputEl.value = '';
+  }
+
+  function setPendingImage(dataUrl) {
+    pendingImage = dataUrl;
+    if (imagePreview && imageThumb) {
+      imageThumb.src = dataUrl;
+      imagePreview.classList.remove('d-none');
+    }
+  }
+
+  function handleImageFile(file) {
+    if (!file || !/^image\/(png|jpe?g|webp|gif)$/i.test(file.type)) {
+      alert('Please attach a PNG, JPEG, WEBP, or GIF image.');
+      return;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+      alert('Image is too large. Please use one under 6 MB.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () { downscaleImage(reader.result, setPendingImage); };
+    reader.onerror = function () { alert('Could not read that image.'); };
+    reader.readAsDataURL(file);
+  }
+
+  function downscaleImage(dataUrl, done) {
+    var img = new Image();
+    img.onload = function () {
+      var MAX = 1400;
+      var scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      if (scale >= 1) { done(dataUrl); return; }
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      done(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = function () { done(dataUrl); };
+    img.src = dataUrl;
+  }
+
+  if (imageBtn && imageInputEl) {
+    imageBtn.addEventListener('click', function () { imageInputEl.click(); });
+    imageInputEl.addEventListener('change', function () { handleImageFile(imageInputEl.files && imageInputEl.files[0]); });
+  }
+  if (imageClear) imageClear.addEventListener('click', clearPendingImage);
+
   function sendMessage(message) {
-    pushMsg('user', message);
+    var image = pendingImage;
+    clearPendingImage();
+    pushMsg('user', message, image ? { image: image } : null);
     renderHistoryList();
     if (inputEl) inputEl.value = '';
-    addBubble(message, true);
+
+    var userExtra = image ? { image: image } : null;
+    addBubble(message, true, userExtra);
 
     var started = Date.now();
     var convo = activeConvo();
@@ -651,7 +721,7 @@
     fetch(urls.assistant, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: message, history: history })
+      body: JSON.stringify({ message: message, history: history, image: image })
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {

@@ -524,7 +524,7 @@ body {
 
 .assist-form {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
   background: #fff;
@@ -533,13 +533,84 @@ body {
 .assist-form .form-control:focus {
   box-shadow: 0 0 0 0.2rem rgba(86, 182, 198, 0.25);
 }
+.assist-form .assist-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+}
 .assist-form textarea.form-control {
   resize: vertical;
   min-height: 2.4rem;
   max-height: 8rem;
+  flex: 1 1 auto;
 }
 .assist-form .btn {
   flex-shrink: 0;
+}
+
+.assist-img-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #64748b;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.assist-img-btn:hover {
+  background: #f1f5f9;
+  color: var(--brand-primary);
+}
+
+.assist-img-preview {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  max-width: 220px;
+}
+.assist-img-preview img {
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: block;
+}
+.assist-img-clear {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.assist-img-clear:hover {
+  background: #dc2626;
+}
+
+.assist-user-img {
+  max-width: 260px;
+  max-height: 220px;
+  border-radius: 0.6rem;
+  margin-bottom: 0.3rem;
+  display: block;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .assist-reply {
