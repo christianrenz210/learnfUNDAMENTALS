@@ -343,6 +343,7 @@
       <div class="modal-body">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
           <span class="badge bg-primary"><i class="bi bi-tag me-1"></i>v{{ latest_update.version }}</span>
+          <span class="badge bg-info text-dark"><i class="bi bi-robot me-1"></i>ERE{{ eren_version }}</span>
           <span class="badge
             {% if latest_update.type == 'fix' %}bg-warning text-dark
             {% elif latest_update.type == 'launch' %}bg-success
