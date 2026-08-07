@@ -1055,7 +1055,7 @@ LESSONS = [
         "id": 36,
         "minutes": 60,
         "title": "Angular",
-        "icon": "bi-angular",
+        "icon": "bi-bezier2",
         "description": "Angular is one of the world's most popular frameworks for building large-scale web applications. Watch the official origin story documentary to learn how AngularJS was born inside Google, how a complete rewrite divided the community, and how the modern Angular framework rose again with TypeScript, components, and Ivy. After the video, download the essay activity and answer the questions.",
         "videos": {
             "general": [
