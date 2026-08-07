@@ -1,5 +1,19 @@
 CHANGELOG = [
     {
+        "version": "1.61",
+        "date": "2026-08-07",
+        "type": "feature",
+        "title": "Angular Lesson, Editable Activity, Admin Coins & AI YouTube Summaries",
+        "changes": [
+            "New lesson: Angular (Advanced Fundamentals) - watch the official 'Angular: An Origin Story' documentary, with key points, an interactive TypeScript component example, and a quiz",
+            "Activities are now answered online: type your Name, Section, and essay answers right on the lesson page, then Download - a neatly formatted DOCX is generated with your answers indented under every question, ready to submit to Google Classroom",
+            "Admins can now view and set the coin balance of any user (including their own account) directly from the Users page, with every change recorded in the Activity Log",
+            "E.R.E.N can now summarize YouTube videos - just paste a link and get a beginner-friendly summary (English or Filipino) with headers and bullet points",
+            "YouTube summaries download as a .txt file instead of a PowerPoint, so it is easy to save and submit",
+            "Fixed answer indentation and formatting (Times New Roman, spacing) in generated activity documents",
+        ],
+    },
+    {
         "version": "1.60",
         "date": "2026-08-06",
         "type": "feature",
