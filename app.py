@@ -1611,8 +1611,9 @@ EREN_SYSTEM_PROMPT = (
     "same language. If the student writes in any other language (for example Spanish, French, "
     "German, or Cebuano), still answer in English or Filipino — default to English. Be concise, "
     "patient, and beginner-friendly. Answer questions about the course, its lessons, quizzes, "
-    "leaderboard, and coding concepts. If a question is off-topic, answer briefly and gently steer "
-    "back to programming.\n\n"
+    "leaderboard, and coding concepts. Never refuse to answer — you can answer questions on any "
+    "topic, even off-topic ones like general knowledge or personal help, and if a question is "
+    "about the course, use it as a chance to teach.\n\n"
     "Course sections and lessons:\n"
     "- Fundamentals: Introduction to Programming, Programming History, Variables and Data Types, "
     "Input and Output, Operators, Logical Operators, Conditionals (if/else), Loops, Functions, "
@@ -2350,111 +2351,6 @@ def assistant_reply(message):
     )
 
 
-_QUIZ_BLOCK_ITEMS = []
-for _lesson in LESSONS:
-    _QUIZ_BLOCK_ITEMS.extend(_lesson.get("quiz", []))
-for _questions in LONG_QUIZZES.values():
-    _QUIZ_BLOCK_ITEMS.extend(_questions)
-
-
-def _norm_text(text):
-    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", (text or "").lower())).strip()
-
-
-QUIZ_Q_TO_OPTIONS = {}
-for _q in _QUIZ_BLOCK_ITEMS:
-    _qn = _norm_text(_q.get("question", ""))
-    if _qn:
-        _opts = {_norm_text(o) for o in _q.get("options", []) if o}
-        if _opts:
-            QUIZ_Q_TO_OPTIONS.setdefault(_qn, set()).update(_opts)
-QUIZ_QUESTIONS = set(QUIZ_Q_TO_OPTIONS)
-QUIZ_OPTIONS = {o for opts in QUIZ_Q_TO_OPTIONS.values() for o in opts}
-
-QUIZ_QUESTION_LESSON = {}
-for _l in LESSONS:
-    for _qq in _l.get("quiz", []):
-        _qnorm = _norm_text(_qq.get("question", ""))
-        if _qnorm:
-            QUIZ_QUESTION_LESSON.setdefault(_qnorm, _l["id"])
-for _questions in LONG_QUIZZES.values():
-    for _qq in _questions:
-        _qnorm = _norm_text(_qq.get("question", ""))
-        if _qnorm:
-            QUIZ_QUESTION_LESSON.setdefault(_qnorm, None)
-del _QUIZ_BLOCK_ITEMS, _q, _qn, _opts, _l, _qq, _qnorm, _questions
-
-QUIZ_ANSWER_INTENT = [
-    "answer",
-    "answers",
-    "sagot",
-    "sagutan",
-    "sagutin",
-    "pasagot",
-    "tamang sagot",
-    "which is correct",
-    "correct answer",
-    "right answer",
-    "right one",
-    "correct one",
-    "correct choice",
-    "what is the answer",
-    "what's the answer",
-    "give me the answer",
-    "cheat",
-    "leak",
-    "leaks",
-]
-
-QUIZ_REFUSAL = (
-    "I can't answer that one — it looks like a quiz question, and getting the "
-    "answer from me would just be cheating yourself! Review the lesson and its "
-    "key points, then try the quiz on your own. If you want to actually "
-    "understand the topic (not just get the answer), rephrase your question and "
-    "I will gladly explain it to you."
-)
-
-
-def _has_quiz_answer_intent(norm):
-    return any(k in norm for k in QUIZ_ANSWER_INTENT)
-
-
-def _norm_has_phrase(norm, phrase):
-    words = norm.split()
-    pwords = phrase.split()
-    if not pwords:
-        return False
-    if len(pwords) == 1:
-        return pwords[0] in words
-    return any(words[i:i + len(pwords)] == pwords for i in range(len(words) - len(pwords) + 1))
-
-
-def is_quiz_question_request(message):
-    norm = _norm_text(message)
-    if not norm:
-        return False
-    matched_questions = [q for q in QUIZ_QUESTIONS if q in norm]
-    for q in matched_questions:
-        if any(_norm_has_phrase(norm, o) for o in QUIZ_Q_TO_OPTIONS[q]):
-            return True
-    if not _has_quiz_answer_intent(norm):
-        return False
-    matched_options = [o for o in QUIZ_OPTIONS if _norm_has_phrase(norm, o)]
-    return len(matched_options) >= 2
-
-
-def lesson_for_quiz_question(message):
-    norm = _norm_text(message)
-    if not norm:
-        return False, None
-    for q, lesson_id in QUIZ_QUESTION_LESSON.items():
-        if not q:
-            continue
-        if q in norm or (len(norm) >= 15 and norm in q):
-            return True, lesson_id
-    return False, None
-
-
 def extract_youtube_id(text):
     m = re.search(
         r"(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|embed/|shorts/|live/|v/)|youtu\.be/)([A-Za-z0-9_-]{11})",
@@ -2531,25 +2427,6 @@ def gemini_summarize(prompt):
             file=sys.stderr,
         )
         return None
-    if lesson_id is None:
-        return (
-            "I won't give you the answer directly — you've got this! That looks like it comes "
-            "from a Long Quiz. Review the section lessons and their key points, then use the "
-            "answer review after the Long Quiz to see what you should study."
-        )
-    lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
-    if not lesson:
-        return QUIZ_REFUSAL
-    section_lessons = [
-        l for l in LESSONS
-        if l.get("section", "Fundamentals") == lesson.get("section", "Fundamentals")
-    ]
-    num = next(i + 1 for i, l in enumerate(section_lessons) if l["id"] == lesson_id)
-    return (
-        "I won't give you the answer directly — you've got this! That question comes from "
-        f"Lesson {num} - {lesson['title']} in the {lesson.get('section', 'Fundamentals')} "
-        "section. Review that lesson and its key points, and the answer should click."
-    )
 
 
 def youtube_summary_reply(video_id, user_message):
@@ -2591,14 +2468,6 @@ def assistant():
     video_id = extract_youtube_id(message)
     if video_id:
         return jsonify({"ok": True, "reply": youtube_summary_reply(video_id, message), "yt_summary": True})
-    if is_quiz_question_request(message):
-        return jsonify({"ok": True, "reply": QUIZ_REFUSAL})
-    quiz_hit, quiz_lesson_id = lesson_for_quiz_question(message)
-    if quiz_hit:
-        reply = assistant_reply(message)
-        if "I am not sure about that one yet" in reply or "outside my built-in course notes" in reply:
-            reply = lesson_review_nudge(quiz_lesson_id)
-        return jsonify({"ok": True, "reply": reply})
     history = data.get("history") if isinstance(data.get("history"), list) else None
     reply = gemini_reply(message, history)
     if reply is None:
