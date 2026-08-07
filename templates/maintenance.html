@@ -36,7 +36,7 @@
       <div class="maintenance-info">
         <div class="maintenance-info-item mb-2">
           <i class="bi bi-clock me-2"></i>
-          <span>Estimated back online: 8:00 - 8:30 PM</span>
+          <span>Estimated back online: {{ maintenance_eta or '8:00 - 8:30 PM' }}</span>
         </div>
         <div class="maintenance-info-item mb-2">
           <i class="bi bi-envelope me-2"></i>
@@ -58,6 +58,11 @@
           <i class="bi bi-person-plus me-2"></i>Register
         </button>
       </div>
+      <div class="mt-3">
+        <button type="button" class="btn maintenance-btn-secondary w-100" id="adminConsoleBtn" title="Open maintenance console">
+          <i class="bi bi-terminal me-2"></i>Admin Console
+        </button>
+      </div>
     </div>
   </div>
 
@@ -72,12 +77,72 @@
         </div>
         <div class="modal-body pt-3">
           <p class="mb-0 fs-6">
-            The latest issue has been fixed earlier. We're currently finishing up final checks.
-            The site should be fully back online by around <strong>8:00 PM</strong> tonight.
+            {{ maintenance_message or "The latest issue has been fixed earlier. We're currently finishing up final checks. The site should be fully back online by around 8:00 PM tonight." }}
           </p>
         </div>
         <div class="modal-footer border-0 pt-0">
           <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="consoleModal" tabindex="-1" aria-labelledby="consoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="consoleModalLabel">
+            <i class="bi bi-shield-lock text-primary me-2"></i>Maintenance Admin Console
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="consoleLogin">
+            <p class="text-muted small mb-3">Enter your admin credentials to run system diagnostics.</p>
+            <div class="mb-3">
+              <label for="consoleUser" class="form-label">Username or Email</label>
+              <input type="text" class="form-control" id="consoleUser" autocomplete="username" placeholder="Enter your admin username or email">
+            </div>
+            <div class="mb-3">
+              <label for="consolePass" class="form-label">Password</label>
+              <input type="password" class="form-control" id="consolePass" autocomplete="current-password" placeholder="Enter your password">
+            </div>
+            <div id="consoleError" class="alert alert-danger d-none py-2 small"></div>
+            <button type="button" class="btn btn-primary" id="consoleVerifyBtn">
+              <span class="spinner-border spinner-border-sm d-none me-1" id="consoleSpin"></span>
+              <i class="bi bi-key me-1" id="consoleKeyIcon"></i>Verify & Run Diagnostics
+            </button>
+          </div>
+          <div id="consoleResults" class="d-none">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="small text-muted" id="consoleOperator"></span>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="consoleRefreshBtn">
+                <i class="bi bi-arrow-clockwise me-1"></i>Re-run Checks
+              </button>
+            </div>
+            <div id="consoleSummary" class="mb-3"></div>
+            <div id="consoleIssues" class="mb-3"></div>
+            <h6 class="fw-bold">
+              <i class="bi bi-database me-1"></i>Database Tables
+            </h6>
+            <div id="consoleTables" class="table-responsive mb-3"></div>
+            <h6 class="fw-bold">
+              <i class="bi bi-activity me-1"></i>Recent Activity
+            </h6>
+            <div id="consoleLogs" class="table-responsive mb-3"></div>
+            <hr>
+            <div class="alert alert-warning small mb-3">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              Turning maintenance OFF restores the live site immediately. You will then be able to log back in normally.
+            </div>
+            <button type="button" class="btn btn-danger" id="consoleRestoreBtn">
+              <i class="bi bi-check2-circle me-1"></i>Turn OFF Maintenance / Restore Site
+            </button>
+            <span id="consoleRestoreStatus" class="small ms-2"></span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
@@ -113,6 +178,216 @@
         });
       });
     });
+
+    (function () {
+      var STATUS_URL = {{ url_for('api_maintenance_status') | tojson }};
+      var VERIFY_URL = {{ url_for('api_maintenance_verify_admin') | tojson }};
+      var DIAG_URL = {{ url_for('api_maintenance_diagnostics') | tojson }};
+      var RESTORE_URL = {{ url_for('api_maintenance_restore') | tojson }};
+      var ROOT_URL = {{ url_for('index') | tojson }};
+      var consoleToken = null;
+      var consoleModal = null;
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      function setError(msg) {
+        var el = document.getElementById('consoleError');
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.remove('d-none');
+      }
+
+      function showLoginForm() {
+        document.getElementById('consoleLogin').classList.remove('d-none');
+        document.getElementById('consoleResults').classList.add('d-none');
+      }
+
+      function verifyAdmin() {
+        var user = document.getElementById('consoleUser').value.trim();
+        var pass = document.getElementById('consolePass').value;
+        if (!user || !pass) { setError('Enter your admin username and password.'); return; }
+        setError('');
+        var spin = document.getElementById('consoleSpin');
+        var icon = document.getElementById('consoleKeyIcon');
+        var btn = document.getElementById('consoleVerifyBtn');
+        spin.classList.remove('d-none');
+        icon.classList.add('d-none');
+        btn.disabled = true;
+        fetch(VERIFY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, password: pass })
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+          if (!res.ok || !res.data.token) { throw new Error(res.data.error || 'Verification failed.'); }
+          consoleToken = res.data.token;
+          try { sessionStorage.setItem('cfMaintToken', consoleToken); } catch (e) {}
+          showResults();
+        })
+        .catch(function (err) {
+          setError(err.message);
+        })
+        .then(function () {
+          spin.classList.add('d-none');
+          icon.classList.remove('d-none');
+          btn.disabled = false;
+        });
+      }
+
+      function showResults() {
+        document.getElementById('consoleLogin').classList.add('d-none');
+        document.getElementById('consoleResults').classList.remove('d-none');
+        loadDiagnostics();
+      }
+
+      function badgeHtml(ok) {
+        return ok
+          ? '<span class="badge bg-success">OK</span>'
+          : '<span class="badge bg-danger">FAIL</span>';
+      }
+
+      function loadDiagnostics() {
+        if (!consoleToken) return;
+        fetch(DIAG_URL + '?token=' + encodeURIComponent(consoleToken), { cache: 'no-store' })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+          if (res.ok && res.data.checks) {
+            renderDiagnostics(res.data);
+          } else {
+            consoleToken = null;
+            try { sessionStorage.removeItem('cfMaintToken'); } catch (e) {}
+            setError(res.data.error || 'Diagnostics unavailable.');
+            showLoginForm();
+          }
+        })
+        .catch(function () {
+          setError('Failed to run diagnostics.');
+          showLoginForm();
+        });
+      }
+
+      function renderDiagnostics(d) {
+        var summary = document.getElementById('consoleSummary');
+        var issues = document.getElementById('consoleIssues');
+        var tables = document.getElementById('consoleTables');
+        var logs = document.getElementById('consoleLogs');
+        var operator = document.getElementById('consoleOperator');
+
+        if (d.operator) {
+          operator.textContent = 'Running as: ' + d.operator.username + (d.operator.is_admin ? ' (admin)' : '');
+        }
+
+        var checks = d.checks || {};
+        var html = '<div class="d-flex flex-wrap gap-2">';
+        html += '<span class="badge bg-primary">DB: ' + (checks.database === 'ok' ? 'Connected' : 'Error') + '</span>';
+        if (checks.users) {
+          html += '<span class="badge bg-secondary">Users: ' + checks.users.total + '</span>';
+          html += '<span class="badge bg-info">Online now: ' + checks.users.online_5min + '</span>';
+        }
+        if (checks.failed_logins_24h != null) {
+          html += '<span class="badge ' + (checks.failed_logins_24h ? 'bg-warning text-dark' : 'bg-success') + '">Failed logins 24h: ' + checks.failed_logins_24h + '</span>';
+        }
+        if (checks.unread_feedback != null) {
+          html += '<span class="badge bg-secondary">Unread feedback: ' + checks.unread_feedback + '</span>';
+        }
+        html += '<span class="badge bg-light text-dark">Python ' + (d.system ? d.system.python : '?') + '</span>';
+        html += '<span class="badge bg-light text-dark">DB engine: ' + (d.system ? d.system.db_driver : '?') + '</span>';
+        html += '</div>';
+        summary.innerHTML = html;
+
+        if (d.issues && d.issues.length) {
+          issues.innerHTML = '<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-octagon me-1"></i><strong>' + d.issues.length + ' issue(s) found:</strong><ul class="mb-0 mt-1">' +
+            d.issues.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul></div>';
+        } else {
+          issues.innerHTML = '<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle me-1"></i>No issues detected.</div>';
+        }
+
+        if (d.tables && d.tables.length) {
+          tables.innerHTML = '<table class="table table-sm table-striped mb-0"><thead><tr><th>Table</th><th class="text-end">Rows</th></tr></thead><tbody>' +
+            d.tables.map(function (t) { return '<tr><td>' + esc(t.table) + '</td><td class="text-end">' + esc(t.rows) + '</td></tr>'; }).join('') +
+            '</tbody></table>';
+        } else {
+          tables.innerHTML = '<p class="text-muted small mb-0">No tables found.</p>';
+        }
+
+        if (d.recent_logs && d.recent_logs.length) {
+          logs.innerHTML = '<table class="table table-sm table-striped mb-0"><thead><tr><th>User</th><th>Action</th><th>When</th></tr></thead><tbody>' +
+            d.recent_logs.map(function (l) {
+              return '<tr><td>' + esc(l.user) + '</td><td>' + esc(l.action) + '</td><td class="small text-muted">' + esc((l.at || '').replace('Z', '') + ' UTC') + '</td></tr>';
+            }).join('') + '</tbody></table>';
+        } else {
+          logs.innerHTML = '<p class="text-muted small mb-0">No recent activity.</p>';
+        }
+      }
+
+      function restoreSite() {
+        if (!consoleToken) return;
+        if (!window.confirm('Turn OFF maintenance and restore the live site now?')) return;
+        var status = document.getElementById('consoleRestoreStatus');
+        var btn = document.getElementById('consoleRestoreBtn');
+        btn.disabled = true;
+        status.textContent = 'Restoring...';
+        fetch(RESTORE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: consoleToken })
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { throw new Error(res.data.error || 'Restore failed.'); }
+          status.textContent = 'Site restored! Redirecting...';
+          setTimeout(function () { window.location.href = ROOT_URL; }, 1200);
+        })
+        .catch(function (err) {
+          status.textContent = 'Error: ' + err.message;
+          btn.disabled = false;
+        });
+      }
+
+      var consoleBtn = document.getElementById('adminConsoleBtn');
+      if (consoleBtn) {
+        consoleBtn.addEventListener('click', function () {
+          document.getElementById('consoleError').classList.add('d-none');
+          var token = null;
+          try { token = sessionStorage.getItem('cfMaintToken'); } catch (e) {}
+          if (token) {
+            consoleToken = token;
+            showResults();
+          } else {
+            showLoginForm();
+          }
+          consoleModal = new bootstrap.Modal(document.getElementById('consoleModal'));
+          consoleModal.show();
+        });
+      }
+
+      var verifyBtn = document.getElementById('consoleVerifyBtn');
+      if (verifyBtn) verifyBtn.addEventListener('click', verifyAdmin);
+      var refreshBtn = document.getElementById('consoleRefreshBtn');
+      if (refreshBtn) refreshBtn.addEventListener('click', loadDiagnostics);
+      var restoreBtn = document.getElementById('consoleRestoreBtn');
+      if (restoreBtn) restoreBtn.addEventListener('click', restoreSite);
+      document.getElementById('consolePass').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') verifyAdmin();
+      });
+
+      (function pollRecovery() {
+        fetch(STATUS_URL, { cache: 'no-store' })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && !d.maintenance) {
+              window.location.href = ROOT_URL;
+            }
+          })
+          .catch(function () {});
+      })();
+      setInterval(pollRecovery, 8000);
+    })();
   </script>
 </body>
 </html>

@@ -55,6 +55,7 @@ from flask_login import (
     logout_user,
 )
 from flask_sqlalchemy import SQLAlchemy
+from itsdangerous import URLSafeTimedSerializer
 from sqlalchemy import text as sa_text
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -315,6 +316,13 @@ class FeedbackLike(db.Model):
     user = db.relationship("User", backref=db.backref("feedback_likes", lazy="dynamic"))
 
 
+class SiteSetting(db.Model):
+    __tablename__ = "site_setting"
+    key = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 def log_activity(user, action, details=""):
     try:
         db.session.add(
@@ -490,25 +498,300 @@ def load_user(user_id):
         return None
 
 
-MAINTENANCE_MODE = os.environ.get("MAINTENANCE_MODE", "0") == "1"
+MAINTENANCE_PUBLIC_PATHS = (
+    "/maintenance",
+    "/static/",
+    "/api/maintenance/status",
+    "/api/maintenance/verify-admin",
+    "/api/maintenance/diagnostics",
+    "/api/maintenance/restore",
+    "/logout",
+)
+
+
+def _maint_setting(key, default=None):
+    try:
+        row = db.session.get(SiteSetting, key)
+        return row.value if row is not None else default
+    except Exception:
+        return default
+
+
+def _set_setting(key, value):
+    row = db.session.get(SiteSetting, key)
+    if row is None:
+        db.session.add(SiteSetting(key=key, value=str(value)))
+    else:
+        row.value = str(value)
+    db.session.commit()
+
+
+def maintenance_enabled():
+    val = _maint_setting("maintenance_mode")
+    if val is None:
+        return os.environ.get("MAINTENANCE_MODE", "0") == "1"
+    return str(val).strip().lower() in ("1", "true", "yes", "on")
+
+
+def maintenance_message():
+    return _maint_setting("maintenance_message", "")
+
+
+def maintenance_eta():
+    return _maint_setting("maintenance_eta", "")
+
+
+_console_serializer = URLSafeTimedSerializer(
+    app.config["SECRET_KEY"], salt="cf-maintenance-console"
+)
+
+
+def _make_console_token(user_id):
+    return _console_serializer.dumps({"uid": user_id})
+
+
+def _verify_console_token(token, max_age=1800):
+    try:
+        data = _console_serializer.loads(token, max_age=max_age)
+        return data.get("uid")
+    except Exception:
+        return None
 
 
 @app.before_request
 def check_maintenance_mode():
-    if MAINTENANCE_MODE:
-        maintenance_paths = {"/maintenance", "/static/"}
+    if maintenance_enabled():
         path = request.path
-        if path.startswith("/static/") or path == "/maintenance":
+        if any(path == p or path.startswith(p) for p in MAINTENANCE_PUBLIC_PATHS):
             return None
-        return render_template("maintenance.html"), 503
+        return render_template(
+            "maintenance.html",
+            maintenance_message=maintenance_message(),
+            maintenance_eta=maintenance_eta(),
+        ), 503
 
 
 @app.after_request
 def add_maintenance_header(response):
-    if MAINTENANCE_MODE:
+    if maintenance_enabled():
         if request.path != "/maintenance" and not request.path.startswith("/static/"):
             response.headers["Retry-After"] = "3600"
     return response
+
+
+@app.route("/maintenance")
+def maintenance_page():
+    if not maintenance_enabled():
+        return redirect(url_for("index"))
+    return render_template(
+        "maintenance.html",
+        maintenance_message=maintenance_message(),
+        maintenance_eta=maintenance_eta(),
+    )
+
+
+@app.route("/api/maintenance/status")
+def api_maintenance_status():
+    return jsonify(
+        {
+            "maintenance": maintenance_enabled(),
+            "message": maintenance_message(),
+            "eta": maintenance_eta(),
+        }
+    )
+
+
+_CONSOLE_ATTEMPT_LIMIT = 8
+_CONSOLE_ATTEMPT_WINDOW_MIN = 15
+_console_attempts = {}
+
+
+@app.route("/api/maintenance/verify-admin", methods=["POST"])
+def api_maintenance_verify_admin():
+    ip = _client_ip() or "unknown"
+    now = datetime.utcnow()
+    window = timedelta(minutes=_CONSOLE_ATTEMPT_WINDOW_MIN)
+    _console_attempts[ip] = [
+        t for t in _console_attempts.get(ip, []) if now - t < window
+    ]
+    if len(_console_attempts[ip]) >= _CONSOLE_ATTEMPT_LIMIT:
+        return jsonify({"error": "Too many attempts. Try again later."}), 429
+
+    data = request.get_json(silent=True) or {}
+    login_id = (data.get("username") or "").strip().lower()
+    password = data.get("password") or ""
+    if not login_id or not password:
+        return jsonify({"error": "Username and password are required."}), 400
+
+    user = User.query.filter(
+        db.or_(
+            db.func.lower(User.username) == login_id,
+            db.func.lower(User.email) == login_id,
+        )
+    ).first()
+    if user and user.is_admin and check_password_hash(user.password_hash, password):
+        _console_attempts[ip] = []
+        return jsonify({"token": _make_console_token(user.id)})
+
+    _console_attempts[ip].append(now)
+    return jsonify({"error": "Invalid admin credentials."}), 403
+
+
+def _run_diagnostics(uid):
+    from sqlalchemy import inspect as _inspect
+
+    result = {
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "checks": {},
+        "issues": [],
+        "tables": [],
+        "recent_logs": [],
+    }
+
+    try:
+        inspector = _inspect(db.engine)
+        tables = inspector.get_table_names()
+        for t in sorted(tables):
+            try:
+                count = db.session.execute(
+                    sa_text("SELECT COUNT(*) FROM " + t)
+                ).scalar()
+            except Exception:
+                count = "?"
+            result["tables"].append({"table": t, "rows": count})
+        result["checks"]["database"] = "ok"
+    except Exception as e:
+        result["checks"]["database"] = "error"
+        result["issues"].append("Database connection failed: %s" % e)
+
+    try:
+        total_users = User.query.count()
+        admins = User.query.filter_by(is_admin=True).count()
+        banned = User.query.filter_by(is_banned=True).count()
+        online = User.query.filter(
+            User.last_seen >= datetime.utcnow() - timedelta(minutes=5)
+        ).count()
+        result["checks"]["users"] = {
+            "total": total_users,
+            "admins": admins,
+            "banned": banned,
+            "online_5min": online,
+        }
+        if banned:
+            result["issues"].append("%d banned account(s) exist" % banned)
+    except Exception as e:
+        result["issues"].append("User stats unavailable: %s" % e)
+
+    try:
+        failed_24h = FailedLogin.query.filter(
+            FailedLogin.created_at >= datetime.utcnow() - timedelta(hours=24)
+        ).count()
+        result["checks"]["failed_logins_24h"] = failed_24h
+        if failed_24h:
+            result["issues"].append(
+                "%d failed login attempt(s) in the last 24h" % failed_24h
+            )
+    except Exception:
+        result["checks"]["failed_logins_24h"] = None
+
+    try:
+        result["checks"]["unread_feedback"] = Feedback.query.filter_by(
+            is_read=False
+        ).count()
+    except Exception:
+        result["checks"]["unread_feedback"] = None
+
+    try:
+        recent = (
+            ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(10).all()
+        )
+        result["recent_logs"] = [
+            {
+                "user": (l.user.username if l.user else "?"),
+                "action": l.action,
+                "details": l.details,
+                "at": l.created_at.isoformat() + "Z",
+            }
+            for l in recent
+        ]
+    except Exception:
+        result["recent_logs"] = []
+
+    result["system"] = {
+        "python": sys.version.split()[0],
+        "platform": sys.platform,
+        "db_driver": db.engine.dialect.name,
+    }
+
+    me = db.session.get(User, uid)
+    result["operator"] = (
+        {"username": me.username, "is_admin": me.is_admin} if me else None
+    )
+    return result
+
+
+@app.route("/api/maintenance/diagnostics")
+def api_maintenance_diagnostics():
+    token = (request.args.get("token") or "").strip()
+    uid = _verify_console_token(token)
+    if uid is None:
+        return jsonify({"error": "Invalid or expired console session."}), 403
+    user = db.session.get(User, uid)
+    if not user or not user.is_admin:
+        return jsonify({"error": "Not authorized."}), 403
+    return jsonify(_run_diagnostics(uid))
+
+
+@app.route("/api/maintenance/restore", methods=["POST"])
+def api_maintenance_restore():
+    data = request.get_json(silent=True) or {}
+    uid = _verify_console_token((data.get("token") or "").strip())
+    if uid is None:
+        return jsonify({"error": "Invalid or expired console session."}), 403
+    user = db.session.get(User, uid)
+    if not user or not user.is_admin:
+        return jsonify({"error": "Not authorized."}), 403
+    _set_setting("maintenance_mode", "0")
+    log_activity(user, "Maintenance mode disabled", "Site restored via maintenance console")
+    return jsonify({"ok": True, "maintenance": False})
+
+
+@app.route("/admin/settings/maintenance", methods=["POST"])
+@login_required
+@admin_required
+def admin_settings_maintenance():
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").strip()
+    if action not in ("on", "off"):
+        return jsonify({"error": "Invalid action."}), 400
+
+    _set_setting("maintenance_mode", "1" if action == "on" else "0")
+
+    if action == "on":
+        msg = (data.get("message") or "").strip()
+        eta = (data.get("eta") or "").strip()
+        if msg:
+            _set_setting("maintenance_message", msg)
+        if eta:
+            _set_setting("maintenance_eta", eta)
+        _set_setting("maintenance_started_by", current_user.username)
+        _set_setting("maintenance_started_at", datetime.utcnow().isoformat())
+        log_activity(
+            current_user,
+            "Maintenance mode enabled",
+            "Message: %s | ETA: %s" % (msg or "-", eta or "-"),
+        )
+    else:
+        log_activity(current_user, "Maintenance mode disabled", "Site restored from admin panel")
+
+    return jsonify(
+        {
+            "ok": True,
+            "maintenance": maintenance_enabled(),
+            "message": maintenance_message(),
+            "eta": maintenance_eta(),
+        }
+    )
 
 
 @app.before_request
@@ -1200,6 +1483,9 @@ def admin_dashboard():
         recent_logs=recent_logs,
         recent_users=recent_users,
         now=now,
+        maintenance_enabled=maintenance_enabled(),
+        maintenance_message=maintenance_message(),
+        maintenance_eta=maintenance_eta(),
     )
 
 

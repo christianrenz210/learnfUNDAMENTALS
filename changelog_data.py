@@ -60,6 +60,18 @@ EREN_CHANGELOG = [
 
 CHANGELOG = [
     {
+        "version": "1.63",
+        "date": "2026-08-07",
+        "type": "feature",
+        "title": "Maintenance Control & Admin Console",
+        "changes": [
+            "Admins can now turn maintenance mode ON/OFF directly from the Admin Dashboard with a custom message and estimated back-online time",
+            "When maintenance starts, all users are logged out in real time after a maintenance warning modal",
+            "The maintenance page now has an Admin Console that checks database health, table row counts, online users, failed logins, and recent activity",
+            "Admins can restore the live site from the maintenance page without logging in",
+        ],
+    },
+    {
         "version": "1.62",
         "date": "2026-08-07",
         "type": "feature",
