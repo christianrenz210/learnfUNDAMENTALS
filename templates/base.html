@@ -19,7 +19,7 @@
   </script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="{{ url_for('static', filename='css/style.css') }}?v=28" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}?v=34" rel="stylesheet">
   {% block head_extra %}{% endblock %}
 </head>
 {% block layout_vars %}{% endblock %}
@@ -310,6 +310,23 @@
 {% endif %}
 
 {% if current_user.is_authenticated %}
+<div class="modal fade" id="announcementModal" tabindex="-1" aria-labelledby="announcementModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="announcementModalLabel">
+          <i class="bi bi-megaphone text-primary me-2"></i><span id="announcementTitle">Announcement</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="announcementBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="maintenanceModal" tabindex="-1" aria-labelledby="maintenanceModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -545,6 +562,68 @@
 {# music floater hidden for now — uncomment to restore
 {% include '_music_floater.html' %}
 #}
+
+<button type="button" id="chatToggle" class="chat-toggle" title="Open Global Chat" aria-label="Open Global Chat">
+  <i class="bi bi-chat-dots"></i>
+</button>
+
+<div class="modal fade" id="chatModal" tabindex="-1" aria-labelledby="chatModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="chatModalLabel">
+          <i class="bi bi-chat-dots text-primary me-2"></i>Global Chat
+          <span class="badge bg-success bg-opacity-10 text-success ms-1" title="Users online (last 5 min)">
+            <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i><span id="chatOnlineCount">0</span> online
+          </span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="chat-react-hint" id="chatReactHint">💡 Long press a message to react</div>
+        <div id="chatMessages" class="chat-messages">
+          <div class="chat-empty"><i class="bi bi-chat-dots me-2"></i>Loading messages...</div>
+        </div>
+        <div id="chatError" class="small text-danger px-3 pt-2 d-none"></div>
+        <div id="chatReplyBar" class="chat-reply-bar d-none align-items-center">
+          <div class="chat-reply-content flex-grow-1">
+            <span class="chat-reply-label">Replying to <b id="chatReplyName"></b></span>
+            <span class="chat-reply-preview" id="chatReplyPreview"></span>
+          </div>
+          <input type="hidden" id="chatReplyId" value="">
+          <button type="button" id="chatReplyClear" class="btn btn-sm btn-ghost text-muted" title="Cancel reply"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div id="chatFilePreview" class="chat-file-preview d-none px-2 pt-1"></div>
+        <form id="chatForm" class="d-flex gap-2 p-2 border-top" autocomplete="off" enctype="multipart/form-data">
+          <input id="chatInput" class="form-control" maxlength="300" placeholder="Type a message..." autocomplete="off">
+          <input type="file" id="chatFileInput" accept="image/*,.pdf,.txt,.doc,.docx,.xls,.xlsx,.zip" hidden>
+          <button type="button" id="chatAttachBtn" class="btn btn-outline-secondary flex-shrink-0" title="Attach file"><i class="bi bi-paperclip"></i></button>
+          <button class="btn btn-primary flex-shrink-0" type="submit" title="Send">
+            <i class="bi bi-send"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="notifPanel" class="notif-panel d-none">
+  <div class="notif-panel-head">
+    <span><i class="bi bi-at me-1"></i>Mentions</span>
+    <button type="button" id="notifMarkAll" class="btn btn-link btn-sm p-0">Mark all read</button>
+  </div>
+  <div id="notifList" class="notif-list">
+    <div class="notif-empty small text-muted px-3 py-3">No new mentions.</div>
+  </div>
+</div>
+
+<button type="button" id="notifBubble" class="notif-bubble d-none" title="New mentions" aria-label="New mentions">
+  <span class="notif-bubble-icon"><i class="bi bi-at"></i></span>
+  <span class="notif-bubble-body">
+    <span class="notif-bubble-count" id="notifBubbleCount">0</span>
+    <span class="notif-bubble-latest" id="notifBubbleLatest">mentions</span>
+  </span>
+</button>
 {% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -663,10 +742,47 @@ function togglePassword(inputId, iconId) {
 (function () {
   const STATUS_URL = {{ url_for('api_maintenance_status') | tojson }};
   const LOGOUT_URL = {{ url_for('logout') | tojson }};
+  const ANN_URL = {{ url_for('api_announcement_latest') | tojson }};
   const POLL_MS = 8000;
   let modal = null;
   let countdownTimer = null;
   let redirecting = false;
+  let announcing = false;
+  let annModal = null;
+  let seenAnn = 0;
+  try { seenAnn = parseInt(localStorage.getItem('cfAnnouncementSeen') || '0', 10) || 0; } catch (e) {}
+
+  function maintenanceActive() {
+    const el = document.getElementById('maintenanceModal');
+    return el ? el.classList.contains('show') : false;
+  }
+
+  function showAnnouncement(d) {
+    announcing = true;
+    const el = document.getElementById('announcementModal');
+    if (!el || maintenanceActive()) { announcing = false; return; }
+    document.getElementById('announcementTitle').textContent = d.title || 'Announcement';
+    document.getElementById('announcementBody').textContent = d.message || '';
+    if (annModal) { try { annModal.dispose(); } catch (e) {} annModal = null; }
+    annModal = new bootstrap.Modal(el, { backdrop: 'static', keyboard: false });
+    annModal.show();
+    el.addEventListener('hidden.bs.modal', function onHidden() {
+      el.removeEventListener('hidden.bs.modal', onHidden);
+      seenAnn = d.id;
+      try { localStorage.setItem('cfAnnouncementSeen', String(d.id)); } catch (e) {}
+      announcing = false;
+    });
+  }
+
+  async function pollAnnouncement() {
+    if (announcing || redirecting || maintenanceActive()) return;
+    try {
+      const res = await fetch(ANN_URL, { cache: 'no-store' });
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d && d.id && d.id > seenAnn) showAnnouncement(d);
+    } catch (e) { /* ignore */ }
+  }
 
   function doLogout() {
     if (redirecting) return;
@@ -733,6 +849,762 @@ function togglePassword(inputId, iconId) {
 
   setTimeout(poll, 1500);
   setInterval(poll, POLL_MS);
+  setTimeout(pollAnnouncement, 3000);
+  setInterval(pollAnnouncement, POLL_MS);
+})();
+</script>
+
+<script>
+(function () {
+  const MESSAGES_URL = {{ url_for('api_chat_messages') | tojson }};
+  const LATEST_URL = {{ url_for('api_chat_latest') | tojson }};
+  const SEND_URL = {{ url_for('api_chat_send') | tojson }};
+  const DELETE_URL_PREFIX = {{ url_for('api_chat_delete', mid=0) | tojson }};
+  const isAdmin = {{ current_user.is_admin | tojson }};
+  const CHAT_ALLOWED_EXT_SET = new Set({{ chat_allowed_ext | tojson }});
+  const CHAT_IMAGE_EXT_SET = new Set({{ chat_image_ext | tojson }});
+  const CHAT_MAX_FILE_SIZE = {{ chat_max_file_size }};
+  const toggle = document.getElementById('chatToggle');
+  const chatModalEl = document.getElementById('chatModal');
+  if (!toggle || !chatModalEl) return;
+  const container = document.getElementById('chatMessages');
+  const form = document.getElementById('chatForm');
+  const input = document.getElementById('chatInput');
+  const errorEl = document.getElementById('chatError');
+  const onlineCountEl = document.getElementById('chatOnlineCount');
+  const fileInput = document.getElementById('chatFileInput');
+  const attachBtn = document.getElementById('chatAttachBtn');
+  const filePreview = document.getElementById('chatFilePreview');
+  const replyBar = document.getElementById('chatReplyBar');
+  const replyName = document.getElementById('chatReplyName');
+  const replyPreview = document.getElementById('chatReplyPreview');
+  const replyIdInput = document.getElementById('chatReplyId');
+  const replyClear = document.getElementById('chatReplyClear');
+
+  const chatBadge = document.createElement('span');
+  chatBadge.className = 'float-badge';
+  chatBadge.style.display = 'none';
+  toggle.appendChild(chatBadge);
+
+  let chatModal = null;
+  let lastId = 0;
+  let chatLoaded = false;
+  let seenChatId = 0;
+  let seenInitialized = false;
+  try { seenChatId = parseInt(localStorage.getItem('cfChatSeenId') || '0', 10) || 0; } catch (e) {}
+
+  function sizeBadge(el, len) {
+    var size = len <= 1 ? 18 : (len <= 2 ? 22 : 26);
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+  }
+
+  function setChatBadge(count) {
+    if (count > 0) {
+      chatBadge.textContent = count > 99 ? '99+' : String(count);
+      sizeBadge(chatBadge, chatBadge.textContent.length);
+      chatBadge.style.display = '';
+    } else {
+      chatBadge.style.display = 'none';
+    }
+  }
+
+  function updateSeen(id) {
+    if (id > seenChatId) {
+      seenChatId = id;
+      try { localStorage.setItem('cfChatSeenId', String(id)); } catch (e) {}
+    }
+    setChatBadge(0);
+  }
+
+  async function checkLatest() {
+    try {
+      const res = await fetch(LATEST_URL + '?after=' + seenChatId, { cache: 'no-store' });
+      if (!res.ok) return;
+      const d = await res.json();
+      if (!seenInitialized) {
+        seenInitialized = true;
+        if (!seenChatId) seenChatId = d.id || 0;
+        return;
+      }
+      if (d.count > 0) setChatBadge(d.count);
+    } catch (e) { /* ignore */ }
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function highlightMentions(text) {
+    return text.replace(/@([\w.]+)/g, '<span class="chat-mention">@$1</span>');
+  }
+
+  function ytEmbedUrl(url) {
+    var m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    if (m) return 'https://www.youtube.com/embed/' + m[1];
+    return null;
+  }
+
+  function tiktokEmbedUrl(url) {
+    var m = url.match(/tiktok\.com\/[^?]*(?:video\/|embed\/v\/|player\/v1\/)(\d{10,})/);
+    if (m) return 'https://www.tiktok.com/player/v1/' + m[1];
+    return null;
+  }
+
+  function embedUrls(text) {
+    var urlRe = /https?:\/\/[^\s<>"']+/g;
+    return text.replace(urlRe, function (url) {
+      var yt = ytEmbedUrl(url);
+      if (yt) {
+        return '<div class="chat-embed chat-embed-youtube"><div class="chat-embed-inner"><div class="chat-embed-label">YouTube</div><iframe src="' + esc(yt) + '" frameborder="0" allowfullscreen></iframe></div></div>';
+      }
+      var tt = tiktokEmbedUrl(url);
+      if (tt) {
+        return '<div class="chat-embed chat-embed-tiktok"><div class="chat-embed-inner"><div class="chat-embed-label">TikTok</div><iframe src="' + esc(tt) + '" frameborder="0" allowfullscreen></iframe></div></div>';
+      }      var imgMatch = url.match(/\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i);
+      if (imgMatch) {
+        return '<a href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="image link" class="chat-img-link"></a>';
+      }
+      return '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url) + '</a>';
+    });
+  }
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
+  function formatSize(bytes) {
+    if (!bytes || bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function fileIcon(mime, name) {
+    var ext = (name || '').split('.').pop().toLowerCase();
+    var icons = { pdf: 'bi-file-pdf', txt: 'bi-file-text', doc: 'bi-file-word', docx: 'bi-file-word', xls: 'bi-file-excel', xlsx: 'bi-file-excel', zip: 'bi-file-zip', default: 'bi-file-earmark' };
+    return '<i class="' + (icons[ext] || icons.default) + '"></i>';
+  }
+
+  function msgHtml(m) {
+    const avatar = m.avatar
+      ? '<img class="chat-avatar" src="' + esc(m.avatar) + '" alt="">'
+      : '<div class="chat-avatar chat-avatar-initials">' + esc((m.username || '?').slice(0, 2).toUpperCase()) + '</div>';
+    const del = isAdmin
+      ? '<button type="button" class="chat-delete" data-id="' + m.id + '" title="Delete message"><i class="bi bi-trash"></i></button>'
+      : '';
+    const replyBtn = '<button type="button" class="chat-reply-btn" data-id="' + m.id + '" data-name="' + esc(m.username) + '" data-text="' + esc(m.message || '') + '" title="Reply"><i class="bi bi-reply"></i></button>';
+    let replyLine = '';
+    if (m.reply_to) {
+      replyLine = '<div class="chat-reply-line" data-reply-id="' + esc(m.reply_to.id) + '" title="Click to jump to replied message"><span class="chat-reply-author">' + esc(m.reply_to.username) + '</span><span class="chat-reply-text">' + esc(m.reply_to.text) + '</span></div>';
+    }
+    let fileHtml = '';
+    if (m.file) {
+      if (m.file.is_image) {
+        fileHtml = '<div class="chat-file chat-file-image"><a href="' + esc(m.file.url) + '" target="_blank"><img src="' + esc(m.file.url) + '" alt="' + esc(m.file.name) + '" class="chat-file-img"></a></div>';
+      } else {
+        fileHtml = '<div class="chat-file chat-file-card"><div class="chat-file-icon">' + fileIcon(m.file.mime, m.file.name) + '</div><div class="chat-file-info"><div class="chat-file-name">' + esc(m.file.name) + '</div><div class="chat-file-size">' + formatSize(m.file.size) + '</div></div><a href="' + esc(m.file.url) + '" class="chat-file-link" target="_blank" download><i class="bi bi-download"></i></a></div>';
+      }
+    }
+    let textHtml = m.message ? highlightMentions(embedUrls(esc(m.message))) : '';
+    let reactionHtml = '';
+    if (m.reactions && m.reactions.length) {
+      reactionHtml = '<div class="chat-reaction-bar" data-id="' + m.id + '">' + m.reactions.map(function(r) {
+        return '<button type="button" class="chat-reaction-chip' + (m.my_reaction === r.emoji ? ' active' : '') + '" data-id="' + m.id + '" data-emoji="' + esc(r.emoji) + '" title="' + r.count + ' reaction"><span class="chat-reaction-emoji">' + r.emoji + '</span><span class="chat-reaction-count">' + r.count + '</span></button>';
+      }).join('') + '</div>';
+    }
+    return '<div class="chat-msg ' + (m.is_me ? 'chat-msg-me' : '') + '" data-id="' + m.id + '" data-my-reaction="' + esc(m.my_reaction || '') + '">' +
+      avatar +
+      '<div class="chat-bubble">' +
+        '<div class="chat-meta">' +
+          '<span class="chat-name">' + esc(m.username) + '</span>' +
+          '<span class="chat-time">' + fmtTime(m.created_at) + '</span>' +
+          replyBtn +
+          del +
+        '</div>' +
+        replyLine +
+        (textHtml ? '<div class="chat-text">' + textHtml + '</div>' : '') +
+        fileHtml +
+        reactionHtml +
+      '</div>' +
+    '</div>';
+  }
+
+  const REACT_URL_PREFIX = {{ url_for('api_chat_react', mid=0) | tojson }};
+  let ownReactions = {};
+  const REACTION_PICKER_EMOJIS = ['👍','❤️','😂','😮','😢','😡','🔥','👏'];
+  let pressTimer = null;
+  let pressedMsgId = null;
+
+  function renderReactionBar(m) {
+    const row = container.querySelector('.chat-msg[data-id="' + m.id + '"]');
+    if (!row) return;
+    row.dataset.myReaction = m.my_reaction || '';
+    let rb = row.querySelector('.chat-reaction-bar');
+    const bar = m.reactions && m.reactions.length
+      ? '<div class="chat-reaction-bar" data-id="' + m.id + '">' + m.reactions.map(function(r) {
+          return '<button type="button" class="chat-reaction-chip' + (m.my_reaction === r.emoji ? ' active' : '') + '" data-id="' + m.id + '" data-emoji="' + esc(r.emoji) + '" title="' + r.count + ' reaction"><span class="chat-reaction-emoji">' + r.emoji + '</span><span class="chat-reaction-count">' + r.count + '</span></button>';
+        }).join('') + '</div>'
+      : '<div class="chat-reaction-bar" data-id="' + m.id + '"></div>';
+    if (rb) { rb.innerHTML = bar; } else {
+      const bubble = row.querySelector('.chat-bubble');
+      if (bubble) bubble.insertAdjacentHTML('beforeend', bar);
+    }
+  }
+
+  function emojiActive(mid, emo) {
+    return ownReactions[mid] === emo;
+  }
+
+  function fireReact(mid, emoji) {
+    fetch(REACT_URL_PREFIX.replace('/0', '/' + mid), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ emoji: emoji })
+    })
+      .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+      .then(function(res) {
+        if (!res.ok) throw new Error(res.data.error || 'react failed');
+        const m = { id: mid, reactions: res.data.reactions, my_reaction: res.data.action === 'removed' ? null : emoji };
+        renderReactionBar(m);
+        if (res.data.action === 'added') {
+          ownReactions[mid] = emoji;
+        } else {
+          ownReactions[mid] = null;
+        }
+      })
+      .catch(function(err) { setError('React failed: ' + err.message); });
+  }
+
+  function scrollToBottom() {
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function nearBottom() {
+    return container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+  }
+
+  function setError(msg) {
+    if (!msg) { errorEl.classList.add('d-none'); errorEl.textContent = ''; return; }
+    errorEl.textContent = msg;
+    errorEl.classList.remove('d-none');
+  }
+
+  container.addEventListener('click', function (e) {
+    const delBtn = e.target.closest('.chat-delete');
+    if (delBtn) {
+      const mid = delBtn.dataset.id;
+      if (!mid || !window.confirm('Delete this chat message?')) return;
+      fetch(DELETE_URL_PREFIX.replace('/0', '/' + mid), { method: 'DELETE' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.error) throw new Error(d.error);
+          const row = container.querySelector('.chat-msg[data-id="' + mid + '"]');
+          if (row) row.remove();
+          if (!container.querySelector('.chat-msg')) {
+            container.innerHTML = '<div class="chat-empty"><i class="bi bi-chat-square-dots me-2"></i>No messages yet. Say hello!</div>';
+          }
+        })
+        .catch(err => setError('Delete failed: ' + err.message));
+      return;
+    }
+    const replyBtn = e.target.closest('.chat-reply-btn');
+    if (replyBtn) {
+      const mid = replyBtn.dataset.id;
+      const name = replyBtn.dataset.name;
+      const text = replyBtn.dataset.text;
+      replyIdInput.value = mid;
+      replyName.textContent = name;
+      replyPreview.textContent = text || '(image)';
+      replyBar.classList.remove('d-none');
+      input.focus();
+      return;
+    }
+    const reactChip = e.target.closest('.chat-reaction-chip');
+    if (reactChip) {
+      const mid = reactChip.dataset.id;
+      const emoji = reactChip.dataset.emoji;
+      fireReact(mid, emoji);
+      return;
+    }
+    const replyLine = e.target.closest('.chat-reply-line');
+    if (replyLine) {
+      const rid = replyLine.dataset.replyId;
+      if (rid) {
+        const target = container.querySelector('.chat-msg[data-id="' + rid + '"]');
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+      return;
+    }
+  });
+
+  let pickerEl = null;
+  function closePicker() {
+    if (pickerEl) { pickerEl.remove(); pickerEl = null; }
+    pressTimer = null; pressedMsgId = null;
+  }
+
+  function buildPicker(mid, originRect) {
+    closePicker();
+    const p = document.createElement('div');
+    p.className = 'chat-react-picker';
+    p.setAttribute('data-id', mid);
+    REACTION_PICKER_EMOJIS.forEach(function (emo) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chat-react-picker-btn' + (emojiActive(mid, emo) ? ' active' : '');
+      btn.textContent = emo;
+      btn.title = 'React ' + emo;
+      btn.addEventListener('click', function () {
+        animateEmojiFly(emo, btn, originRect, function () {
+          fireReact(mid, emo);
+          closePicker();
+        });
+      });
+      p.appendChild(btn);
+    });
+    document.body.appendChild(p);
+    const pr = p.getBoundingClientRect();
+    let left = originRect.left + (originRect.width / 2) - (pr.width / 2);
+    if (left + pr.width > window.innerWidth - 6) left = window.innerWidth - pr.width - 6;
+    if (left < 6) left = 6;
+    let top = originRect.bottom + 8;
+    if (top + pr.height > window.innerHeight - 6) top = originRect.top - pr.height - 8;
+    p.style.left = Math.round(left) + 'px';
+    p.style.top = Math.round(top) + 'px';
+    pickerEl = p;
+  }
+
+  function animateEmojiFly(emoji, fromEl, toRect, done) {
+    const f = fromEl.getBoundingClientRect();
+    const fly = document.createElement('span');
+    fly.className = 'chat-react-fly';
+    fly.textContent = emoji;
+    const fy = Math.round(f.top + f.height / 2 - 10);
+    const fx = Math.round(f.left + f.width / 2 - 10);
+    fly.style.left = fx + 'px';
+    fly.style.top = fy + 'px';
+    document.body.appendChild(fly);
+    const tx = (toRect.left + toRect.width / 2) - (f.left + f.width / 2);
+    const ty = (toRect.top + toRect.height / 2) - (f.top + f.height / 2);
+    requestAnimationFrame(function () {
+      fly.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(0.3)';
+      fly.style.opacity = '0';
+    });
+    setTimeout(function () { fly.remove(); if (done) done(); }, 480);
+  }
+
+  container.addEventListener('pointerdown', function (e) {
+    if (pickerEl) closePicker();
+    const msg = e.target.closest('.chat-msg');
+    if (!msg || e.button !== 0) return;
+    const mid = parseInt(msg.dataset.id || '', 10);
+    if (!mid) return;
+    pressedMsgId = mid;
+    pressTimer = setTimeout(function () {
+      if (!pressedMsgId) return;
+      const rect = msg.getBoundingClientRect();
+      buildPicker(pressedMsgId, rect);
+    }, 550);
+  });
+  container.addEventListener('pointerup', function (e) {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    pressedMsgId = null;
+  });
+  container.addEventListener('pointercancel', function (e) {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    pressedMsgId = null;
+  });
+  document.addEventListener('click', function (e) {
+    if (pickerEl && !pickerEl.contains(e.target) && !e.target.closest('.chat-react-picker')) closePicker();
+  });
+
+  async function fetchMessages(initial) {
+    try {
+      const res = await fetch(MESSAGES_URL + (initial ? '' : '?after=' + lastId), { cache: 'no-store' });
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d.messages) {
+        if (initial) {
+          container.innerHTML = d.messages.length
+            ? d.messages.map(msgHtml).join('')
+            : '<div class="chat-empty"><i class="bi bi-chat-square-dots me-2"></i>No messages yet. Say hello!</div>';
+          lastId = d.messages.length ? d.messages[d.messages.length - 1].id : 0;
+          scrollToBottom();
+        } else {
+          const wasNear = nearBottom();
+          d.messages.forEach(function (m) {
+            container.insertAdjacentHTML('beforeend', msgHtml(m));
+            if (m.id > lastId) lastId = m.id;
+          });
+          if (wasNear) scrollToBottom();
+        }
+        chatLoaded = true;
+        updateSeen(lastId);
+      }
+      if (d.online != null && onlineCountEl) onlineCountEl.textContent = d.online;
+    } catch (e) { /* ignore */ }
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const text = input.value.trim();
+    const hasFile = fileInput.files && fileInput.files.length > 0;
+    if (!text && !hasFile) return;
+    input.disabled = true;
+    attachBtn.disabled = true;
+    const replyId = replyIdInput.value;
+    if (hasFile) {
+      const fd = new FormData();
+      if (text) fd.append('message', text);
+      if (replyId) fd.append('reply_to_id', replyId);
+      fd.append('file', fileInput.files[0]);
+      fetch(SEND_URL, {
+        method: 'POST',
+        body: fd
+      })
+        .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+        .then(res => {
+          if (!res.ok) throw new Error(res.data.error || 'Could not send message.');
+          doneSend();
+          if (res.data.message) {
+            container.insertAdjacentHTML('beforeend', msgHtml(res.data.message));
+            if (res.data.message.id > lastId) lastId = res.data.message.id;
+            scrollToBottom();
+          }
+        })
+        .catch(err => setError(err.message))
+        .then(function () { input.disabled = false; attachBtn.disabled = false; input.focus(); });
+    } else {
+      fetch(SEND_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, reply_to_id: replyId ? parseInt(replyId, 10) : null })
+      })
+        .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+        .then(res => {
+          if (!res.ok) throw new Error(res.data.error || 'Could not send message.');
+          doneSend();
+          if (res.data.message) {
+            container.insertAdjacentHTML('beforeend', msgHtml(res.data.message));
+            if (res.data.message.id > lastId) lastId = res.data.message.id;
+            scrollToBottom();
+          }
+        })
+        .catch(err => setError(err.message))
+        .then(function () { input.disabled = false; attachBtn.disabled = false; input.focus(); });
+    }
+  });
+
+   function doneSend() {
+    input.value = '';
+    if (fileInput) fileInput.value = '';
+    if (filePreview) { filePreview.classList.add('d-none'); filePreview.innerHTML = ''; }
+    if (replyBar) { replyBar.classList.add('d-none'); replyIdInput.value = ''; }
+    setError('');
+  }
+
+  if (attachBtn && fileInput) {
+    attachBtn.addEventListener('click', function () {
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', function (e) {
+      const f = e.target.files && e.target.files[0];
+      if (!f) {
+        filePreview.classList.add('d-none');
+        filePreview.innerHTML = '';
+        return;
+      }
+      const ext = f.name.split('.').pop().toLowerCase();
+      if (!CHAT_ALLOWED_EXT_SET.has(ext)) {
+        setError('File type not allowed. Allowed: ' + Array.from(CHAT_ALLOWED_EXT_SET).join(', '));
+        fileInput.value = '';
+        return;
+      }
+      if (f.size > CHAT_MAX_FILE_SIZE) {
+        setError('File too large (max ' + (CHAT_MAX_FILE_SIZE / 1024 / 1024) + ' MB).');
+        fileInput.value = '';
+        return;
+      }
+      setError('');
+      if (ext in CHAT_IMAGE_EXT_SET) {
+        const url = URL.createObjectURL(f);
+        filePreview.innerHTML = '<img src="' + url + '" class="chat-preview-img" alt="Preview">' +
+          '<span class="chat-preview-name">' + f.name + ' (' + formatSize(f.size) + ')</span>' +
+          '<button type="button" class="chat-preview-remove" title="Remove"><i class="bi bi-x-lg"></i></button>';
+      } else {
+        filePreview.innerHTML = '<i class="' + fileIcon('', f.name) + ' chat-preview-icon"></i>' +
+          '<span class="chat-preview-name">' + f.name + ' (' + formatSize(f.size) + ')</span>' +
+          '<button type="button" class="chat-preview-remove" title="Remove"><i class="bi bi-x-lg"></i></button>';
+      }
+      filePreview.classList.remove('d-none');
+    });
+    filePreview.addEventListener('click', function (e) {
+      const btn = e.target.closest('.chat-preview-remove');
+      if (!btn) return;
+      fileInput.value = '';
+      filePreview.classList.add('d-none');
+      filePreview.innerHTML = '';
+    });
+  }
+
+  if (replyClear) {
+    replyClear.addEventListener('click', function () {
+      replyBar.classList.add('d-none');
+      replyIdInput.value = '';
+      input.focus();
+    });
+  }
+
+  toggle.addEventListener('click', function () {
+    chatModal = chatModal || new bootstrap.Modal(chatModalEl);
+    chatModal.show();
+  });
+
+  chatModalEl.addEventListener('shown.bs.modal', function () {
+    if (!chatLoaded) { fetchMessages(true); }
+    else { fetchMessages(false); }
+    setTimeout(function () { input.focus(); }, 100);
+  });
+
+  setInterval(function () {
+    if (chatModalEl.classList.contains('show')) fetchMessages(chatLoaded ? false : true);
+  }, 5000);
+
+  setInterval(function () {
+    if (!chatModalEl.classList.contains('show')) checkLatest();
+  }, 10000);
+
+  checkLatest();
+})();
+</script>
+
+<script>
+(function () {
+  const NOTIFS_URL = {{ url_for('api_notifications') | tojson }};
+  const READ_URL = {{ url_for('api_notifications_read') | tojson }};
+  const bubble = document.getElementById('notifBubble');
+  const panel = document.getElementById('notifPanel');
+  const listEl = document.getElementById('notifList');
+  const countEl = document.getElementById('notifBubbleCount');
+  const latestEl = document.getElementById('notifBubbleLatest');
+  if (!bubble || !panel || !listEl) return;
+
+  let notifs = [];
+  let listOpen = false;
+  let suppressed = false;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
+  function avatarHtml(n) {
+    if (n.sender_avatar) {
+      return '<img class="notif-row-avatar" src="' + esc(n.sender_avatar) + '" alt="">';
+    }
+    return '<div class="notif-row-avatar notif-row-avatar-initials">' + esc((n.sender || '?').slice(0, 2).toUpperCase()) + '</div>';
+  }
+
+  function renderList() {
+    listEl.innerHTML = notifs.length
+      ? notifs.slice(0, 8).map(function (n) {
+          return '<button type="button" class="notif-row" data-id="' + n.id + '" data-kind="' + esc(n.kind) + '" data-mid="' + (n.chat_message_id || '') + '">' +
+            avatarHtml(n) +
+            '<span class="notif-row-text"><strong>' + esc(n.sender || 'Someone') + '</strong> ' + esc(n.message) + '</span>' +
+            '<span class="notif-row-time">' + fmtTime(n.created_at) + '</span>' +
+          '</button>';
+        }).join('')
+      : '<div class="notif-empty small text-muted px-3 py-3">No new mentions.</div>';
+  }
+
+  function updateBubble() {
+    if (suppressed || !notifs.length) {
+      bubble.classList.add('d-none');
+      panel.classList.add('d-none');
+      listOpen = false;
+      return;
+    }
+    bubble.classList.remove('d-none');
+    countEl.textContent = notifs.length;
+    const n = notifs[0];
+    latestEl.textContent = esc(n.sender || 'Someone') + ' mentioned you';
+  }
+
+  function setSuppressed(hidden) {
+    suppressed = hidden;
+    const chatToggle = document.getElementById('chatToggle');
+    if (chatToggle) chatToggle.style.display = hidden ? 'none' : '';
+    if (hidden) { panel.classList.add('d-none'); listOpen = false; }
+    updateBubble();
+  }
+
+  const assistPanel = document.getElementById('assistPanel');
+  function assistantOpen() {
+    return !!document.querySelector('.assist-layout') ||
+      !!(assistPanel && !assistPanel.classList.contains('d-none'));
+  }
+  function syncFloaters() {
+    setSuppressed(assistantOpen());
+  }
+  if (assistPanel && 'MutationObserver' in window) {
+    const obs = new MutationObserver(syncFloaters);
+    obs.observe(assistPanel, { attributes: true, attributeFilter: ['class'] });
+  }
+  syncFloaters();
+
+  function markRead(id) {
+    fetch(READ_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(id ? { id: id } : {})
+    }).then(function () {
+      if (id) { notifs = notifs.filter(function (x) { return x.id !== id; }); }
+      else { notifs = []; }
+      renderList();
+      updateBubble();
+    }).catch(function () {});
+  }
+
+  function openChat() {
+    const chatToggle = document.getElementById('chatToggle');
+    if (chatToggle) chatToggle.click();
+  }
+
+  bubble.addEventListener('click', function () {
+    listOpen = !listOpen;
+    panel.classList.toggle('d-none', !listOpen);
+    if (listOpen) renderList();
+  });
+
+  document.getElementById('notifMarkAll').addEventListener('click', function () {
+    markRead(null);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('#notifBubble') || e.target.closest('#notifPanel')) return;
+    if (listOpen) { listOpen = false; panel.classList.add('d-none'); }
+  });
+
+  listEl.addEventListener('click', function (e) {
+    const row = e.target.closest('.notif-row');
+    if (!row) return;
+    const kind = row.dataset.kind;
+    const nid = parseInt(row.dataset.id, 10);
+    const target = notifs.filter(function (x) { return x.id === nid; })[0];
+    markRead(nid);
+    if (kind === 'announcement_mention') {
+      const annModal = document.getElementById('announcementModal');
+      if (annModal) {
+        const body = document.getElementById('announcementBody');
+        const title = document.getElementById('announcementTitle');
+        if (body) body.textContent = target ? target.message : '';
+        if (title) title.textContent = 'Mentioned in announcement';
+        new bootstrap.Modal(annModal, { backdrop: 'static', keyboard: false }).show();
+      }
+    } else {
+      openChat();
+    }
+  });
+
+  async function poll() {
+    try {
+      const res = await fetch(NOTIFS_URL, { cache: 'no-store' });
+      if (!res.ok) return;
+      const d = await res.json();
+      notifs = d.notifications || [];
+      updateBubble();
+    } catch (e) { /* ignore */ }
+  }
+
+  poll();
+  setInterval(poll, 6000);
+})();
+</script>
+
+<script>
+(function () {
+  const toggle = document.getElementById('assistToggle');
+  const panel = document.getElementById('assistPanel');
+  const msgsEl = document.getElementById('assistMessages');
+  const form = document.getElementById('assistForm');
+  if (!toggle || !msgsEl) return;
+
+  const dot = document.createElement('span');
+  dot.className = 'float-badge';
+  dot.style.display = 'none';
+  toggle.appendChild(dot);
+
+  let awaitingReply = false;
+  let replyCount = 0;
+
+  function sizeBadge(el, len) {
+    var size = len <= 1 ? 18 : (len <= 2 ? 22 : 26);
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+  }
+
+  function setDot(on) {
+    if (on) {
+      dot.textContent = replyCount > 99 ? '99+' : String(replyCount);
+      sizeBadge(dot, dot.textContent.length);
+    }
+    dot.style.display = on ? '' : 'none';
+  }
+
+  function panelHidden() { return panel && panel.classList.contains('d-none'); }
+
+  if (form) {
+    form.addEventListener('submit', function () { awaitingReply = true; });
+  }
+
+  if (msgsEl && 'MutationObserver' in window) {
+    const obs = new MutationObserver(function (muts) {
+      if (!awaitingReply || !panelHidden()) return;
+      for (var i = 0; i < muts.length; i++) {
+        var nodes = muts[i].addedNodes;
+        for (var j = 0; j < nodes.length; j++) {
+          var n = nodes[j];
+          if (n.nodeType === 1 && n.classList && n.classList.contains('assist-bot')) {
+            replyCount++;
+            setDot(true);
+            return;
+          }
+        }
+      }
+    });
+    obs.observe(msgsEl, { childList: true });
+  }
+
+  if (panel && 'MutationObserver' in window) {
+    const obs2 = new MutationObserver(function () {
+      if (!panel.classList.contains('d-none')) { replyCount = 0; setDot(false); awaitingReply = false; }
+    });
+    obs2.observe(panel, { attributes: true, attributeFilter: ['class'] });
+  }
 })();
 </script>
 {% endif %}

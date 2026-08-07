@@ -57,7 +57,9 @@ from flask_login import (
 from flask_sqlalchemy import SQLAlchemy
 from itsdangerous import URLSafeTimedSerializer
 from sqlalchemy import text as sa_text
+from sqlalchemy.orm import selectinload
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 
 from lessons_data import LESSONS, LONG_QUIZZES
 from changelog_data import CHANGELOG, EREN_CHANGELOG
@@ -152,7 +154,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.63"
+APP_VERSION = "1.66"
 EREN_VERSION = "2.2"
 
 
@@ -165,7 +167,7 @@ def inject_avatar():
             return user.avatar
         return url_for("static", filename="uploads/" + user.avatar)
 
-    return {"avatar_src": avatar_src, "app_version": APP_VERSION, "eren_version": EREN_VERSION, "latest_update": CHANGELOG[0], "latest_eren_update": EREN_CHANGELOG[0], "latest_system_version": CHANGELOG[0]["version"]}
+    return {"avatar_src": avatar_src, "app_version": APP_VERSION, "eren_version": EREN_VERSION, "latest_update": CHANGELOG[0], "latest_eren_update": EREN_CHANGELOG[0], "latest_system_version": CHANGELOG[0]["version"], "chat_allowed_ext": sorted(CHAT_ALLOWED_EXT), "chat_image_ext": sorted(CHAT_IMAGE_EXT), "chat_max_file_size": CHAT_MAX_FILE_SIZE}
 
 
 @app.context_processor
@@ -192,6 +194,24 @@ AVATAR_MIME = {
     "jpeg": "image/jpeg",
     "gif": "image/gif",
     "webp": "image/webp",
+}
+CHAT_UPLOAD_DIR = os.path.join(app.root_path, "static", "chat_uploads")
+CHAT_ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "webp", "pdf", "txt", "doc", "docx", "xls", "xlsx", "zip"}
+CHAT_IMAGE_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
+CHAT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+CHAT_MIME = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "gif": "image/gif",
+    "webp": "image/webp",
+    "pdf": "application/pdf",
+    "txt": "text/plain",
+    "doc": "application/msword",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "xls": "application/vnd.ms-excel",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "zip": "application/zip",
 }
 
 db = SQLAlchemy(app)
@@ -321,6 +341,80 @@ class SiteSetting(db.Model):
     key = db.Column(db.String(100), primary_key=True)
     value = db.Column(db.Text, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ChatMessage(db.Model):
+    __tablename__ = "chat_message"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    message = db.Column(db.String(500), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    reply_to_id = db.Column(db.Integer, db.ForeignKey("chat_message.id"), nullable=True, index=True)
+    file_name = db.Column(db.String(200), nullable=True)
+    file_size = db.Column(db.Integer, nullable=True)
+    file_mime = db.Column(db.String(100), nullable=True)
+
+    user = db.relationship("User", backref=db.backref("chat_messages", lazy="dynamic"))
+    reply_to = db.relationship("ChatMessage", remote_side=[id], backref=db.backref("replies", lazy="dynamic"))
+    reactions = db.relationship("ChatReaction", backref=db.backref("message_ref", lazy="joined"), lazy="selectin", cascade="all, delete-orphan")
+
+
+class ChatReaction(db.Model):
+    __tablename__ = "chat_reaction"
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey("chat_message.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    emoji = db.Column(db.String(8), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    __table_args__ = (db.UniqueConstraint("message_id", "user_id", "emoji", name="uq_chat_reaction_msg_user_emoji"),)
+
+
+class Notification(db.Model):
+    __tablename__ = "notification"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    from_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    kind = db.Column(db.String(30), nullable=False, default="chat_mention")
+    message = db.Column(db.String(500), nullable=False)
+    chat_message_id = db.Column(db.Integer, nullable=True)
+    is_read = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("notifications", lazy="dynamic"))
+    sender = db.relationship("User", foreign_keys=[from_user_id])
+
+
+_MENTION_RE = re.compile(r"@([\w.]+)")
+
+
+def parse_mentions(text):
+    names, seen = [], set()
+    for m in _MENTION_RE.finditer(text or ""):
+        name = m.group(1).rstrip(".,;:!?")
+        key = name.lower()
+        if not name or key in seen:
+            continue
+        seen.add(key)
+        names.append(name)
+    users = []
+    for name in names:
+        u = User.query.filter(db.func.lower(User.username) == name.lower()).first()
+        if u:
+            users.append(u)
+    return users
+
+
+def _notif_json(n):
+    sender = db.session.get(User, n.from_user_id) if n.from_user_id else None
+    return {
+        "id": n.id,
+        "kind": n.kind,
+        "message": n.message,
+        "sender": sender.username if sender else None,
+        "sender_avatar": _avatar_url(sender) if sender else None,
+        "chat_message_id": n.chat_message_id,
+        "created_at": n.created_at.isoformat() + "Z",
+    }
 
 
 def log_activity(user, action, details=""):
@@ -792,6 +886,318 @@ def admin_settings_maintenance():
             "eta": maintenance_eta(),
         }
     )
+
+
+def _avatar_url(user):
+    if not user or not user.avatar:
+        return ""
+    if user.avatar.startswith("data:"):
+        return user.avatar
+    return url_for("static", filename="uploads/" + user.avatar)
+
+
+def _chat_message_json(m, me_id):
+    u = m.user
+    result = {
+        "id": m.id,
+        "username": u.username if u else "Deleted user",
+        "avatar": _avatar_url(u),
+        "message": m.message,
+        "created_at": m.created_at.isoformat() + "Z",
+        "is_admin": bool(u and u.is_admin),
+        "is_me": u is not None and u.id == me_id,
+    }
+    if m.reply_to_id:
+        rt = m.reply_to
+        if rt:
+            rtext = rt.message or ""
+            result["reply_to"] = {
+                "id": m.reply_to_id,
+                "username": rt.user.username if rt.user else "Deleted user",
+                "avatar": _avatar_url(rt.user),
+                "text": (rtext[:100] + "...") if len(rtext) > 100 else rtext,
+            }
+    if m.file_name:
+        mime = m.file_mime or ""
+        result["file"] = {
+            "name": m.file_name,
+            "size": m.file_size or 0,
+            "mime": mime,
+            "is_image": mime.startswith("image/"),
+            "url": url_for("static", filename="chat_uploads/" + secure_filename(m.file_name)),
+        }
+    if m.reactions:
+        agg = {}
+        mine = None
+        for r in m.reactions:
+            agg[r.emoji] = agg.get(r.emoji, 0) + 1
+            if r.user_id == me_id:
+                mine = r.emoji
+        result["reactions"] = [{"emoji": e, "count": c} for e, c in sorted(agg.items(), key=lambda kv: kv[1], reverse=True)]
+        result["my_reaction"] = mine
+    else:
+        result["my_reaction"] = None
+    return result
+
+
+@app.route("/api/announcement/latest")
+@login_required
+def api_announcement_latest():
+    try:
+        aid = int(_maint_setting("announcement_id") or "0")
+    except (TypeError, ValueError):
+        aid = 0
+    return jsonify(
+        {
+            "id": aid,
+            "title": _maint_setting("announcement_title", ""),
+            "message": _maint_setting("announcement_message", ""),
+            "created_at": _maint_setting("announcement_created_at", ""),
+        }
+    )
+
+
+@app.route("/admin/announcement", methods=["POST"])
+@login_required
+@admin_required
+def admin_announcement():
+    data = request.get_json(silent=True) or {}
+    title = (data.get("title") or "").strip()
+    message = (data.get("message") or "").strip()
+    if not message:
+        return jsonify({"error": "Announcement message is required."}), 400
+    if len(message) > 1000:
+        return jsonify({"error": "Announcement is too long (1000 characters max)."}), 400
+    if contains_badword(message) or (title and contains_badword(title)):
+        return jsonify({"error": "Announcement contains an inappropriate word."}), 400
+    try:
+        new_id = int(_maint_setting("announcement_id") or "0") + 1
+    except (TypeError, ValueError):
+        new_id = 1
+    _set_setting("announcement_id", new_id)
+    _set_setting("announcement_title", title)
+    _set_setting("announcement_message", message)
+    _set_setting("announcement_created_at", datetime.utcnow().isoformat())
+    mentioned = parse_mentions("%s %s" % (title, message))
+    if mentioned:
+        excerpt = message if len(message) <= 200 else message[:200] + "..."
+        for u in mentioned:
+            if u.id == current_user.id:
+                continue
+            db.session.add(
+                Notification(
+                    user_id=u.id,
+                    from_user_id=current_user.id,
+                    kind="announcement_mention",
+                    message="%s mentioned you in an announcement: %s" % (current_user.username, excerpt),
+                )
+            )
+        db.session.commit()
+    log_activity(current_user, "Sent announcement", "Title: %s" % (title or "-"))
+    return jsonify({"ok": True, "id": new_id, "title": title, "message": message})
+
+
+@app.route("/api/chat/messages")
+@login_required
+def api_chat_messages():
+    try:
+        after = max(0, int(request.args.get("after", 0)))
+    except (TypeError, ValueError):
+        after = 0
+    q = ChatMessage.query.options(selectinload(ChatMessage.reactions))
+    if after:
+        rows = (
+            q.filter(ChatMessage.id > after)
+            .order_by(ChatMessage.id.asc())
+            .limit(100)
+            .all()
+        )
+    else:
+        rows = q.order_by(ChatMessage.id.desc()).limit(50).all()[::-1]
+    online = User.query.filter(
+        User.last_seen >= datetime.utcnow() - timedelta(minutes=5)
+    ).count()
+    return jsonify(
+        {
+            "messages": [_chat_message_json(m, current_user.id) for m in rows],
+            "online": online,
+        }
+    )
+
+
+CHAT_MAX_LEN = 300
+CHAT_RATE_MIN_SECONDS = 3
+_chat_last_sent = {}
+
+
+@app.route("/api/chat/messages/latest")
+@login_required
+def api_chat_latest():
+    after = request.args.get("after", 0, type=int) or 0
+    row = ChatMessage.query.order_by(ChatMessage.id.desc()).first()
+    count = ChatMessage.query.filter(ChatMessage.id > after).count() if after else 0
+    return jsonify({"id": row.id if row else 0, "count": count})
+
+
+@app.route("/api/chat/message", methods=["POST"])
+@login_required
+def api_chat_send():
+    if current_user.is_banned:
+        return jsonify({"error": "You cannot chat while banned."}), 403
+    is_multipart = request.content_type.startswith("multipart/form-data")
+    if is_multipart:
+        text = (request.form.get("message") or "").strip()
+        reply_to_id = request.form.get("reply_to_id", type=int) or None
+        file_obj = request.files.get("file")
+    else:
+        data = request.get_json(silent=True) or {}
+        text = (data.get("message") or "").strip()
+        reply_to_id = data.get("reply_to_id") or None
+        file_obj = None
+    file_name = None
+    file_size = None
+    file_mime = None
+    if file_obj and file_obj.filename:
+        ext = file_obj.filename.rsplit(".", 1)[-1].lower() if "." in file_obj.filename else ""
+        if ext not in CHAT_ALLOWED_EXT:
+            return jsonify({"error": "File type not allowed."}), 400
+        file_data = file_obj.read()
+        if len(file_data) > CHAT_MAX_FILE_SIZE:
+            return jsonify({"error": "File too large (max 10 MB)."}), 400
+        file_name = secure_filename(file_obj.filename)
+        safe = uuid.uuid4().hex + "_" + file_name
+        dest = os.path.join(CHAT_UPLOAD_DIR, safe)
+        with open(dest, "wb") as f:
+            f.write(file_data)
+        file_name = safe
+        file_size = len(file_data)
+        file_mime = CHAT_MIME.get(ext, "application/octet-stream")
+    if not text and not file_name:
+        return jsonify({"error": "Message or file is required."}), 400
+    if text and len(text) > CHAT_MAX_LEN:
+        return jsonify({"error": "Message is too long (%d characters max)." % CHAT_MAX_LEN}), 400
+    if text and contains_badword(text):
+        return jsonify(
+            {"error": "Your message contains an inappropriate word and was not sent."}
+        ), 400
+    now = datetime.utcnow()
+    last = _chat_last_sent.get(current_user.id)
+    if last and (now - last).total_seconds() < CHAT_RATE_MIN_SECONDS:
+        return jsonify(
+            {"error": "Please wait a few seconds before sending another message."}
+        ), 429
+    _chat_last_sent[current_user.id] = now
+    if reply_to_id:
+        target = db.session.get(ChatMessage, reply_to_id)
+        if target:
+            reply_to_id = target.id
+        else:
+            reply_to_id = None
+    msg = ChatMessage(
+        user_id=current_user.id,
+        message=text or "",
+        reply_to_id=reply_to_id,
+        file_name=file_name,
+        file_size=file_size,
+        file_mime=file_mime,
+    )
+    db.session.add(msg)
+    if text:
+        mentioned = parse_mentions(text)
+        if mentioned:
+            excerpt = text if len(text) <= 200 else text[:200] + "..."
+            for u in mentioned:
+                if u.id == current_user.id:
+                    continue
+                db.session.add(
+                    Notification(
+                        user_id=u.id,
+                        from_user_id=current_user.id,
+                        kind="chat_mention",
+                        message="%s mentioned you in chat: %s" % (current_user.username, excerpt),
+                        chat_message_id=msg.id,
+                    )
+                )
+    db.session.commit()
+    return jsonify({"ok": True, "message": _chat_message_json(msg, current_user.id)})
+
+
+@app.route("/api/chat/message/<int:mid>", methods=["DELETE"])
+@login_required
+@admin_required
+def api_chat_delete(mid):
+    msg = db.session.get(ChatMessage, mid)
+    if not msg:
+        return jsonify({"error": "Message not found."}), 404
+    username = msg.user.username if msg.user else "?"
+    if msg.file_name:
+        fpath = os.path.join(CHAT_UPLOAD_DIR, msg.file_name)
+        try:
+            if os.path.exists(fpath):
+                os.remove(fpath)
+        except Exception:
+            pass
+    db.session.delete(msg)
+    db.session.commit()
+    log_activity(current_user, "Deleted chat message", "Message from %s deleted" % username)
+    return jsonify({"ok": True})
+
+
+def _reaction_summary(msg):
+    if not msg.reactions:
+        return []
+    agg = {}
+    for r in msg.reactions:
+        agg[r.emoji] = agg.get(r.emoji, 0) + 1
+    return [{"emoji": e, "count": c} for e, c in sorted(agg.items(), key=lambda kv: kv[1], reverse=True)]
+
+
+@app.route("/api/chat/message/<int:mid>/react", methods=["POST"])
+@login_required
+def api_chat_react(mid):
+    msg = db.session.get(ChatMessage, mid)
+    if not msg:
+        return jsonify({"error": "Message not found."}), 404
+    data = request.get_json(silent=True) or {}
+    emoji = (data.get("emoji") or "").strip()
+    if not emoji:
+        return jsonify({"error": "emoji required"}), 400
+    existing = ChatReaction.query.filter_by(message_id=msg.id, user_id=current_user.id, emoji=emoji).first()
+    if existing:
+        db.session.delete(existing)
+        action = "removed"
+    else:
+        # single reaction per user: remove any other reaction they have on this message
+        ChatReaction.query.filter_by(message_id=msg.id, user_id=current_user.id).delete(synchronize_session=False)
+        db.session.add(ChatReaction(message_id=msg.id, user_id=current_user.id, emoji=emoji))
+        action = "added"
+    db.session.commit()
+    db.session.refresh(msg, attribute_names=["reactions"])
+    return jsonify({"ok": True, "action": action, "reactions": _reaction_summary(msg)})
+
+
+@app.route("/api/notifications")
+@login_required
+def api_notifications():
+    base = Notification.query.filter_by(user_id=current_user.id, is_read=False)
+    rows = base.order_by(Notification.created_at.desc()).limit(20).all()
+    return jsonify({"count": base.count(), "notifications": [_notif_json(n) for n in rows]})
+
+
+@app.route("/api/notifications/read", methods=["POST"])
+@login_required
+def api_notifications_read():
+    data = request.get_json(silent=True) or {}
+    nid = data.get("id")
+    q = Notification.query.filter_by(user_id=current_user.id, is_read=False)
+    if nid:
+        try:
+            q = q.filter(Notification.id == int(nid))
+        except (TypeError, ValueError):
+            q = q.filter(False)
+    q.update({"is_read": True}, synchronize_session=False)
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 @app.before_request
@@ -1486,6 +1892,12 @@ def admin_dashboard():
         maintenance_enabled=maintenance_enabled(),
         maintenance_message=maintenance_message(),
         maintenance_eta=maintenance_eta(),
+        last_announcement={
+            "id": _maint_setting("announcement_id", "0"),
+            "title": _maint_setting("announcement_title", ""),
+            "message": _maint_setting("announcement_message", ""),
+            "created_at": _maint_setting("announcement_created_at", ""),
+        },
     )
 
 
@@ -4567,6 +4979,7 @@ with app.app_context():
     
     db.create_all()
     os.makedirs(AVATAR_DIR, exist_ok=True)
+    os.makedirs(CHAT_UPLOAD_DIR, exist_ok=True)
     is_sqlite = db.engine.dialect.name == "sqlite"
     
     # Check if user table has required columns, drop and recreate if corrupted
@@ -4703,6 +5116,54 @@ with app.app_context():
             try:
                 with db.engine.begin() as conn:
                     conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN ban_reason VARCHAR(200)'))
+                break
+            except Exception:
+                time.sleep(0.5)
+    try:
+        _cm_cols = [c["name"] for c in _inspect(db.engine).get_columns("chat_message")]
+    except Exception:
+        _cm_cols = []
+    if "reply_to_id" not in _cm_cols:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    if is_sqlite:
+                        conn.execute(sa_text("ALTER TABLE chat_message ADD COLUMN reply_to_id INTEGER DEFAULT NULL"))
+                    else:
+                        conn.execute(sa_text('ALTER TABLE "chat_message" ADD COLUMN reply_to_id INTEGER'))
+                break
+            except Exception:
+                time.sleep(0.5)
+    if "file_name" not in _cm_cols:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    if is_sqlite:
+                        conn.execute(sa_text("ALTER TABLE chat_message ADD COLUMN file_name VARCHAR(200)"))
+                    else:
+                        conn.execute(sa_text('ALTER TABLE "chat_message" ADD COLUMN file_name VARCHAR(200)'))
+                break
+            except Exception:
+                time.sleep(0.5)
+    if "file_size" not in _cm_cols:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    if is_sqlite:
+                        conn.execute(sa_text("ALTER TABLE chat_message ADD COLUMN file_size INTEGER"))
+                    else:
+                        conn.execute(sa_text('ALTER TABLE "chat_message" ADD COLUMN file_size INTEGER'))
+                break
+            except Exception:
+                time.sleep(0.5)
+    if "file_mime" not in _cm_cols:
+        for _ in range(10):
+            try:
+                with db.engine.begin() as conn:
+                    if is_sqlite:
+                        conn.execute(sa_text("ALTER TABLE chat_message ADD COLUMN file_mime VARCHAR(100)"))
+                    else:
+                        conn.execute(sa_text('ALTER TABLE "chat_message" ADD COLUMN file_mime VARCHAR(100)'))
                 break
             except Exception:
                 time.sleep(0.5)

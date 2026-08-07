@@ -107,6 +107,39 @@
     </div>
   </div>
 
+  <div class="card shadow-sm mb-4 fade-up">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <h6 class="mb-0">
+        <i class="bi bi-megaphone text-primary me-2"></i>Send Announcement
+      </h6>
+      <span class="small text-muted" id="annLastInfo">
+        {% if last_announcement.id and last_announcement.id != '0' %}
+          Last sent: #{{ last_announcement.id }}{% if last_announcement.title %} - {{ last_announcement.title }}{% endif %}
+        {% else %}
+          No announcements sent yet
+        {% endif %}
+      </span>
+    </div>
+    <div class="card-body">
+      <p class="small text-muted mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        The announcement pops up in real time (within ~10 seconds) for every logged-in user on any page.
+      </p>
+      <div class="mb-3">
+        <label for="annTitle" class="form-label small fw-semibold">Title (optional)</label>
+        <input type="text" class="form-control" id="annTitle" maxlength="80" placeholder="e.g. Important Reminder">
+      </div>
+      <div class="mb-3">
+        <label for="annMessage" class="form-label small fw-semibold">Message</label>
+        <textarea class="form-control" id="annMessage" rows="3" maxlength="1000" placeholder="Type the announcement message..."></textarea>
+      </div>
+      <button type="button" class="btn btn-primary" id="annSendBtn">
+        <i class="bi bi-send me-1"></i>Send Announcement
+      </button>
+      <span id="annStatus" class="small text-muted ms-2"></span>
+    </div>
+  </div>
+
   <div class="row g-4">
     <div class="col-lg-6">
       <div class="card shadow-sm h-100 fade-up">
@@ -263,6 +296,44 @@
         status.classList.add('text-danger');
         btn.disabled = false;
       });
+  });
+})();
+
+(function () {
+  const btn = document.getElementById('annSendBtn');
+  if (!btn) return;
+  const title = document.getElementById('annTitle');
+  const message = document.getElementById('annMessage');
+  const status = document.getElementById('annStatus');
+  const info = document.getElementById('annLastInfo');
+
+  btn.addEventListener('click', function () {
+    if (!message.value.trim()) {
+      status.textContent = 'Enter a message first.';
+      status.classList.add('text-danger');
+      return;
+    }
+    btn.disabled = true;
+    status.classList.remove('text-danger');
+    status.textContent = 'Sending...';
+    fetch('{{ url_for('admin_announcement') }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title.value.trim(), message: message.value.trim() })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) throw new Error(data.error);
+        status.textContent = 'Sent! Logged-in users will see it within ~10 seconds.';
+        info.textContent = 'Last sent: #' + data.id + (data.title ? ' - ' + data.title : '');
+        title.value = '';
+        message.value = '';
+      })
+      .catch(err => {
+        status.textContent = 'Error: ' + err.message;
+        status.classList.add('text-danger');
+      })
+      .then(function () { btn.disabled = false; });
   });
 })();
 </script>

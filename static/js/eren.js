@@ -107,6 +107,13 @@
       return token;
     });
 
+    // 4. TikTok URLs
+    text = text.replace(/https?:\/\/(?:www\.|vm\.|m\.)?tiktok\.com\/[^?]*(?:video\/|embed\/v\/|player\/v1\/)(\d{10,})[^\s<]*/gi, function(match, id) {
+      var token = '___VIDEO_EMBED_' + tokens.length + '___';
+      tokens.push({ id: id, title: 'TikTok', provider: 'tiktok' });
+      return token;
+    });
+
     return { text: text, tokens: tokens };
   }
 
@@ -193,9 +200,14 @@
 
     tokens.forEach(function(item, idx) {
       var token = '___VIDEO_EMBED_' + idx + '___';
-      var embedHtml = '<div class="ratio ratio-16x9 my-2 rounded overflow-hidden shadow-sm">' +
-        '<iframe src="https://www.youtube.com/embed/' + item.id + '" title="' + (item.title || 'Video Lesson') + '" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>' +
-        '</div>';
+      var embedHtml;
+      if (item.provider === 'tiktok') {
+        embedHtml = '<div class="ratio ratio-9x16 tiktok-embed-ratio"><iframe src="https://www.tiktok.com/player/v1/' + item.id + '" title="' + (item.title || 'TikTok') + '" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe></div>';
+      } else {
+        embedHtml = '<div class="ratio ratio-16x9 my-2 rounded overflow-hidden shadow-sm">' +
+          '<iframe src="https://www.youtube.com/embed/' + item.id + '" title="' + (item.title || 'Video Lesson') + '" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>' +
+          '</div>';
+      }
       el.innerHTML = el.innerHTML.replace(token, embedHtml);
     });
 
@@ -441,7 +453,7 @@
 
   function renderBotContent(bubble, text, opts) {
     bubble.textContent = '';
-    if (/```|<iframe|youtube\.com|youtu\.be|\[video:/.test(text)) {
+    if (/```|<iframe|youtube\.com|youtu\.be|tiktok\.com|\[video:/.test(text)) {
       bubble.appendChild(buildReply(text));
     } else {
       var w = document.createElement('div');
@@ -494,7 +506,7 @@
 
   function finishTypingBubble(bubble, text, opts) {
     bubble.classList.remove('assist-typing');
-    if (/```|<iframe|youtube\.com|youtu\.be|\[video:/.test(text)) {
+    if (/```|<iframe|youtube\.com|youtu\.be|tiktok\.com|\[video:/.test(text)) {
       renderBotContent(bubble, text, opts);
       return;
     }

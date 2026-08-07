@@ -60,6 +60,47 @@ EREN_CHANGELOG = [
 
 CHANGELOG = [
     {
+        "version": "1.66",
+        "date": "2026-08-07",
+        "type": "feature",
+        "title": "Emoji Reactions & Link Embed Fixes",
+        "changes": [
+            "Long-press any Global Chat message to pop up an emoji reaction picker (like Messenger), then tap an emoji to react",
+            "Tap an existing reaction chip to add/remove your own reaction",
+            "Reaction counts now show under each message",
+            "TikTok embeds now use TikTok's current player URL format so links embed properly again",
+            "TikTok embeds use a portrait aspect ratio so vertical videos are no longer tiny",
+            "Replying to a message now shows the full reply preview (no longer cut off) and is clickable to jump to the original message",
+            "Long YouTube and image links now embed inline - image links show a preview thumbnail",
+        ],
+    },
+    {
+        "version": "1.65",
+        "date": "2026-08-07",
+        "type": "feature",
+        "title": "Mention Users in Chat & Announcements",
+        "changes": [
+            "Type @username in Global Chat or in an announcement to mention that user",
+            "Mentioned users get a messenger-style notification bubble right on their screen, no matter what page they are on",
+            "Clicking the bubble opens a list of mentions - tap one to jump straight to the chat or see the announcement",
+            "Mentioned usernames are highlighted in chat so you can spot them easily",
+            "New unread number badge on the Global Chat button that counts how many messages you have not seen yet - it stays even when there are many, and clears when you open the chat",
+            "The E.R.E.N floating button also shows a number badge when the AI finishes replies while the panel is closed",
+            "Floating chat buttons hide automatically while the AI assistant is open so they never cover the message box",
+        ],
+    },
+    {
+        "version": "1.64",
+        "date": "2026-08-07",
+        "type": "feature",
+        "title": "Announcements & Global Chat",
+        "changes": [
+            "Admins can now send announcements from the Admin Dashboard that pop up in real time for every logged-in user on any page",
+            "New Global Chat on the dashboard - every user can chat with everyone in real time, with profanity filter and 3-second cooldown",
+            "Admins can delete any chat message to moderate the chat",
+        ],
+    },
+    {
         "version": "1.63",
         "date": "2026-08-07",
         "type": "feature",
