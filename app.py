@@ -149,7 +149,7 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.63"
+APP_VERSION = "1.64"
 EREN_VERSION = "2.2"
 
 

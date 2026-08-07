@@ -697,10 +697,31 @@
   }
 
   if (imageBtn && imageInputEl) {
-    imageBtn.addEventListener('click', function () { imageInputEl.click(); });
+    imageBtn.addEventListener('click', function () {
+      var proModalEl = document.getElementById('proModal');
+      if (proModalEl && window.bootstrap) {
+        new bootstrap.Modal(proModalEl).show();
+      } else {
+        imageInputEl.click();
+      }
+    });
+    imageBtn.addEventListener('mouseenter', function () {
+      imageBtn.setAttribute('title', 'Pro feature (locked)');
+    });
     imageInputEl.addEventListener('change', function () { handleImageFile(imageInputEl.files && imageInputEl.files[0]); });
   }
   if (imageClear) imageClear.addEventListener('click', clearPendingImage);
+
+  var proUpgradeBtn = document.getElementById('proUpgradeBtn');
+  if (proUpgradeBtn) {
+    proUpgradeBtn.addEventListener('click', function () {
+      var proModalEl = document.getElementById('proModal');
+      if (proModalEl && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(proModalEl).hide();
+      }
+      if (imageInputEl) imageInputEl.click();
+    });
+  }
 
   function sendMessage(message) {
     var image = pendingImage;
