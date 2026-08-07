@@ -505,7 +505,7 @@ document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
   new bootstrap.Tooltip(el);
 });
 (function () {
-  const STORE = 'dashboardSections';
+  const STORE = 'dashboardSections_' + {{ current_user.id }};
   function readState() {
     try { return JSON.parse(localStorage.getItem(STORE)) || {}; }
     catch (e) { return {}; }

@@ -1,0 +1,43 @@
+<button type="button" id="musicToggle" class="music-toggle" aria-label="Toggle music player">
+  <i class="bi bi-music-note-beamed music-toggle-icon"></i>
+  <span class="music-toggle-eq" aria-hidden="true"><span></span><span></span><span></span></span>
+</button>
+
+<div id="musicPanel" class="music-panel d-none">
+  <div class="music-header d-flex align-items-center">
+    <i class="bi bi-music-note-beamed me-2"></i>
+    <div class="flex-grow-1">
+      <strong>Music Floater</strong>
+      <div id="musicStation" class="music-station">Study music</div>
+    </div>
+    <button type="button" id="musicClose" class="btn-close btn-close-white ms-1" aria-label="Close music player"></button>
+  </div>
+  <div class="music-now">
+    <div id="musicTitle" class="music-title">Select a station to start</div>
+    <div id="musicEq" class="music-eq" aria-hidden="true"><span></span><span></span><span></span></div>
+    <a id="musicFallback" class="music-fallback d-none" href="#" target="_blank" rel="noopener">Open in YouTube <i class="bi bi-box-arrow-up-right"></i></a>
+    <div id="musicEmbedWrap" class="music-embed-wrap d-none">
+      <div id="musicEmbed" class="music-embed"></div>
+    </div>
+  </div>
+  <div class="music-controls">
+    <button type="button" id="musicPrev" class="music-btn" aria-label="Previous station"><i class="bi bi-skip-start-fill"></i></button>
+    <button type="button" id="musicPlay" class="music-btn music-btn-play" aria-label="Play"><i class="bi bi-play-fill"></i></button>
+    <button type="button" id="musicNext" class="music-btn" aria-label="Next station"><i class="bi bi-skip-end-fill"></i></button>
+  </div>
+  <div class="music-volume">
+    <i class="bi bi-volume-up-fill"></i>
+    <input type="range" id="musicVolume" min="0" max="100" value="70" aria-label="Volume">
+  </div>
+  <form id="musicSearchForm" class="music-search">
+    <input type="text" id="musicSearchInput" class="form-control form-control-sm" placeholder="Search music on YouTube..." autocomplete="off" aria-label="Search music">
+    <button type="submit" class="btn btn-sm btn-outline-primary" aria-label="Search"><i class="bi bi-search"></i></button>
+  </form>
+  <div id="musicStations" class="music-stations"></div>
+  <form id="musicCustom" class="music-custom">
+    <input type="text" id="musicUrl" class="form-control form-control-sm" placeholder="Paste a YouTube URL to play..." autocomplete="off" aria-label="YouTube URL">
+    <button type="submit" class="btn btn-sm btn-primary" aria-label="Play this URL"><i class="bi bi-play-fill"></i></button>
+  </form>
+</div>
+
+<div id="musicPlayer"></div>

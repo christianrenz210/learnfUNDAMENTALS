@@ -1,5 +1,6 @@
 import base64
 import glob
+import html
 import io
 import json
 import os
@@ -13,6 +14,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime, timedelta
@@ -881,10 +883,12 @@ def login():
         show_database_reset_warning = False
     
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
+        login_id = request.form.get("username", "").strip().lower()
         password = request.form.get("password", "")
         ip = _client_ip()
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter(
+            db.or_(db.func.lower(User.username) == login_id, db.func.lower(User.email) == login_id)
+        ).first()
         if is_ip_locked(ip) and not (user and user.is_admin):
             flash(
                 "Too many failed login attempts from your IP address. "
@@ -916,7 +920,7 @@ def login():
             if user.is_admin:
                 return redirect(url_for("admin_dashboard"))
             return redirect(url_for("dashboard"))
-        record_failed_login(username)
+        record_failed_login(login_id)
         attempts_left = max(0, LOGIN_LOCK_ATTEMPTS - failed_login_count(ip))
         if attempts_left <= 0:
             flash(
@@ -1006,6 +1010,66 @@ def update_profile():
         log_activity(current_user, "Updated profile", "Changed username, email, avatar, or password")
         flash("Profile updated successfully.", "success")
     return redirect(url_for("dashboard"))
+
+
+@app.route("/api/youtube/search")
+@login_required
+def api_youtube_search():
+    q = request.args.get("q", "").strip()
+    api_key = os.environ.get("YOUTUBE_API_KEY", "").strip()
+    if not q:
+        return jsonify({"error": "empty_query", "message": "Missing search query."}), 400
+    if not api_key:
+        return jsonify({"error": "no_api_key", "message": "Set YOUTUBE_API_KEY in .env to enable music search."})
+
+    def _fetch_search(query, category=None):
+        params = {
+            "part": "snippet",
+            "type": "video",
+            "maxResults": 12,
+            "q": query,
+            "key": api_key,
+            "videoEmbeddable": "true",
+        }
+        if category:
+            params["videoCategoryId"] = category
+        url = "https://www.googleapis.com/youtube/v3/search?" + urllib.parse.urlencode(params)
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    data = None
+    error_msg = None
+    try:
+        data = _fetch_search(q, category="10")
+        if not data.get("items"):
+            data = _fetch_search(q)
+    except urllib.error.HTTPError as e:
+        try:
+            body = json.loads(e.read().decode("utf-8", "replace"))
+            error_msg = body.get("error", {}).get("message", str(e))
+        except Exception:
+            error_msg = str(e)
+    except Exception as e:
+        error_msg = str(e)
+
+    if error_msg:
+        return jsonify({"error": "api_error", "message": error_msg})
+
+    items = []
+    for it in data.get("items", []):
+        vid = (it.get("id") or {}).get("videoId")
+        if not vid:
+            continue
+        snip = it.get("snippet") or {}
+        thumb = ((snip.get("thumbnails") or {}).get("medium") or {}).get("url", "")
+        items.append({
+            "id": vid,
+            "title": html.unescape(snip.get("title", "")),
+            "channel": html.unescape(snip.get("channelTitle", "")),
+            "thumb": thumb,
+        })
+    return jsonify({"results": items})
 
 
 @app.route("/dashboard")

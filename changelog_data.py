@@ -60,6 +60,16 @@ EREN_CHANGELOG = [
 
 CHANGELOG = [
     {
+        "version": "1.62",
+        "date": "2026-08-07",
+        "type": "feature",
+        "title": "Login with Username or Email",
+        "changes": [
+            "Login now accepts your username OR your email address - type either one in the single field and it works",
+            "Suggested by: Syrez Leodones - mapagmahal 123, di kana mahal",
+        ],
+    },
+    {
         "version": "1.61",
         "date": "2026-08-07",
         "type": "feature",
