@@ -315,6 +315,36 @@
         </div>
       </div>
 
+      {% if lesson.activity %}
+      <div class="card shadow-sm mb-4" id="activityCard"
+           data-questions-url="{{ url_for('activity_questions', lesson_id=lesson.id) }}"
+           data-download-url="{{ url_for('activity_download', lesson_id=lesson.id) }}"
+           data-template-url="{{ url_for('static', filename='docs/' ~ lesson.activity.docx) }}">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">
+            <i class="bi bi-clipboard-check text-success me-2"></i>Activity
+          </h5>
+        </div>
+        <div class="card-body">
+          <h6 class="fw-semibold">{{ lesson.activity.title }}</h6>
+          {% if lesson.activity.description %}
+            <p class="text-muted small mb-3">{{ lesson.activity.description }}</p>
+          {% endif %}
+          <div id="activityQuestions" class="mb-3">
+            <p class="text-muted mb-0"><i class="bi bi-hourglass-split me-1"></i>Loading questions...</p>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button type="button" class="btn btn-success" id="activityDownloadBtn" disabled>
+              <i class="bi bi-download me-1"></i>Download with My Answers (DOCX)
+            </button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('static', filename='docs/' ~ lesson.activity.docx) }}" download>
+              <i class="bi bi-file-earmark-word me-1"></i>Blank Template
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <div class="d-flex justify-content-between">
         {% if prev_lesson_id %}
           <a href="{{ url_for('lesson', lesson_id=prev_lesson_id) }}" class="btn btn-outline-secondary">
@@ -524,6 +554,99 @@
 </div>
 {% endif %}
 <script type="application/json" id="quizAnswers">{{ lesson.quiz | map(attribute='correct') | list | tojson }}</script>
+<script>
+(function () {
+  const activityCard = document.getElementById('activityCard');
+  if (activityCard) {
+    const qUrl = activityCard.dataset.questionsUrl;
+    const dUrl = activityCard.dataset.downloadUrl;
+    const container = document.getElementById('activityQuestions');
+    const downloadBtn = document.getElementById('activityDownloadBtn');
+
+    fetch(qUrl, { cache: 'no-store' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.ok) throw new Error(data.error || 'Could not load the activity.');
+        const questions = data.questions || [];
+        const meta = data.meta || [];
+        if (!questions.length && !meta.length) {
+          container.innerHTML = '<p class="text-muted mb-0">No questions found in the activity file.</p>';
+          return;
+        }
+        let html = '';
+        meta.forEach(function (m, i) {
+          html += '<div class="mb-3">' +
+            '<label class="form-label fw-semibold mb-1" for="activity-meta-' + i + '">' + m.label + '</label>' +
+            '<input type="text" class="form-control activity-meta" id="activity-meta-' + i +
+            '" data-key="' + m.label + '" placeholder="' + m.label + '">' +
+            '</div>';
+        });
+        if (meta.length) {
+          html += '<hr class="my-3">';
+        }
+        questions.forEach(function (q, i) {
+          html += '<div class="mb-3">' +
+            '<label class="form-label fw-semibold" for="activity-q-' + i + '">' + (i + 1) + '. ' + q + '</label>' +
+            '<textarea class="form-control activity-answer" id="activity-q-' + i + '" rows="3"' +
+            ' placeholder="Type your answer here..."></textarea>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+        downloadBtn.disabled = false;
+      })
+      .catch(function (err) {
+        container.innerHTML = '<p class="text-muted mb-0"><i class="bi bi-exclamation-triangle me-1"></i>' +
+          (err.message || 'Could not load the activity.') + '</p>';
+      });
+
+    downloadBtn.addEventListener('click', function () {
+      const answers = {};
+      container.querySelectorAll('.activity-answer').forEach(function (ta, i) {
+        answers[i] = ta.value;
+      });
+      const meta = {};
+      container.querySelectorAll('.activity-meta').forEach(function (input) {
+        meta[input.dataset.key] = input.value;
+      });
+      downloadBtn.disabled = true;
+      downloadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Preparing document...';
+      fetch(dUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: answers, meta: meta })
+      })
+        .then(function (res) {
+          if (!res.ok) return res.json().then(function (d) { throw new Error(d.error || 'Could not create the document.'); });
+          let filename = 'activity.docx';
+          const cd = res.headers.get('Content-Disposition');
+          if (cd) {
+            const m = cd.match(/filename\*=UTF-8''([^;]+)/i) || cd.match(/filename="?([^";]+)"?/i);
+            if (m && m[1]) {
+              try { filename = decodeURIComponent(m[1]); } catch (e) { filename = m[1]; }
+            }
+          }
+          return res.blob().then(function (blob) { return { blob: blob, filename: filename }; });
+        })
+        .then(function (data) {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(data.blob);
+          a.download = data.filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+        })
+        .catch(function (err) {
+          window.alert(err.message || 'Could not create the document. Please try again.');
+        })
+        .finally(function () {
+          downloadBtn.disabled = false;
+          downloadBtn.innerHTML = '<i class="bi bi-download me-1"></i>Download with My Answers (DOCX)';
+        });
+    });
+  }
+})();
+</script>
 <script>
 (function () {
   const answers = JSON.parse(document.getElementById('quizAnswers').textContent);

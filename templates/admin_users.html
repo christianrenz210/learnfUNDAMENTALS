@@ -37,6 +37,7 @@
             <th>Lessons Done</th>
             <th>Quizzes</th>
             <th>Labs</th>
+            <th>Coins</th>
             <th>Role</th>
             <th>Actions</th>
           </tr>
@@ -81,6 +82,11 @@
                 <span class="badge bg-danger bg-opacity-10 text-danger">{{ row.labs }}</span>
               </td>
               <td>
+                <span class="badge bg-warning bg-opacity-10 text-warning">
+                  <i class="bi bi-coin me-1"></i>{{ row.user.coins or 0 }}
+                </span>
+              </td>
+              <td>
                 {% if row.user.is_admin %}
                   <span class="badge bg-danger">Admin</span>
                 {% else %}
@@ -92,6 +98,13 @@
                   <a href="{{ url_for('admin_user_progress', uid=row.user.id) }}" class="btn btn-sm btn-outline-primary">
                     <i class="bi bi-list-check me-1"></i>Progress
                   </a>
+                  <button class="btn btn-sm btn-outline-warning coins-btn"
+                          data-user="{{ row.user.username }}"
+                          data-current="{{ row.user.coins or 0 }}"
+                          data-url="{{ url_for('admin_set_coins', uid=row.user.id) }}"
+                          title="Set coins for {{ row.user.username }}">
+                    <i class="bi bi-coin me-1"></i>Coins
+                  </button>
                   {% if row.user.is_admin %}
                     <button class="btn btn-sm btn-outline-secondary" disabled title="Cannot ban admins">
                       <i class="bi bi-slash-circle"></i> Ban
@@ -111,7 +124,7 @@
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="10" class="text-center text-muted py-4">No users yet.</td></tr>
+            <tr><td colspan="11" class="text-center text-muted py-4">No users yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -177,6 +190,30 @@
       input.type = 'hidden';
       input.name = 'reason';
       input.value = reason;
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    });
+  });
+
+  // Coins button -> prompt for the new balance, submit a POST form
+  document.querySelectorAll('.coins-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const username = btn.getAttribute('data-user');
+      const current = btn.getAttribute('data-current');
+      const value = window.prompt('Set coins for ' + username + ' (current: ' + current + '):', current);
+      if (value === null) return;
+      if (!/^\d+$/.test(value.trim())) {
+        window.alert('Please enter a valid whole number of coins.');
+        return;
+      }
+      const form = document.createElement('form');
+      form.method = 'post';
+      form.action = btn.getAttribute('data-url');
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'coins';
+      input.value = value.trim();
       form.appendChild(input);
       document.body.appendChild(form);
       form.submit();

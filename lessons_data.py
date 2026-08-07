@@ -1051,6 +1051,65 @@ LESSONS = [
         ],
     },
     {
+        "section": "Advanced Fundamentals",
+        "id": 36,
+        "minutes": 60,
+        "title": "Angular",
+        "icon": "bi-angular",
+        "description": "Angular is one of the world's most popular frameworks for building large-scale web applications. Watch the official origin story documentary to learn how AngularJS was born inside Google, how a complete rewrite divided the community, and how the modern Angular framework rose again with TypeScript, components, and Ivy. After the video, download the essay activity and answer the questions.",
+        "videos": {
+            "general": [
+                {"id": "cRC9DlH45lA", "channel": "CultRepo", "title": "Angular: The Documentary | An origin story", "duration": 60},
+            ],
+        },
+        "key_points": [
+            "AngularJS was created by Miško Hevery in 2009 as an internal Google experiment, initially brushed off by Gmail and Google Maps before becoming a JavaScript sensation.",
+            "AngularJS made two-way data binding and dependency injection mainstream, which made building single-page applications dramatically easier.",
+            "Angular 2 (released 2016) was a complete rewrite of AngularJS, not a version bump — the team decided a clean break was the only way forward.",
+            "The rewrite split the community, but TypeScript — a superset of JavaScript with static types — became the foundation of modern Angular.",
+            "Modern Angular is built around components, templates, dependency injection, and modules; components combine an HTML template with a class that controls it.",
+            "Ivy is the modern Angular compiler and runtime: faster builds, smaller bundles, and better debugging.",
+            "Signals are Angular's newer reactivity system, making state changes faster and more predictable.",
+            "Angular is designed for large-scale, enterprise applications: strict structure, built-in router, forms, HTTP client, and tooling like the Angular CLI.",
+            "The documentary highlights how open-source communities, internal pressure at Google, and years of iteration shaped the framework we use today.",
+        ],
+        "code": {
+            "typescript": "// ==============================================\n// ANGULAR - A BASIC COMPONENT (app.component.ts)\n// Angular apps are built from components:\n// a class that controls a template.\n// ==============================================\n\nimport { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-root',              // used as <app-root> in HTML\n  template: `\n    <h1>{{ title }}</h1>\n    <p>Count: {{ count }}</p>\n    <button (click)=\"increase()\">+1</button>\n    <button (click)=\"reset()\">Reset</button>\n  `,\n})\nexport class AppComponent {\n  title = 'My Angular App';          // data binding: {{ title }}\n  count = 0;\n\n  increase(): void {\n    this.count += 1;                 // event binding: (click)\n  }\n\n  reset(): void {\n    this.count = 0;\n  }\n}\n\n// Run with the Angular CLI:\n//   ng new my-app        -> create a new project\n//   cd my-app            -> go inside it\n//   ng serve             -> start the dev server\n//   ng generate component hello  -> generate a new component",
+        },
+        "activity": {
+            "title": "Activity: Angular - An Origin Story",
+            "docx": "Activity - Angular Origin Story.docx",
+            "description": "Answer the essay questions based on the documentary and your own understanding of Angular. Download the document, type your answers, and submit it to your instructor.",
+        },
+        "quiz": [
+            {
+                "question": "Who created AngularJS?",
+                "options": ["Brad Green", "Miško Hevery", "Guido van Rossum", "Addy Osmani"],
+                "correct": 1,
+            },
+            {
+                "question": "What happened when Angular 2 was released?",
+                "options": ["It was a small update to AngularJS", "It was a complete rewrite of the framework", "It added Python support", "It renamed to TypeScript"],
+                "correct": 1,
+            },
+            {
+                "question": "Which language became the foundation of modern Angular?",
+                "options": ["JavaScript", "Java", "TypeScript", "C#"],
+                "correct": 2,
+            },
+            {
+                "question": "What is a component in Angular?",
+                "options": ["A database table", "A class combined with a template that controls part of the page", "A CSS file", "A type of loop"],
+                "correct": 1,
+            },
+            {
+                "question": "What is Ivy?",
+                "options": ["A new version of AngularJS", "The modern Angular compiler and runtime", "A CSS framework", "A JavaScript library for animations"],
+                "correct": 1,
+            },
+        ],
+    },
+    {
         "section": "Advanced Database System",
         "id": 11,
         "minutes": 35,

@@ -1355,6 +1355,35 @@ def admin_unban_user(uid):
     return redirect(url_for("admin_users"))
 
 
+@app.route("/admin/user/<int:uid>/coins", methods=["POST"])
+@login_required
+@admin_required
+def admin_set_coins(uid):
+    user = db.session.get(User, uid)
+    if user is None:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin_users"))
+    raw = (request.form.get("coins") or "").strip()
+    try:
+        amount = int(raw)
+    except ValueError:
+        flash("Please enter a valid whole number of coins.", "danger")
+        return redirect(url_for("admin_users"))
+    if amount < 0:
+        flash("Coins cannot be negative.", "danger")
+        return redirect(url_for("admin_users"))
+    old = user.coins or 0
+    user.coins = amount
+    db.session.commit()
+    log_activity(
+        current_user,
+        "Admin set coins",
+        "Set %s's coins from %d to %d" % (user.username, old, amount),
+    )
+    flash("Set %s's coins to %d." % (user.username, amount), "success")
+    return redirect(url_for("admin_users"))
+
+
 @app.route("/admin/api/online-users")
 @login_required
 @admin_required
@@ -1627,7 +1656,12 @@ EREN_SYSTEM_PROMPT = (
     "- Deploying with Render: (srudWEWKPv0)\n"
     "- Deploying with Netlify: (IH95RG9Y6L4, YUtNzwxOVYY)\n"
     "- SQL Injection Intro: (wcaiKgQU6VE)\n"
-    "- How SQL Injection Works: (FwIUkAwKzG8)"
+    "- How SQL Injection Works: (FwIUkAwKzG8)\n"
+    "- Angular (Advanced Fundamentals): (cRC9DlH45lA)\n"
+    "\n\nYouTube Summaries:\n"
+    "When a student pastes a YouTube link, the system automatically fetches the video transcript "
+    "and asks you to summarize it. Give a beginner-friendly summary (English or Filipino) with "
+    "short ## headers and - bullets, highlight key points, and answer any question they asked.\n"
     "\n\nPresentations / PPT requests:\n"
     "When a student asks for a presentation, PowerPoint, slide outline, or to 'make this into slides' for any "
     "topic, produce a clean slide deck using ONLY this format — it renders nicely in chat and can be exported "
@@ -2421,7 +2455,82 @@ def lesson_for_quiz_question(message):
     return False, None
 
 
-def lesson_review_nudge(lesson_id):
+def extract_youtube_id(text):
+    m = re.search(
+        r"(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|embed/|shorts/|live/|v/)|youtu\.be/)([A-Za-z0-9_-]{11})",
+        text or "",
+    )
+    return m.group(1) if m else None
+
+
+def fetch_youtube_transcript(video_id, max_chars=120000):
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+
+        def _part_text(part):
+            if isinstance(part, dict):
+                return part.get("text", "")
+            return getattr(part, "text", "") or ""
+
+        try:
+            api = YouTubeTranscriptApi()
+            fetched = api.fetch(
+                video_id,
+                languages=["en", "en-US", "en-GB", "fil", "tl", "es"],
+            )
+        except Exception:
+            try:
+                api = YouTubeTranscriptApi()
+                fetched = api.fetch(video_id)
+            except AttributeError:
+                fetched = YouTubeTranscriptApi.get_transcript(video_id)
+        text = " ".join(_part_text(p) for p in fetched)
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text:
+            return None
+        return text[:max_chars]
+    except Exception as exc:
+        print(
+            "[E.R.E.N] Transcript fetch failed for %s: %s" % (video_id, exc),
+            file=sys.stderr,
+        )
+        return None
+
+
+def gemini_summarize(prompt):
+    api_key = _gemini_api_key()
+    if not api_key:
+        return None
+    model = _gemini_model()
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent?key={api_key}"
+    )
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": EREN_SYSTEM_PROMPT}]
+        },
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 4096},
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+        parts = body.get("candidates", [{}])[0].get("content", {}).get("parts") or []
+        reply = "".join(p.get("text", "") for p in parts).strip()
+        return reply or None
+    except Exception as exc:
+        print(
+            f"[E.R.E.N] Gemini summarize request failed ({model}): {exc}",
+            file=sys.stderr,
+        )
+        return None
     if lesson_id is None:
         return (
             "I won't give you the answer directly — you've got this! That looks like it comes "
@@ -2443,6 +2552,35 @@ def lesson_review_nudge(lesson_id):
     )
 
 
+def youtube_summary_reply(video_id, user_message):
+    transcript = fetch_youtube_transcript(video_id)
+    if not transcript:
+        return (
+            "Hindi ko makuha ang transcript ng video na iyan — maaaring naka-disable ang "
+            "captions nito o hindi available ang video. Subukan ang ibang video, o i-paste "
+            "ang script sa chat para i-summarize ko."
+        )
+    prompt = (
+        "A student pasted a YouTube link (video ID: %s) and wants help with it. Their "
+        "message: \"%s\"\n\n"
+        "Here is the video's transcript:\n\n%s\n\n"
+        "Give a clear, beginner-friendly summary of the video in the student's language "
+        "(English or Filipino). Use short sections with headers and bullet points "
+        "(## and - only, no other markdown), highlight the key points, and answer their "
+        "question if they asked one. Keep it under 700 words."
+    ) % (video_id, user_message[:300], transcript)
+    reply = gemini_summarize(prompt)
+    if reply:
+        return reply
+    preview = transcript[:800]
+    return (
+        "Nakuha ko ang transcript ng video, pero walang available na AI brain (missing "
+        "GEMINI_API_KEY), kaya ito lang ang preview ng mga unang bahagi:\n\n"
+        "> %s...\n\n"
+        "I-set ang GEMINI_API_KEY para makapagbigay ako ng buong buod." % preview
+    )
+
+
 @app.route("/assistant", methods=["POST"])
 @login_required
 def assistant():
@@ -2450,6 +2588,9 @@ def assistant():
     message = (data.get("message") or "").strip()
     if not message:
         return jsonify({"ok": False, "error": "Please type a message."}), 400
+    video_id = extract_youtube_id(message)
+    if video_id:
+        return jsonify({"ok": True, "reply": youtube_summary_reply(video_id, message), "yt_summary": True})
     if is_quiz_question_request(message):
         return jsonify({"ok": True, "reply": QUIZ_REFUSAL})
     quiz_hit, quiz_lesson_id = lesson_for_quiz_question(message)
@@ -2831,6 +2972,164 @@ def lesson_leaderboard(lesson_id):
     if not any(l["id"] == lesson_id for l in LESSONS):
         return jsonify({"ok": False, "error": "Lesson not found."}), 404
     return jsonify({"ok": True, "leaderboard": get_lesson_leaderboard(lesson_id)})
+
+
+def _activity_docx_path(lesson):
+    docx_name = (lesson.get("activity") or {}).get("docx")
+    if not docx_name:
+        return None
+    path = os.path.join(app.static_folder, "docs", docx_name)
+    if not os.path.exists(path):
+        return None
+    return path
+
+
+@app.route("/lesson/<int:lesson_id>/activity/questions", methods=["GET"])
+@login_required
+def activity_questions(lesson_id):
+    lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
+    if lesson is None or not lesson.get("activity"):
+        return jsonify({"ok": False, "error": "No activity for this lesson."}), 404
+    path = _activity_docx_path(lesson)
+    if path is None:
+        return jsonify({"ok": False, "error": "Activity file is missing."}), 404
+    from docx import Document as DocxDocument
+
+    doc = DocxDocument(path)
+    in_questions = False
+    questions = []
+    meta = []
+    for p in doc.paragraphs:
+        text = p.text.strip()
+        if text == "Questions":
+            in_questions = True
+            continue
+        if in_questions and text:
+            questions.append(text)
+    for t in doc.tables:
+        for row in t.rows:
+            cells = row.cells
+            if len(cells) >= 2 and cells[0].text.strip():
+                label = cells[0].text.strip().rstrip(":").strip()
+                meta.append({"label": label, "key": label})
+    return jsonify({
+        "ok": True,
+        "title": lesson["activity"].get("title", "Activity"),
+        "meta": meta,
+        "questions": questions,
+    })
+
+
+@app.route("/lesson/<int:lesson_id>/activity/download", methods=["POST"])
+@login_required
+def activity_download(lesson_id):
+    lesson = next((l for l in LESSONS if l["id"] == lesson_id), None)
+    if lesson is None or not lesson.get("activity"):
+        return jsonify({"ok": False, "error": "No activity for this lesson."}), 404
+    path = _activity_docx_path(lesson)
+    if path is None:
+        return jsonify({"ok": False, "error": "Activity file is missing."}), 404
+    data = request.get_json(silent=True) or {}
+    answers = data.get("answers") or {}
+    meta_values = data.get("meta") or {}
+    if not isinstance(answers, dict):
+        answers = {}
+    if not isinstance(meta_values, dict):
+        meta_values = {}
+
+    from copy import deepcopy
+    from docx import Document as DocxDocument
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    def insert_answer_after(paragraph, text, indent_twips=720):
+        anchor = paragraph._p
+        pPr_source = None
+        nxt = anchor.getnext()
+        if nxt is not None:
+            nxt_pPr = nxt.find(qn("w:pPr"))
+            if nxt_pPr is not None and nxt_pPr.find(qn("w:numPr")) is None:
+                pPr_source = nxt_pPr
+        mark_fonts = None
+        mark_pPr = anchor.find(qn("w:pPr"))
+        if mark_pPr is not None:
+            mr = mark_pPr.find(qn("w:rPr"))
+            if mr is not None:
+                mark_fonts = mr.find(qn("w:rFonts"))
+        for line in text.splitlines():
+            new_p = deepcopy(anchor)
+            for child in list(new_p):
+                new_p.remove(child)
+            pPr = deepcopy(pPr_source) if pPr_source is not None else OxmlElement("w:pPr")
+            numPr = pPr.find(qn("w:numPr"))
+            if numPr is not None:
+                pPr.remove(numPr)
+            ind = OxmlElement("w:ind")
+            ind.set(qn("w:left"), str(indent_twips))
+            rPr_node = pPr.find(qn("w:rPr"))
+            if rPr_node is not None:
+                rPr_node.addprevious(ind)
+            else:
+                pPr.append(ind)
+            new_p.append(pPr)
+            r = OxmlElement("w:r")
+            rPr = OxmlElement("w:rPr")
+            for tag in ("w:b", "w:i", "w:u"):
+                el = OxmlElement(tag)
+                el.set(qn("w:val"), "0")
+                rPr.append(el)
+            if mark_fonts is not None:
+                rPr.append(deepcopy(mark_fonts))
+            r.append(rPr)
+            t = OxmlElement("w:t")
+            t.text = line if line else " "
+            t.set(qn("xml:space"), "preserve")
+            r.append(t)
+            new_p.append(r)
+            pPr_source = pPr
+            anchor.addnext(new_p)
+            anchor = new_p
+
+    doc = DocxDocument(path)
+    in_questions = False
+    qi = 0
+    for p in doc.paragraphs:
+        text = p.text.strip()
+        if text == "Questions":
+            in_questions = True
+            continue
+        if in_questions and text:
+            answer = answers.get(str(qi)) or ""
+            answer = answer.strip()
+            if answer:
+                insert_answer_after(p, answer)
+            qi += 1
+
+    for t in doc.tables:
+        for row in t.rows:
+            cells = row.cells
+            if len(cells) >= 2:
+                label = cells[0].text.strip().rstrip(":").strip()
+                value = meta_values.get(label) or ""
+                if label and value.strip():
+                    p = cells[1].paragraphs[0]
+                    if p.runs:
+                        p.runs[0].text = value.strip()
+                    else:
+                        p.add_run(value.strip())
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    base = os.path.splitext(os.path.basename(path))[0]
+    safe_name = re.sub(r"[^A-Za-z0-9_. -]", "", current_user.username).strip() or "user"
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name="%s - %s.docx" % (base, safe_name),
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
 
 @app.route("/lesson/<int:lesson_id>/quiz", methods=["POST"])

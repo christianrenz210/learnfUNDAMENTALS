@@ -55,12 +55,16 @@
     return createConvo();
   }
 
-  function pushMsg(role, content) {
+  function pushMsg(role, content, extra) {
     var c = activeConvo();
     if (!c.title && role === 'user') {
       c.title = (content || '').trim().slice(0, 45);
     }
-    c.messages.push({ role: role, content: content });
+    var msg = { role: role, content: content };
+    if (extra) {
+      for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) msg[k] = extra[k]; }
+    }
+    c.messages.push(msg);
     if (c.messages.length > MAX_MSGS) c.messages = c.messages.slice(-MAX_MSGS);
     c.ts = Date.now();
     saveStore();
@@ -416,7 +420,26 @@
     return btn;
   }
 
-  function renderBotContent(bubble, text) {
+  function addTxtButton(bubble, text) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'assist-ppt-btn';
+    btn.innerHTML = '<i class="bi bi-file-earmark-text"></i> Download Summary (TXT)';
+    btn.addEventListener('click', function () {
+      var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      var a = document.createElement('a');
+      var objUrl = URL.createObjectURL(blob);
+      a.href = objUrl;
+      a.download = 'video-summary.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(objUrl); }, 2000);
+    });
+    return btn;
+  }
+
+  function renderBotContent(bubble, text, opts) {
     bubble.textContent = '';
     if (/```|<iframe|youtube\.com|youtu\.be|\[video:/.test(text)) {
       bubble.appendChild(buildReply(text));
@@ -426,23 +449,28 @@
       appendAssistText(w, text);
       bubble.appendChild(w);
     }
-    if (urls.assistantPpt && looksLikeSlides(text)) {
+    if (opts && opts.yt) {
       var bar = document.createElement('div');
       bar.className = 'assist-ppt-bar';
-      bar.appendChild(addPptButton(bubble, text));
+      bar.appendChild(addTxtButton(bubble, text));
       bubble.appendChild(bar);
+    } else if (urls.assistantPpt && looksLikeSlides(text)) {
+      var bar2 = document.createElement('div');
+      bar2.className = 'assist-ppt-bar';
+      bar2.appendChild(addPptButton(bubble, text));
+      bubble.appendChild(bar2);
     }
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
 
-  function addBubble(content, isUser) {
+  function addBubble(content, isUser, opts) {
     var bubble = document.createElement('div');
     bubble.className = 'assist-bubble ' + (isUser ? 'assist-user' : 'assist-bot');
     msgsEl.appendChild(bubble);
     if (isUser) {
       bubble.textContent = content;
     } else {
-      renderBotContent(bubble, content);
+      renderBotContent(bubble, content, opts);
     }
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return bubble;
@@ -457,10 +485,10 @@
     return bubble;
   }
 
-  function finishTypingBubble(bubble, text) {
+  function finishTypingBubble(bubble, text, opts) {
     bubble.classList.remove('assist-typing');
     if (/```|<iframe|youtube\.com|youtu\.be|\[video:/.test(text)) {
-      renderBotContent(bubble, text);
+      renderBotContent(bubble, text, opts);
       return;
     }
     var i = 0;
@@ -468,7 +496,7 @@
       i += 3;
       if (i >= text.length) {
         clearInterval(timer);
-        renderBotContent(bubble, text);
+        renderBotContent(bubble, text, opts);
       } else {
         bubble.textContent = text.slice(0, i);
       }
@@ -496,7 +524,7 @@
       msgsEl.appendChild(g);
     } else {
       msgs.forEach(function (m) {
-        addBubble(m.content || '', m.role === 'user');
+        addBubble(m.content || '', m.role === 'user', m);
       });
     }
     msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -628,12 +656,13 @@
       .then(function (res) { return res.json(); })
       .then(function (data) {
         var reply = data.ok ? data.reply : (data.error || 'Something went wrong.');
-        pushMsg('assistant', reply);
+        var opts = (data.ok && data.yt_summary) ? { yt: true } : null;
+        pushMsg('assistant', reply, opts);
         renderHistoryList();
         var elapsed = Date.now() - started;
         setTimeout(function () {
           var typing = addTypingBubble();
-          setTimeout(function () { finishTypingBubble(typing, reply); }, 900);
+          setTimeout(function () { finishTypingBubble(typing, reply, opts); }, 900);
         }, Math.max(0, 450 - elapsed));
       })
       .catch(function () {
