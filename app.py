@@ -357,6 +357,7 @@ class ChatMessage(db.Model):
     user = db.relationship("User", backref=db.backref("chat_messages", lazy="dynamic"))
     reply_to = db.relationship("ChatMessage", remote_side=[id], backref=db.backref("replies", lazy="dynamic"))
     reactions = db.relationship("ChatReaction", backref=db.backref("message_ref", lazy="joined"), lazy="selectin", cascade="all, delete-orphan")
+    read_by = db.relationship("ChatRead", backref=db.backref("message_ref_r", lazy="joined"), lazy="selectin", cascade="all, delete-orphan")
 
 
 class ChatReaction(db.Model):
@@ -367,6 +368,16 @@ class ChatReaction(db.Model):
     emoji = db.Column(db.String(8), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     __table_args__ = (db.UniqueConstraint("message_id", "user_id", "emoji", name="uq_chat_reaction_msg_user_emoji"),)
+
+
+class ChatRead(db.Model):
+    __tablename__ = "chat_read"
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey("chat_message.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    user = db.relationship("User", backref=db.backref("chat_reads", lazy="dynamic"), lazy="joined")
+    __table_args__ = (db.UniqueConstraint("user_id", "message_id", name="uq_chat_read_user_msg"),)
 
 
 class Notification(db.Model):
@@ -937,6 +948,8 @@ def _chat_message_json(m, me_id):
         result["my_reaction"] = mine
     else:
         result["my_reaction"] = None
+    if u is not None and u.id == me_id and m.read_by:
+        result["seen_by"] = _seen_by_json(m, me_id)
     return result
 
 
@@ -1004,7 +1017,10 @@ def api_chat_messages():
         after = max(0, int(request.args.get("after", 0)))
     except (TypeError, ValueError):
         after = 0
-    q = ChatMessage.query.options(selectinload(ChatMessage.reactions))
+    q = ChatMessage.query.options(
+        selectinload(ChatMessage.reactions),
+        selectinload(ChatMessage.read_by).selectinload(ChatRead.user),
+    )
     if after:
         rows = (
             q.filter(ChatMessage.id > after)
@@ -1143,6 +1159,20 @@ def api_chat_delete(mid):
     return jsonify({"ok": True})
 
 
+def _seen_by_json(m, me_id):
+    if not m.read_by:
+        return []
+    seen = sorted(
+        [r for r in m.read_by if r.user_id != me_id],
+        key=lambda r: r.created_at or datetime.utcnow(),
+        reverse=True,
+    )[:8]
+    return [
+        {"username": r.user.username if r.user else "Deleted user", "avatar": _avatar_url(r.user), "when": (r.created_at.isoformat() + "Z") if r.created_at else None}
+        for r in seen
+    ]
+
+
 def _reaction_summary(msg):
     if not msg.reactions:
         return []
@@ -1174,6 +1204,26 @@ def api_chat_react(mid):
     db.session.commit()
     db.session.refresh(msg, attribute_names=["reactions"])
     return jsonify({"ok": True, "action": action, "reactions": _reaction_summary(msg)})
+
+
+@app.route("/api/chat/message/<int:mid>/seen", methods=["POST"])
+@login_required
+def api_chat_seen(mid):
+    msg = db.session.get(ChatMessage, mid)
+    if not msg:
+        return jsonify({"error": "Message not found."}), 404
+    if msg.user_id == current_user.id:
+        return jsonify({"ok": True, "seen_by": []})
+    if current_user.is_banned:
+        return jsonify({"error": "You cannot chat while banned."}), 403
+    existing = ChatRead.query.filter_by(message_id=msg.id, user_id=current_user.id).first()
+    if not existing:
+        db.session.add(ChatRead(message_id=msg.id, user_id=current_user.id))
+        db.session.commit()
+        db.session.refresh(msg, attribute_names=["read_by"])
+        seen_by = _seen_by_json(msg, current_user.id)
+        return jsonify({"ok": True, "seen_by": seen_by})
+    return jsonify({"ok": True, "seen_by": []})
 
 
 @app.route("/api/notifications")

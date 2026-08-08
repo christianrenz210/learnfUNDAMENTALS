@@ -68,6 +68,7 @@ CHANGELOG = [
             "Long-press any Global Chat message to pop up an emoji reaction picker (like Messenger), then tap an emoji to react",
             "Tap an existing reaction chip to add/remove your own reaction",
             "Reaction counts now show under each message",
+            "Added Seen by - when you read someone's message, they see which users read it (Messenger-style), shown under their own messages",
             "TikTok embeds now use TikTok's current player URL format so links embed properly again",
             "TikTok embeds use a portrait aspect ratio so vertical videos are no longer tiny",
             "Replying to a message now shows the full reply preview (no longer cut off) and is clickable to jump to the original message",

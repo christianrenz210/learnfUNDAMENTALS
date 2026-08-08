@@ -2802,6 +2802,43 @@ body {
   box-shadow: 0 0 0 2px var(--brand-secondary);
 }
 
+/* ===== Seen by ===== */
+.chat-seen-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--bs-tertiary-color);
+}
+.chat-seen-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--bs-border-color);
+  background-image: url("");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  border: 1px solid var(--bs-border-color);
+  font-size: 0.6rem;
+}
+.chat-seen-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.chat-msg-me .chat-seen-bar {
+  justify-content: flex-end;
+}
+.chat-msg-me .chat-seen-label {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 /* ===== Reply UI ===== */
 .chat-reply-bar {
   background: rgba(108, 117, 125, 0.08);

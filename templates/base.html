@@ -1021,7 +1021,16 @@ function togglePassword(inputId, iconId) {
         return '<button type="button" class="chat-reaction-chip' + (m.my_reaction === r.emoji ? ' active' : '') + '" data-id="' + m.id + '" data-emoji="' + esc(r.emoji) + '" title="' + r.count + ' reaction"><span class="chat-reaction-emoji">' + r.emoji + '</span><span class="chat-reaction-count">' + r.count + '</span></button>';
       }).join('') + '</div>';
     }
-    return '<div class="chat-msg ' + (m.is_me ? 'chat-msg-me' : '') + '" data-id="' + m.id + '" data-my-reaction="' + esc(m.my_reaction || '') + '">' +
+    let seenHtml = '';
+    if (m.is_me && m.seen_by && m.seen_by.length) {
+      const names = m.seen_by.map(function(s) { return s.username; }).join(', ');
+      seenHtml = '<div class="chat-seen-bar" data-id="' + m.id + '" title="Seen by ' + esc(names) + '">' +
+        m.seen_by.slice(0, 4).map(function(s) {
+          return '<span class="chat-seen-dot" title="' + esc(s.username) + '" style="background-image:url(' + esc(s.avatar || '') + ')">' + esc(s.username) + '</span>';
+        }).join('') +
+        '<span class="chat-seen-label" title="Seen by ' + esc(names) + '"><i class="bi bi-check2-all"></i> Seen by ' + esc(names) + '</span></div>';
+    }
+    return '<div class="chat-msg ' + (m.is_me ? 'chat-msg-me' : '') + '" data-id="' + m.id + '" data-is-me="' + (m.is_me ? 'true' : 'false') + '" data-my-reaction="' + esc(m.my_reaction || '') + '">' +
       avatar +
       '<div class="chat-bubble">' +
         '<div class="chat-meta">' +
@@ -1034,11 +1043,13 @@ function togglePassword(inputId, iconId) {
         (textHtml ? '<div class="chat-text">' + textHtml + '</div>' : '') +
         fileHtml +
         reactionHtml +
+        seenHtml +
       '</div>' +
     '</div>';
   }
 
   const REACT_URL_PREFIX = {{ url_for('api_chat_react', mid=0) | tojson }};
+  const SEEN_URL_PREFIX = {{ url_for('api_chat_seen', mid=0) | tojson }};
   let ownReactions = {};
   const REACTION_PICKER_EMOJIS = ['👍','❤️','😂','😮','😢','😡','🔥','👏'];
   let pressTimer = null;
@@ -1205,6 +1216,52 @@ function togglePassword(inputId, iconId) {
     setTimeout(function () { fly.remove(); if (done) done(); }, 480);
   }
 
+  const seenObserver = new IntersectionObserver(onSeenIntersect, { threshold: 0.5 });
+  const seenObserved = {};
+  function observeMessages() {
+    container.querySelectorAll('.chat-msg').forEach(function (row) {
+      const mid = parseInt(row.dataset.id || '', 10);
+      if (!mid || seenObserved[mid]) return;
+      seenObserved[mid] = true;
+      if (row.dataset.isMe === 'true') return;
+      seenObserver.observe(row);
+    });
+  }
+  function onSeenIntersect(entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      const mid = parseInt(entry.target.dataset.id || '', 10);
+      if (!mid) return;
+      seenObserver.unobserve(entry.target);
+      fetch(SEEN_URL_PREFIX.replace('/0', '/' + mid), { method: 'POST', credentials: 'same-origin' })
+        .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+        .then(function (res) {
+          if (!res.ok || !res.data.seen_by || !res.data.seen_by.length) return;
+          renderSeenBar(mid, res.data.seen_by);
+        })
+        .catch(function () {});
+    });
+  }
+  function renderSeenBar(mid, seenBy) {
+    const row = container.querySelector('.chat-msg[data-id="' + mid + '"]');
+    if (!row || row.dataset.isMe === 'false') return;
+    const names = seenBy.map(function (s) { return s.username; }).join(', ');
+    const html = '<div class="chat-seen-bar" data-id="' + mid + '" title="Seen by ' + esc(names) + '">' +
+      seenBy.slice(0, 4).map(function (s) {
+        return '<span class="chat-seen-dot" title="' + esc(s.username) + '" style="background-image:url(' + esc(s.avatar || '') + ')">' + esc(s.username) + '</span>';
+      }).join('') +
+      '<span class="chat-seen-label" title="Seen by ' + esc(names) + '"><i class="bi bi-check2-all"></i> Seen by ' + esc(names) + '</span></div>';
+    let sb = row.querySelector('.chat-seen-bar');
+    const bubble = row.querySelector('.chat-bubble');
+    if (!bubble) return;
+    if (sb) { sb.innerHTML = html; }
+    else {
+      const rb = bubble.querySelector('.chat-reaction-bar');
+      if (rb) rb.insertAdjacentHTML('afterend', html);
+      else bubble.insertAdjacentHTML('beforeend', html);
+    }
+  }
+
   container.addEventListener('pointerdown', function (e) {
     if (pickerEl) closePicker();
     const msg = e.target.closest('.chat-msg');
@@ -1251,6 +1308,7 @@ function togglePassword(inputId, iconId) {
           if (wasNear) scrollToBottom();
         }
         chatLoaded = true;
+        observeMessages();
         updateSeen(lastId);
       }
       if (d.online != null && onlineCountEl) onlineCountEl.textContent = d.online;
