@@ -1586,6 +1586,8 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 GOOGLE_SCOPES = "openid email profile"
 google_enabled = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
 
+_google_state_serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="cf-google-oauth-state")
+
 
 def _google_redirect_uri():
     return GOOGLE_REDIRECT_URI or url_for("google_auth_callback", _external=True)
@@ -1645,8 +1647,7 @@ def login_google():
     if not google_enabled:
         flash("Google sign-in is not configured yet.", "danger")
         return redirect(url_for("login"))
-    state = uuid.uuid4().hex
-    session["google_oauth_state"] = state
+    state = _google_state_serializer.dumps({"n": uuid.uuid4().hex})
     params = {
         "client_id": GOOGLE_CLIENT_ID,
         "redirect_uri": _google_redirect_uri(),
@@ -1664,7 +1665,12 @@ def google_auth_callback():
         flash("Google sign-in was cancelled or failed.", "danger")
         return redirect(url_for("login"))
     state = request.args.get("state")
-    if not state or state != session.pop("google_oauth_state", None):
+    if not state:
+        flash("Google sign-in session expired. Please try again.", "danger")
+        return redirect(url_for("login"))
+    try:
+        _google_state_serializer.loads(state, max_age=600)
+    except Exception:
         flash("Google sign-in session expired. Please try again.", "danger")
         return redirect(url_for("login"))
     code = request.args.get("code")
