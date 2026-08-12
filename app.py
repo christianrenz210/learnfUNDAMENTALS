@@ -44,6 +44,7 @@ from flask import (
     render_template,
     request,
     send_file,
+    session,
     url_for,
 )
 from flask_login import (
@@ -163,11 +164,11 @@ def inject_avatar():
     def avatar_src(user):
         if not user or not user.avatar:
             return ""
-        if user.avatar.startswith("data:"):
+        if user.avatar.startswith("data:") or user.avatar.startswith("http"):
             return user.avatar
         return url_for("static", filename="uploads/" + user.avatar)
 
-    return {"avatar_src": avatar_src, "app_version": APP_VERSION, "eren_version": EREN_VERSION, "latest_update": CHANGELOG[0], "latest_eren_update": EREN_CHANGELOG[0], "latest_system_version": CHANGELOG[0]["version"], "chat_allowed_ext": sorted(CHAT_ALLOWED_EXT), "chat_image_ext": sorted(CHAT_IMAGE_EXT), "chat_max_file_size": CHAT_MAX_FILE_SIZE}
+    return {"avatar_src": avatar_src, "app_version": APP_VERSION, "eren_version": EREN_VERSION, "latest_update": CHANGELOG[0], "latest_eren_update": EREN_CHANGELOG[0], "latest_system_version": CHANGELOG[0]["version"], "chat_allowed_ext": sorted(CHAT_ALLOWED_EXT), "chat_image_ext": sorted(CHAT_IMAGE_EXT), "chat_max_file_size": CHAT_MAX_FILE_SIZE, "google_enabled": bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)}
 
 
 @app.context_processor
@@ -226,6 +227,8 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
+    google_id = db.Column(db.String(100), index=True, nullable=True)
+    is_google = db.Column(db.Boolean, default=False, nullable=False)
     avatar = db.Column(db.Text, nullable=True)
     lab_completed = db.Column(db.Integer, default=0)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
@@ -610,6 +613,8 @@ MAINTENANCE_PUBLIC_PATHS = (
     "/api/maintenance/verify-admin",
     "/api/maintenance/diagnostics",
     "/api/maintenance/restore",
+    "/auth/",
+    "/login/google",
     "/logout",
 )
 
@@ -902,7 +907,7 @@ def admin_settings_maintenance():
 def _avatar_url(user):
     if not user or not user.avatar:
         return ""
-    if user.avatar.startswith("data:"):
+    if user.avatar.startswith("data:") or user.avatar.startswith("http"):
         return user.avatar
     return url_for("static", filename="uploads/" + user.avatar)
 
@@ -1572,6 +1577,147 @@ def aiassist():
     return render_template("aiassist.html")
 
 
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
+GOOGLE_SCOPES = "openid email profile"
+google_enabled = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+
+
+def _google_redirect_uri():
+    return GOOGLE_REDIRECT_URI or url_for("google_auth_callback", _external=True)
+
+
+def _google_exchange_code(code):
+    body = urllib.parse.urlencode(
+        {
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": _google_redirect_uri(),
+            "grant_type": "authorization_code",
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        GOOGLE_TOKEN_URL,
+        data=body,
+        method="POST",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _google_userinfo(token_resp):
+    token = token_resp.get("access_token")
+    if not token:
+        raise Exception("Google did not return an access token.")
+    req = urllib.request.Request(
+        GOOGLE_USERINFO_URL,
+        headers={"Authorization": "Bearer " + str(token)},
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _unique_google_username(email, name):
+    base = (name or "").strip() or (email or "").split("@")[0]
+    base = re.sub(r"\s+", "_", base)
+    base = re.sub(r"[^A-Za-z0-9_.]", "", base).strip("._")[:30]
+    if not base:
+        base = "googleuser"
+    candidate = base
+    i = 1
+    while User.query.filter_by(username=candidate).first():
+        suffix = str(i)
+        candidate = base[: 50 - len(suffix)] + suffix
+        i += 1
+    return candidate
+
+
+@app.route("/login/google")
+def login_google():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+    if not google_enabled:
+        flash("Google sign-in is not configured yet.", "danger")
+        return redirect(url_for("login"))
+    state = uuid.uuid4().hex
+    session["google_oauth_state"] = state
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": _google_redirect_uri(),
+        "response_type": "code",
+        "scope": GOOGLE_SCOPES,
+        "state": state,
+        "prompt": "select_account",
+    }
+    return redirect(GOOGLE_AUTH_URL + "?" + urllib.parse.urlencode(params))
+
+
+@app.route("/auth/google/callback")
+def google_auth_callback():
+    if request.args.get("error"):
+        flash("Google sign-in was cancelled or failed.", "danger")
+        return redirect(url_for("login"))
+    state = request.args.get("state")
+    if not state or state != session.pop("google_oauth_state", None):
+        flash("Google sign-in session expired. Please try again.", "danger")
+        return redirect(url_for("login"))
+    code = request.args.get("code")
+    if not google_enabled or not code:
+        flash("Google sign-in is not configured.", "danger")
+        return redirect(url_for("login"))
+    try:
+        info = _google_userinfo(_google_exchange_code(code))
+    except Exception as e:
+        flash("Google sign-in failed: %s" % e, "danger")
+        return redirect(url_for("login"))
+    google_id = str(info.get("sub") or "")
+    email = (info.get("email") or "").strip().lower()
+    if not google_id or not email:
+        flash("Google did not provide an email for this account.", "danger")
+        return redirect(url_for("login"))
+    user = User.query.filter_by(google_id=google_id).first()
+    if user is None:
+        user = User.query.filter(db.func.lower(User.email) == email).first()
+    created = user is None
+    if user is None:
+        user = User(
+            username=_unique_google_username(email, info.get("name")),
+            email=email,
+            password_hash=generate_password_hash(uuid.uuid4().hex),
+            google_id=google_id,
+            is_google=True,
+            avatar=info.get("picture") or None,
+        )
+        db.session.add(user)
+        db.session.commit()
+    else:
+        if not user.google_id:
+            user.google_id = google_id
+            user.is_google = True
+        if not user.avatar and info.get("picture"):
+            user.avatar = info["picture"]
+        db.session.commit()
+    login_user(user)
+    log_activity(
+        user,
+        "Signed in with Google" if not created else "Registered with Google",
+        "Google account: " + email,
+    )
+    flash(
+        "Welcome, " + user.username + ("! Your account was created with Google." if created else "!"),
+        "success",
+    )
+    if user.is_admin:
+        return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("dashboard"))
+
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
@@ -1640,7 +1786,7 @@ def login():
             return render_template(
                 "login.html", registered=request.args.get("registered") == "1", database_reset=show_database_reset_warning
             )
-        if user and check_password_hash(user.password_hash, password):
+        if user and user.password_hash and check_password_hash(user.password_hash, password):
             if user.is_banned:
                 flash(
                     "Your account has been banned (%s). Contact an admin to get unbanned."
@@ -5056,6 +5202,21 @@ with app.app_context():
                     conn.execute(sa_text('DROP TABLE IF EXISTS feedback CASCADE'))
                     conn.execute(sa_text('DROP TABLE IF EXISTS "user" CASCADE'))
             db.create_all()
+        else:
+            # Add Google OAuth columns if missing
+            with db.engine.begin() as conn:
+                if "google_id" not in _user_cols:
+                    if is_sqlite:
+                        conn.execute(sa_text("ALTER TABLE user ADD COLUMN google_id VARCHAR(100)"))
+                    else:
+                        conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN google_id VARCHAR(100)'))
+                    print("[FIX] Added google_id column to user table.")
+                if "is_google" not in _user_cols:
+                    if is_sqlite:
+                        conn.execute(sa_text("ALTER TABLE user ADD COLUMN is_google BOOLEAN NOT NULL DEFAULT 0"))
+                    else:
+                        conn.execute(sa_text('ALTER TABLE "user" ADD COLUMN is_google BOOLEAN NOT NULL DEFAULT false'))
+                    print("[FIX] Added is_google column to user table.")
     except Exception:
         pass
     

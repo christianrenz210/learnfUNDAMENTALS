@@ -2309,6 +2309,34 @@ body {
   padding: 0 0.75rem;
 }
 
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.5rem;
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  font-weight: 600;
+  padding: 0.7rem 1rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.google-btn:hover,
+.google-btn:focus {
+  color: var(--bs-body-color);
+  background-color: var(--bs-tertiary-bg);
+  transform: translateY(-1px);
+  box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+.google-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
 [data-bs-theme="dark"] .auth-card {
   background-color: var(--bs-body-bg);
 }
