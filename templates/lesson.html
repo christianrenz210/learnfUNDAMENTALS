@@ -546,8 +546,13 @@
             <button type="button" class="btn btn-success" id="completeQuizBtn">
               <i class="bi bi-trophy me-1"></i>Proceed to Long Quiz
             </button>
-          {% endif %}
-        {% endif %}
+              {% endif %}
+            {% endif %}
+            {% if builder_url %}
+              <a href="{{ builder_url }}" class="btn btn-info ms-2 d-inline-flex align-items-center">
+                <i class="bi bi-diagram-3 me-1"></i>Open Flowchart Builder
+              </a>
+            {% endif %}
       </div>
     </div>
   </div>

@@ -1842,6 +1842,56 @@ LESSONS = [
             },
         ],
     },
+    {
+        "section": "Fundamentals",
+        "id": 37,
+        "minutes": 30,
+        "title": "Flowcharts",
+        "icon": "bi-diagram-3",
+        "description": "A flowchart is a diagram that shows the steps of a process or algorithm using standard shapes. Before writing code, drawing a flowchart helps you plan the logic clearly and catch mistakes early. In this lesson you will learn the common flowchart symbols and how to read and draw a flowchart, then build your own in the interactive Flowchart Builder.",
+        "key_points": [
+            "An oval (terminator) shows the Start or End of a flowchart.",
+            "A rectangle (process) shows a single action or calculation, like x = x + 1.",
+            "A diamond (decision) shows a yes/no question; it has two exits (usually Yes and No).",
+            "A parallelogram (input/output) shows reading input or printing output.",
+            "Arrows show the flow of control from one step to the next.",
+            "Draw the flowchart first, then translate each shape into code.",
+        ],
+        "code": {
+            "python": "# Flowchart for: is a number even?\n# (parallelogram: input n)\n# (diamond: n % 2 == 0 ?)\n#   Yes -> rectangle: print 'Even'\n#   No  -> rectangle: print 'Odd'\n\nn = int(input('Enter a number: '))\nif n % 2 == 0:\n    print('Even')\nelse:\n    print('Odd')",
+            "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int n;\n    cout << \"Enter a number: \";   // parallelogram: output\n    cin >> n;                      // parallelogram: input\n    if (n % 2 == 0) {              // diamond: decision\n        cout << \"Even\";            // rectangle: process\n    } else {\n        cout << \"Odd\";\n    }\n    return 0;\n}",
+            "java": "import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.print(\"Enter a number: \");  // parallelogram: output\n        int n = sc.nextInt();                   // parallelogram: input\n        if (n % 2 == 0) {                      // diamond: decision\n            System.out.println(\"Even\");         // rectangle: process\n        } else {\n            System.out.println(\"Odd\");\n        }\n    }\n}",
+            "c": "#include <stdio.h>\n\nint main() {\n    int n;\n    printf(\"Enter a number: \");   // parallelogram: output\n    scanf(\"%d\", &n);               // parallelogram: input\n    if (n % 2 == 0) {              // diamond: decision\n        printf(\"Even\");            // rectangle: process\n    } else {\n        printf(\"Odd\");\n    }\n    return 0;\n}",
+        },
+        "quiz": [
+            {
+                "question": "Which shape shows the Start or End of a flowchart?",
+                "options": ["Rectangle", "Oval (terminator)", "Diamond", "Parallelogram"],
+                "correct": 1,
+            },
+            {
+                "question": "A diamond is used for a ...",
+                "options": ["Process step", "Input/output", "Decision (yes/no question)", "Start point"],
+                "correct": 2,
+            },
+            {
+                "question": "What do the arrows in a flowchart represent?",
+                "options": ["Time", "Flow of control", "Memory", "Code comments"],
+                "correct": 1,
+            },
+            {
+                "question": "Which shape is used for input or output?",
+                "options": ["Parallelogram", "Oval", "Rectangle", "Hexagon"],
+                "correct": 0,
+            },
+            {
+                "question": "Why should you draw a flowchart before coding?",
+                "options": ["It makes the program run faster", "It helps plan logic and catch mistakes early", "It replaces the need for a language", "It is required by the compiler"],
+                "correct": 1,
+            },
+        ],
+        "builder": "flowchart",
+    },
 ]
 
 LONG_QUIZZES = {

@@ -3857,6 +3857,9 @@ def lesson(lesson_id):
         else:
             lab_url = url_for("lesson_lab", lesson_id=lesson_id)
         lab_title = LABS[lesson_id]["title"]
+    builder_url = None
+    if lesson.get("builder") == "flowchart":
+        builder_url = url_for("flowchart_builder")
     prev_lesson_id = section_lessons[idx - 1]["id"] if idx > 0 else None
     next_lesson_id = section_lessons[idx + 1]["id"] if idx < len(section_lessons) - 1 else None
     return render_template(
@@ -3873,6 +3876,7 @@ def lesson(lesson_id):
         lab_completed=lab_completed,
         lab_url=lab_url,
         lab_title=lab_title,
+        builder_url=builder_url,
         total_lessons=len(AVAILABLE_LESSONS),
         prev_lesson_id=prev_lesson_id,
         next_lesson_id=next_lesson_id,
@@ -3890,6 +3894,12 @@ def lesson_leaderboard(lesson_id):
     if not any(l["id"] == lesson_id for l in LESSONS):
         return jsonify({"ok": False, "error": "Lesson not found."}), 404
     return jsonify({"ok": True, "leaderboard": get_lesson_leaderboard(lesson_id)})
+
+
+@app.route("/flowchart")
+@login_required
+def flowchart_builder():
+    return render_template("flowchart.html")
 
 
 def _activity_docx_path(lesson):

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Flowchart Builder - CodeFundamentals{% endblock %}
+
+{% block content %}
+<div class="fc-page">
+  <div class="fc-header">
+    <a href="{{ url_for('lesson', lesson_id=37) }}" class="fc-back"><i class="bi bi-arrow-left"></i> Back to lesson</a>
+    <h1><i class="bi bi-diagram-3 me-2"></i>Flowchart Builder</h1>
+    <p class="fc-sub">Draw a flowchart by adding shapes, connecting them with arrows, and editing labels. Your work is saved automatically on this device.</p>
+  </div>
+
+  <div class="fc-toolbar no-print">
+    <div class="fc-group">
+      <span class="fc-label">Add:</span>
+      <button type="button" class="fc-shape" data-type="start"><i class="bi bi-circle-fill"></i> Start / End</button>
+      <button type="button" class="fc-shape" data-type="process"><i class="bi bi-square-fill"></i> Process</button>
+      <button type="button" class="fc-shape" data-type="decision"><i class="bi bi-diamond-fill"></i> Decision</button>
+      <button type="button" class="fc-shape" data-type="io"><i class="bi bi-card-text"></i> Input / Output</button>
+    </div>
+    <div class="fc-group">
+      <button type="button" class="fc-action" id="fcConnect"><i class="bi bi-arrow-right-circle"></i> Connect</button>
+      <button type="button" class="fc-action" id="fcDelete"><i class="bi bi-trash"></i> Delete selected</button>
+      <button type="button" class="fc-action" id="fcExample"><i class="bi bi-lightbulb"></i> Load example</button>
+      <button type="button" class="fc-action" id="fcClear"><i class="bi bi-eraser"></i> Clear all</button>
+    </div>
+    <div class="fc-group">
+      <button type="button" class="fc-action fc-primary" id="fcPng"><i class="bi bi-image"></i> Export PNG</button>
+      <button type="button" class="fc-action" id="fcJson"><i class="bi bi-download"></i> Save JSON</button>
+      <button type="button" class="fc-action" id="fcLoad"><i class="bi bi-upload"></i> Load JSON</button>
+      <input type="file" id="fcFile" accept="application/json" class="d-none">
+    </div>
+  </div>
+
+  <div class="fc-stage">
+    <svg id="fcCanvas" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="fc-hint" id="fcHint">Tap a shape above to add it, then drag to move. Double-click a shape to rename it.</div>
+  </div>
+
+  <aside class="fc-side no-print">
+    <h5>Try it yourself</h5>
+    <p>Pick a challenge and build the flowchart, then compare with the code in the lesson:</p>
+    <ul class="fc-challenges">
+      <li>"Is a number even or odd?"</li>
+      <li>"Find the largest of three numbers."</li>
+      <li>"Check if a year is a leap year."</li>
+      <li>"Login: verify username and password."</li>
+    </ul>
+    <hr>
+    <h6>How to use</h6>
+    <ol class="fc-how">
+      <li>Click a shape button to drop it on the canvas.</li>
+      <li>Drag shapes to position them.</li>
+      <li>Click <strong>Connect</strong>, then click two shapes to draw an arrow.</li>
+      <li>Double-click a shape to edit its text.</li>
+      <li>Select a shape and press <kbd>Delete</kbd> to remove it.</li>
+    </ol>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/flowchart.js') }}?v=1"></script>
+{% endblock %}
