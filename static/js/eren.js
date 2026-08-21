@@ -18,6 +18,8 @@
 
   var VOICE_KEY = 'cfErenVoice_' + (cfg.username || 'guest');
   var autoSpeak = false;
+  var voiceMode = false;
+  var justSent = false;
   try { autoSpeak = localStorage.getItem(VOICE_KEY) === '1'; } catch (e) {}
 
   function stripForSpeech(text) {
@@ -33,10 +35,10 @@
       .trim();
   }
 
-  function speak(text) {
-    if (!hasTTS) return;
+  function speak(text, onDone) {
+    if (!hasTTS) { if (onDone) onDone(); return; }
     var t = stripForSpeech(text);
-    if (!t) return;
+    if (!t) { if (onDone) onDone(); return; }
     try {
       window.speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(t.slice(0, 3000));
@@ -47,10 +49,14 @@
         document.querySelectorAll('.assist-speak-btn.speaking').forEach(function (b) { b.classList.remove('speaking'); });
         if (currentSpeakBtn) currentSpeakBtn.classList.add('speaking');
       };
-      u.onend = function () { if (currentSpeakBtn) currentSpeakBtn.classList.remove('speaking'); };
+      u.onend = function () {
+        if (currentSpeakBtn) currentSpeakBtn.classList.remove('speaking');
+        if (onDone) onDone();
+      };
+      u.onerror = function () { if (onDone) onDone(); };
       currentSpeakBtn = null;
       window.speechSynthesis.speak(u);
-    } catch (e) {}
+    } catch (e) { if (onDone) onDone(); }
   }
 
   var currentSpeakBtn = null;
@@ -59,8 +65,47 @@
     var btn = document.getElementById('assistMicBtn');
     if (!btn) return;
     btn.classList.toggle('assist-mic-listening', on);
-    btn.title = on ? 'Stop listening' : 'Talk to E.R.E.N';
+    btn.title = on ? 'Stop voice assistant' : 'Talk to E.R.E.N';
     btn.innerHTML = on ? '<i class="bi bi-mic-fill"></i>' : '<i class="bi bi-mic"></i>';
+  }
+
+  function armListening() {
+    if (listening || !voiceMode) return;
+    try {
+      recognition = new SpeechRecognition();
+      recognition.lang = (navigator.language || 'en-US');
+      recognition.interimResults = true;
+      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = function (ev) {
+        var interim = '';
+        var final = '';
+        for (var i = ev.resultIndex; i < ev.results.length; i++) {
+          var res = ev.results[i];
+          if (res.isFinal) final += res[0].transcript;
+          else interim += res[0].transcript;
+        }
+        if (inputEl) inputEl.value = final || interim;
+        if (final) {
+          var spoken = final.trim();
+          if (inputEl) inputEl.value = '';
+          if (spoken) { justSent = true; sendMessage(spoken); }
+          stopListening();
+        }
+      };
+      recognition.onerror = function () { stopListening(); };
+      recognition.onend = function () {
+        listening = false;
+        setMicState(false);
+        if (voiceMode) {
+          if (justSent) { justSent = false; }
+          else { setTimeout(armListening, 500); }
+        }
+      };
+      recognition.start();
+      listening = true;
+      setMicState(true);
+    } catch (e) { stopListening(); }
   }
 
   function stopListening() {
@@ -69,42 +114,12 @@
     setMicState(false);
   }
 
-  function startListening() {
+  function startVoiceSession() {
     if (!hasSR) {
       alert('Voice input is not supported in this browser. Please use Chrome or Edge.');
       return;
     }
-    if (listening) { stopListening(); return; }
-    function realStart() {
-      try {
-        recognition = new SpeechRecognition();
-        recognition.lang = (navigator.language || 'en-US');
-        recognition.interimResults = true;
-        recognition.continuous = false;
-        recognition.maxAlternatives = 1;
-        recognition.onresult = function (ev) {
-          var interim = '';
-          var final = '';
-          for (var i = ev.resultIndex; i < ev.results.length; i++) {
-            var res = ev.results[i];
-            if (res.isFinal) final += res[0].transcript;
-            else interim += res[0].transcript;
-          }
-          if (inputEl) inputEl.value = final || interim;
-          if (final) {
-            var spoken = final.trim();
-            if (inputEl) inputEl.value = '';
-            stopListening();
-            if (spoken) sendMessage(spoken);
-          }
-        };
-        recognition.onerror = function () { stopListening(); };
-        recognition.onend = function () { listening = false; setMicState(false); };
-        recognition.start();
-        listening = true;
-        setMicState(true);
-      } catch (e) { stopListening(); }
-    }
+    voiceMode = true;
     if (hasTTS) {
       window.speechSynthesis.cancel();
       var g = new SpeechSynthesisUtterance('Hey, how can I help you, master?');
@@ -112,18 +127,30 @@
       g.rate = 1.2;
       g.pitch = 1;
       var started = false;
-      var begin = function () { if (started) return; started = true; realStart(); };
+      var begin = function () { if (started) return; started = true; armListening(); };
       g.onend = begin;
       g.onerror = begin;
       try { window.speechSynthesis.speak(g); } catch (e) {}
       setTimeout(begin, 3000);
     } else {
-      realStart();
+      armListening();
     }
   }
 
+  function stopVoice() {
+    voiceMode = false;
+    justSent = false;
+    stopListening();
+    if (hasTTS) window.speechSynthesis.cancel();
+  }
+
+  function toggleVoice() {
+    if (voiceMode || listening) { stopVoice(); return; }
+    startVoiceSession();
+  }
+
   var micBtn = document.getElementById('assistMicBtn');
-  if (micBtn) micBtn.addEventListener('click', function (e) { e.preventDefault(); startListening(); });
+  if (micBtn) micBtn.addEventListener('click', function (e) { e.preventDefault(); toggleVoice(); });
 
   function setVoiceState(on) {
     autoSpeak = !!on;
@@ -890,7 +917,12 @@
           var typing = addTypingBubble();
           setTimeout(function () {
             finishTypingBubble(typing, reply, opts);
-            if (autoSpeak) speak(reply);
+            if (voiceMode) {
+              if (autoSpeak) speak(reply, armListening);
+              else setTimeout(armListening, 700);
+            } else if (autoSpeak) {
+              speak(reply);
+            }
           }, 900);
         }, Math.max(0, 450 - elapsed));
       })
@@ -899,7 +931,15 @@
         pushMsg('assistant', reply);
         renderHistoryList();
         var typing = addTypingBubble();
-        setTimeout(function () { finishTypingBubble(typing, reply); }, 900);
+        setTimeout(function () {
+          finishTypingBubble(typing, reply);
+          if (voiceMode) {
+            if (autoSpeak) speak(reply, armListening);
+            else setTimeout(armListening, 700);
+          } else if (autoSpeak) {
+            speak(reply);
+          }
+        }, 900);
       });
   }
 
