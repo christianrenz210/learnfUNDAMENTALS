@@ -75,34 +75,51 @@
       return;
     }
     if (listening) { stopListening(); return; }
-    try {
-      recognition = new SpeechRecognition();
-      recognition.lang = (navigator.language || 'en-US');
-      recognition.interimResults = true;
-      recognition.continuous = false;
-      recognition.maxAlternatives = 1;
-      recognition.onresult = function (ev) {
-        var interim = '';
-        var final = '';
-        for (var i = ev.resultIndex; i < ev.results.length; i++) {
-          var res = ev.results[i];
-          if (res.isFinal) final += res[0].transcript;
-          else interim += res[0].transcript;
-        }
-        if (inputEl) inputEl.value = final || interim;
-        if (final) {
-          var spoken = final.trim();
-          if (inputEl) inputEl.value = '';
-          stopListening();
-          if (spoken) sendMessage(spoken);
-        }
-      };
-      recognition.onerror = function () { stopListening(); };
-      recognition.onend = function () { listening = false; setMicState(false); };
-      recognition.start();
-      listening = true;
-      setMicState(true);
-    } catch (e) { stopListening(); }
+    function realStart() {
+      try {
+        recognition = new SpeechRecognition();
+        recognition.lang = (navigator.language || 'en-US');
+        recognition.interimResults = true;
+        recognition.continuous = false;
+        recognition.maxAlternatives = 1;
+        recognition.onresult = function (ev) {
+          var interim = '';
+          var final = '';
+          for (var i = ev.resultIndex; i < ev.results.length; i++) {
+            var res = ev.results[i];
+            if (res.isFinal) final += res[0].transcript;
+            else interim += res[0].transcript;
+          }
+          if (inputEl) inputEl.value = final || interim;
+          if (final) {
+            var spoken = final.trim();
+            if (inputEl) inputEl.value = '';
+            stopListening();
+            if (spoken) sendMessage(spoken);
+          }
+        };
+        recognition.onerror = function () { stopListening(); };
+        recognition.onend = function () { listening = false; setMicState(false); };
+        recognition.start();
+        listening = true;
+        setMicState(true);
+      } catch (e) { stopListening(); }
+    }
+    if (hasTTS) {
+      window.speechSynthesis.cancel();
+      var g = new SpeechSynthesisUtterance('Hey, how can I help you, master?');
+      g.lang = (navigator.language || 'en-US');
+      g.rate = 1.2;
+      g.pitch = 1;
+      var started = false;
+      var begin = function () { if (started) return; started = true; realStart(); };
+      g.onend = begin;
+      g.onerror = begin;
+      try { window.speechSynthesis.speak(g); } catch (e) {}
+      setTimeout(begin, 3000);
+    } else {
+      realStart();
+    }
   }
 
   var micBtn = document.getElementById('assistMicBtn');
