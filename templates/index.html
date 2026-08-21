@@ -324,19 +324,23 @@
     ]
   ];
   var li = 0, ti = 0, ci = 0;
-  function step() {
-    if (li >= lines.length) return;
+
+  function typeStep() {
+    if (li >= lines.length) {
+      setTimeout(deleteStep, 1800);
+      return;
+    }
     var line = lines[li];
     if (ti >= line.length) {
       out.appendChild(document.createElement('br'));
       li++; ti = 0; ci = 0;
-      setTimeout(step, 260);
+      setTimeout(typeStep, 260);
       return;
     }
     var tok = line[ti];
     if (ci >= tok.t.length) {
       ti++; ci = 0;
-      setTimeout(step, 45);
+      setTimeout(typeStep, 45);
       return;
     }
     var span = document.createElement('span');
@@ -344,9 +348,30 @@
     span.textContent = tok.t.charAt(ci);
     out.appendChild(span);
     ci++;
-    setTimeout(step, 42);
+    setTimeout(typeStep, 42);
   }
-  setTimeout(step, 600);
+
+  function deleteStep() {
+    var last = out.lastChild;
+    if (!last) {
+      li = 0; ti = 0; ci = 0;
+      setTimeout(typeStep, 500);
+      return;
+    }
+    if (last.tagName === 'BR') {
+      out.removeChild(last);
+      setTimeout(deleteStep, 30);
+      return;
+    }
+    if (last.textContent.length > 1) {
+      last.textContent = last.textContent.slice(0, -1);
+    } else {
+      out.removeChild(last);
+    }
+    setTimeout(deleteStep, 26);
+  }
+
+  setTimeout(typeStep, 600);
 })();
 </script>
 {% endblock %}
