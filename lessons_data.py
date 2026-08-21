@@ -1862,6 +1862,7 @@ LESSONS = [
                 {"id": "HecufBrsowY", "channel": "Doctor J", "title": "Introduction to Flowcharts | Flowchart Basics Part 1"},
             ],
         },
+        "code": {},
         "quiz": [
             {
                 "question": "Which shape shows the Start or End of a flowchart?",

@@ -86,7 +86,7 @@
                 </a>
               {% endif %}
             {% endif %}
-          </div>
+      </div>
           <p class="lead">{{ lesson.description }}</p>
         </div>
       </div>
@@ -173,6 +173,7 @@
       </div>
       {% endif %}
 
+      {% if lesson.get('code') %}
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-white">
           <h5 class="mb-0">
@@ -251,6 +252,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
 
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-white">
