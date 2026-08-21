@@ -1857,11 +1857,10 @@ LESSONS = [
             "Arrows show the flow of control from one step to the next.",
             "Draw the flowchart first, then translate each shape into code.",
         ],
-        "code": {
-            "python": "# Flowchart for: is a number even?\n# (parallelogram: input n)\n# (diamond: n % 2 == 0 ?)\n#   Yes -> rectangle: print 'Even'\n#   No  -> rectangle: print 'Odd'\n\nn = int(input('Enter a number: '))\nif n % 2 == 0:\n    print('Even')\nelse:\n    print('Odd')",
-            "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int n;\n    cout << \"Enter a number: \";   // parallelogram: output\n    cin >> n;                      // parallelogram: input\n    if (n % 2 == 0) {              // diamond: decision\n        cout << \"Even\";            // rectangle: process\n    } else {\n        cout << \"Odd\";\n    }\n    return 0;\n}",
-            "java": "import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        System.out.print(\"Enter a number: \");  // parallelogram: output\n        int n = sc.nextInt();                   // parallelogram: input\n        if (n % 2 == 0) {                      // diamond: decision\n            System.out.println(\"Even\");         // rectangle: process\n        } else {\n            System.out.println(\"Odd\");\n        }\n    }\n}",
-            "c": "#include <stdio.h>\n\nint main() {\n    int n;\n    printf(\"Enter a number: \");   // parallelogram: output\n    scanf(\"%d\", &n);               // parallelogram: input\n    if (n % 2 == 0) {              // diamond: decision\n        printf(\"Even\");            // rectangle: process\n    } else {\n        printf(\"Odd\");\n    }\n    return 0;\n}",
+        "videos": {
+            "general": [
+                {"id": "HecufBrsowY", "channel": "Doctor J", "title": "Introduction to Flowcharts | Flowchart Basics Part 1"},
+            ],
         },
         "quiz": [
             {

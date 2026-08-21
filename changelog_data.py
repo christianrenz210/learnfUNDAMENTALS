@@ -83,7 +83,7 @@ CHANGELOG = [
             "Each reply has a Read aloud button so you can replay E.R.E.N's voice anytime, even with voice replies turned off",
             "Hands-free mode - after E.R.E.N finishes a reply it automatically listens again, so you can keep talking without tapping the mic (tap the mic once more to stop)",
             "Voice chat uses the browser's built-in Web Speech API, so it works with no extra API keys (mic needs Chrome/Edge over HTTPS or localhost)",
-            "New Flowcharts lesson (Fundamentals) - learn the standard symbols: oval = start/end, rectangle = process, diamond = decision, parallelogram = input/output, with a quiz",
+            "New Flowcharts lesson (Fundamentals) with a video tutorial and a quiz - learn the standard symbols: oval = start/end, rectangle = process, diamond = decision, parallelogram = input/output",
             "New interactive Flowchart Builder - drag shapes onto a canvas, connect them with arrows, rename them, and auto-saved on your device; export as PNG or JSON",
         ],
     },
