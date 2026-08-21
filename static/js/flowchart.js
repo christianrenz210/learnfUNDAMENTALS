@@ -20,6 +20,7 @@
   var connectMode = false;
   var connectFrom = null;
   var dragging = null;
+  var editingInput = null;
 
   // arrow marker
   var defs = document.createElementNS(SVGNS, 'defs');
@@ -154,11 +155,54 @@
     render();
   }
 
-  function updateLabel(id) {
+  function cancelInlineEdit() {
+    if (editingInput) {
+      if (editingInput.parentNode) editingInput.parentNode.removeChild(editingInput);
+      editingInput = null;
+    }
+  }
+
+  function startInlineEdit(id) {
     var n = nodes.find(function (x) { return x.id === id; });
     if (!n) return;
-    var v = prompt('Edit text for this shape:', n.label);
-    if (v !== null) { n.label = v; save(); render(); }
+    cancelInlineEdit();
+    selectedId = id;
+    render();
+    var g = svg.querySelector('[data-id="' + id + '"]');
+    var t = g && g.querySelector('text');
+    if (!t) return;
+    var stageRect = svg.parentElement.getBoundingClientRect();
+    var tr = t.getBoundingClientRect();
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'fc-edit-input';
+    input.value = n.label;
+    input.style.position = 'absolute';
+    input.style.left = (tr.left - stageRect.left) + 'px';
+    input.style.top = (tr.top - stageRect.top - 2) + 'px';
+    input.style.width = Math.max(Math.round(tr.width) + 16, 80) + 'px';
+    input.style.height = (Math.round(tr.height) + 6) + 'px';
+    svg.parentElement.appendChild(input);
+    editingInput = input;
+    input.focus();
+    input.select();
+
+    function commit() {
+      if (!editingInput) return;
+      n.label = input.value;
+      cancelInlineEdit();
+      save();
+      render();
+    }
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancelInlineEdit(); }
+    });
+    input.addEventListener('blur', commit);
+  }
+
+  function updateLabel(id) {
+    startInlineEdit(id);
   }
 
   function save() {
@@ -264,11 +308,19 @@
     connectBtn.classList.toggle('active', connectMode);
     document.getElementById('fcHint').textContent = connectMode
       ? 'Connect mode: click the first shape, then the second shape to draw an arrow.'
-      : 'Tap a shape above to add it, then drag to move. Double-click a shape to rename it.';
+      : 'Tap a shape above to add it, then drag to move. Double-click a shape — or select it and click Edit Text — to rename it.';
     render();
   });
 
   document.getElementById('fcDelete').addEventListener('click', deleteSelected);
+
+  document.getElementById('fcEdit').addEventListener('click', function () {
+    if (!selectedId) {
+      document.getElementById('fcHint').textContent = 'Select a shape first, then click Edit Text (or double-click it).';
+      return;
+    }
+    startInlineEdit(selectedId);
+  });
 
   document.getElementById('fcClear').addEventListener('click', function () {
     if (!confirm('Clear the whole canvas?')) return;

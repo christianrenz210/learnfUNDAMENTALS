@@ -17,12 +17,13 @@
       <button type="button" class="fc-shape" data-type="decision"><i class="bi bi-diamond-fill"></i> Decision</button>
       <button type="button" class="fc-shape" data-type="io"><i class="bi bi-card-text"></i> Input / Output</button>
     </div>
-    <div class="fc-group">
-      <button type="button" class="fc-action" id="fcConnect"><i class="bi bi-arrow-right-circle"></i> Connect</button>
-      <button type="button" class="fc-action" id="fcDelete"><i class="bi bi-trash"></i> Delete selected</button>
-      <button type="button" class="fc-action" id="fcExample"><i class="bi bi-lightbulb"></i> Load example</button>
-      <button type="button" class="fc-action" id="fcClear"><i class="bi bi-eraser"></i> Clear all</button>
-    </div>
+     <div class="fc-group">
+       <button type="button" class="fc-action" id="fcConnect"><i class="bi bi-arrow-right-circle"></i> Connect</button>
+       <button type="button" class="fc-action" id="fcEdit"><i class="bi bi-pencil-square"></i> Edit Text</button>
+       <button type="button" class="fc-action" id="fcDelete"><i class="bi bi-trash"></i> Delete selected</button>
+       <button type="button" class="fc-action" id="fcExample"><i class="bi bi-lightbulb"></i> Load example</button>
+       <button type="button" class="fc-action" id="fcClear"><i class="bi bi-eraser"></i> Clear all</button>
+     </div>
     <div class="fc-group">
       <button type="button" class="fc-action fc-primary" id="fcPng"><i class="bi bi-image"></i> Export PNG</button>
       <button type="button" class="fc-action" id="fcJson"><i class="bi bi-download"></i> Save JSON</button>
@@ -33,7 +34,7 @@
 
   <div class="fc-stage">
     <svg id="fcCanvas" xmlns="http://www.w3.org/2000/svg"></svg>
-    <div class="fc-hint" id="fcHint">Tap a shape above to add it, then drag to move. Double-click a shape to rename it.</div>
+    <div class="fc-hint" id="fcHint">Tap a shape above to add it, then drag to move. Double-click a shape — or select it and click Edit Text — to change its label.</div>
   </div>
 
   <aside class="fc-side no-print">
@@ -50,8 +51,8 @@
     <ol class="fc-how">
       <li>Click a shape button to drop it on the canvas.</li>
       <li>Drag shapes to position them.</li>
-      <li>Click <strong>Connect</strong>, then click two shapes to draw an arrow.</li>
-      <li>Double-click a shape to edit its text.</li>
+       <li>Click <strong>Connect</strong>, then click two shapes to draw an arrow.</li>
+       <li>Double-click a shape — or select it and click <strong>Edit Text</strong> — to change its label.</li>
       <li>Select a shape and press <kbd>Delete</kbd> to remove it.</li>
     </ol>
   </aside>
@@ -59,5 +60,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/flowchart.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='js/flowchart.js') }}?v=2"></script>
 {% endblock %}
