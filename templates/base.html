@@ -504,6 +504,12 @@
       <button type="button" id="assistImageClear" class="assist-img-clear" aria-label="Remove image">&times;</button>
     </div>
     <div class="assist-input-row">
+      <button type="button" id="assistMicBtn" class="assist-img-btn" aria-label="Talk to E.R.E.N" title="Talk to E.R.E.N">
+        <i class="bi bi-mic"></i>
+      </button>
+      <button type="button" id="assistVoiceBtn" class="assist-img-btn" aria-label="Toggle voice replies" title="E.R.E.N will not speak">
+        <i class="bi bi-volume-mute"></i>
+      </button>
       <button type="button" id="assistImageBtn" class="assist-img-btn" aria-label="Attach image" title="Attach an image">
         <i class="bi bi-image"></i>
       </button>
@@ -1683,7 +1689,7 @@ window.EREN = {
   }
 };
 </script>
-<script src="{{ url_for('static', filename='js/eren.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='js/eren.js') }}?v=8"></script>
 {# <script src="{{ url_for('static', filename='js/music.js') }}?v=15"></script> — music floater hidden for now #}
 {% endif %}
 </body>

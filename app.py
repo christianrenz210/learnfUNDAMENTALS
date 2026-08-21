@@ -155,8 +155,8 @@ def localtime_filter(dt, fmt="%Y-%m-%d %H:%M:%S"):
     return dt.astimezone(LOCAL_TZ).strftime(fmt)
 
 
-APP_VERSION = "1.66"
-EREN_VERSION = "2.2"
+APP_VERSION = "1.67"
+EREN_VERSION = "2.3"
 
 
 @app.context_processor
@@ -5447,4 +5447,4 @@ with app.app_context():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True, threaded=True, port=int(os.environ.get("PORT", 5001)))
+    app.run(host="0.0.0.0", debug=True, threaded=True, port=int(os.environ.get("PORT", 5002)))

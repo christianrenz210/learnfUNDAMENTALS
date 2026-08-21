@@ -9,6 +9,121 @@
 
   var isFullPage = msgsEl.classList.contains('assist-page-messages');
 
+  // ---------- Voice (Speech Recognition + Speech Synthesis) ----------
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var hasSR = !!SpeechRecognition;
+  var hasTTS = !!window.speechSynthesis;
+  var recognition = null;
+  var listening = false;
+
+  var VOICE_KEY = 'cfErenVoice_' + (cfg.username || 'guest');
+  var autoSpeak = false;
+  try { autoSpeak = localStorage.getItem(VOICE_KEY) === '1'; } catch (e) {}
+
+  function stripForSpeech(text) {
+    return (text || '')
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/\[video:[^\]]*\]/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/https?:\/\/\S+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function speak(text) {
+    if (!hasTTS) return;
+    var t = stripForSpeech(text);
+    if (!t) return;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(t.slice(0, 3000));
+      u.lang = (navigator.language || 'en-US');
+      u.rate = 1.2;
+      u.pitch = 1;
+      u.onstart = function () {
+        document.querySelectorAll('.assist-speak-btn.speaking').forEach(function (b) { b.classList.remove('speaking'); });
+        if (currentSpeakBtn) currentSpeakBtn.classList.add('speaking');
+      };
+      u.onend = function () { if (currentSpeakBtn) currentSpeakBtn.classList.remove('speaking'); };
+      currentSpeakBtn = null;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  var currentSpeakBtn = null;
+
+  function setMicState(on) {
+    var btn = document.getElementById('assistMicBtn');
+    if (!btn) return;
+    btn.classList.toggle('assist-mic-listening', on);
+    btn.title = on ? 'Stop listening' : 'Talk to E.R.E.N';
+    btn.innerHTML = on ? '<i class="bi bi-mic-fill"></i>' : '<i class="bi bi-mic"></i>';
+  }
+
+  function stopListening() {
+    if (recognition) { try { recognition.stop(); } catch (e) {} }
+    listening = false;
+    setMicState(false);
+  }
+
+  function startListening() {
+    if (!hasSR) {
+      alert('Voice input is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+    if (listening) { stopListening(); return; }
+    try {
+      recognition = new SpeechRecognition();
+      recognition.lang = (navigator.language || 'en-US');
+      recognition.interimResults = true;
+      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = function (ev) {
+        var interim = '';
+        var final = '';
+        for (var i = ev.resultIndex; i < ev.results.length; i++) {
+          var res = ev.results[i];
+          if (res.isFinal) final += res[0].transcript;
+          else interim += res[0].transcript;
+        }
+        if (inputEl) inputEl.value = final || interim;
+        if (final) {
+          var spoken = final.trim();
+          if (inputEl) inputEl.value = '';
+          stopListening();
+          if (spoken) sendMessage(spoken);
+        }
+      };
+      recognition.onerror = function () { stopListening(); };
+      recognition.onend = function () { listening = false; setMicState(false); };
+      recognition.start();
+      listening = true;
+      setMicState(true);
+    } catch (e) { stopListening(); }
+  }
+
+  var micBtn = document.getElementById('assistMicBtn');
+  if (micBtn) micBtn.addEventListener('click', function (e) { e.preventDefault(); startListening(); });
+
+  function setVoiceState(on) {
+    autoSpeak = !!on;
+    try { localStorage.setItem(VOICE_KEY, on ? '1' : '0'); } catch (e) {}
+    var btn = document.getElementById('assistVoiceBtn');
+    if (!btn) return;
+    btn.classList.toggle('assist-voice-on', autoSpeak);
+    btn.setAttribute('aria-pressed', autoSpeak ? 'true' : 'false');
+    btn.title = autoSpeak ? 'E.R.E.N will speak replies' : 'E.R.E.N will not speak';
+    btn.innerHTML = autoSpeak ? '<i class="bi bi-volume-up-fill"></i>' : '<i class="bi bi-volume-mute"></i>';
+    if (!autoSpeak && hasTTS) window.speechSynthesis.cancel();
+  }
+
+  var voiceBtn = document.getElementById('assistVoiceBtn');
+  if (voiceBtn) voiceBtn.addEventListener('click', function (e) { e.preventDefault(); setVoiceState(!autoSpeak); });
+  setVoiceState(autoSpeak);
+
   var urls = cfg.urls || {};
   var RUN_LANGS = {
     python: 'python', py: 'python', python3: 'python',
@@ -472,6 +587,18 @@
       bar2.appendChild(addPptButton(bubble, text));
       bubble.appendChild(bar2);
     }
+    if (hasTTS) {
+      var sp = document.createElement('button');
+      sp.type = 'button';
+      sp.className = 'assist-speak-btn';
+      sp.title = 'Read this reply aloud';
+      sp.innerHTML = '<i class="bi bi-volume-up"></i> Read aloud';
+      sp.addEventListener('click', function () {
+        currentSpeakBtn = sp;
+        speak(text);
+      });
+      bubble.appendChild(sp);
+    }
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
 
@@ -744,7 +871,10 @@
         var elapsed = Date.now() - started;
         setTimeout(function () {
           var typing = addTypingBubble();
-          setTimeout(function () { finishTypingBubble(typing, reply, opts); }, 900);
+          setTimeout(function () {
+            finishTypingBubble(typing, reply, opts);
+            if (autoSpeak) speak(reply);
+          }, 900);
         }, Math.max(0, 450 - elapsed));
       })
       .catch(function () {

@@ -1,5 +1,17 @@
 EREN_CHANGELOG = [
     {
+        "version": "2.3",
+        "date": "2026-08-22",
+        "type": "feature",
+        "title": "E.R.E.N Can Now Talk",
+        "changes": [
+            "Voice input - tap the mic button and speak to E.R.E.N; your speech is converted to a message and sent automatically",
+            "Voice output - toggle the voice button and E.R.E.N reads every reply aloud using your browser's text-to-speech",
+            "Each reply has a Read aloud button so you can replay E.R.E.N's voice anytime",
+            "Runs entirely in the browser with the Web Speech API, so no extra API keys are needed (mic requires Chrome/Edge over HTTPS or localhost)",
+        ],
+    },
+    {
         "version": "2.2",
         "date": "2026-08-07",
         "type": "feature",
@@ -59,6 +71,18 @@ EREN_CHANGELOG = [
 ]
 
 CHANGELOG = [
+    {
+        "version": "1.67",
+        "date": "2026-08-22",
+        "type": "feature",
+        "title": "Voice Chat with E.R.E.N",
+        "changes": [
+            "Talk to E.R.E.N hands-free - tap the mic button and speak; your voice is turned into a message and sent automatically",
+            "E.R.E.N can now reply out loud - toggle the voice button so every answer is read aloud using your browser's text-to-speech",
+            "Each reply has a Read aloud button so you can replay E.R.E.N's voice anytime, even with voice replies turned off",
+            "Voice chat uses the browser's built-in Web Speech API, so it works with no extra API keys (mic needs Chrome/Edge over HTTPS or localhost)",
+        ],
+    },
     {
         "version": "1.66",
         "date": "2026-08-07",
