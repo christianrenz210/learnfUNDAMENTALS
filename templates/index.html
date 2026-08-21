@@ -323,18 +323,12 @@
       { t: ')', c: 'text-white' }
     ]
   ];
-  var li = 0, ti = 0, ci = 0;
+  var li = 0, ti = 0, ci = 0, idx = 0;
 
   function typeStep() {
-    if (li >= lines.length) {
-      setTimeout(deleteStep, 1800);
-      return;
-    }
-    var line = lines[li];
+    var line = lines[idx];
     if (ti >= line.length) {
-      out.appendChild(document.createElement('br'));
-      li++; ti = 0; ci = 0;
-      setTimeout(typeStep, 260);
+      setTimeout(deleteStep, 1700);
       return;
     }
     var tok = line[ti];
@@ -354,13 +348,9 @@
   function deleteStep() {
     var last = out.lastChild;
     if (!last) {
-      li = 0; ti = 0; ci = 0;
+      idx = (idx + 1) % lines.length;
+      ti = 0; ci = 0;
       setTimeout(typeStep, 500);
-      return;
-    }
-    if (last.tagName === 'BR') {
-      out.removeChild(last);
-      setTimeout(deleteStep, 30);
       return;
     }
     if (last.textContent.length > 1) {
