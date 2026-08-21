@@ -55,9 +55,7 @@
             <span class="lp-codecard-file">hello_world.py</span>
           </div>
           <div class="lp-codecard-body">
-            <span class="text-danger">print</span><span class="text-white">(</span><span class="text-warning">"Hello, world!"</span><span class="text-white">)</span><br>
-            <span class="text-danger">print</span><span class="text-white">(</span><span class="text-warning">"Programming is fun!"</span><span class="text-white">)</span>
-            <div class="lp-codecard-cursor"></div>
+            <span id="lpTyped"></span><span class="lp-codecard-cursor" id="lpCursor"></span>
           </div>
         </div>
       </div>
@@ -304,4 +302,51 @@
     </div>
   </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var out = document.getElementById('lpTyped');
+  if (!out) return;
+  var lines = [
+    [
+      { t: 'print', c: 'text-danger' },
+      { t: '(', c: 'text-white' },
+      { t: '"Hello, world!"', c: 'text-warning' },
+      { t: ')', c: 'text-white' }
+    ],
+    [
+      { t: 'print', c: 'text-danger' },
+      { t: '(', c: 'text-white' },
+      { t: '"Programming is fun!"', c: 'text-warning' },
+      { t: ')', c: 'text-white' }
+    ]
+  ];
+  var li = 0, ti = 0, ci = 0;
+  function step() {
+    if (li >= lines.length) return;
+    var line = lines[li];
+    if (ti >= line.length) {
+      out.appendChild(document.createElement('br'));
+      li++; ti = 0; ci = 0;
+      setTimeout(step, 260);
+      return;
+    }
+    var tok = line[ti];
+    if (ci >= tok.t.length) {
+      ti++; ci = 0;
+      setTimeout(step, 45);
+      return;
+    }
+    var span = document.createElement('span');
+    span.className = tok.c;
+    span.textContent = tok.t.charAt(ci);
+    out.appendChild(span);
+    ci++;
+    setTimeout(step, 42);
+  }
+  setTimeout(step, 600);
+})();
+</script>
 {% endblock %}
