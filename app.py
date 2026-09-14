@@ -188,7 +188,13 @@ if DATABASE_URL.startswith("postgresql"):
     }
 
 ALLOWED_AVATAR_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
-AVATAR_DIR = os.path.join(app.root_path, "static", "uploads")
+IS_SERVERLESS = bool(os.environ.get("SERVERLESS") or os.environ.get("VERCEL"))
+if IS_SERVERLESS:
+    AVATAR_DIR = "/tmp/uploads"
+    CHAT_UPLOAD_DIR = "/tmp/chat_uploads"
+else:
+    AVATAR_DIR = os.path.join(app.root_path, "static", "uploads")
+    CHAT_UPLOAD_DIR = os.path.join(app.root_path, "static", "chat_uploads")
 AVATAR_MIME = {
     "png": "image/png",
     "jpg": "image/jpeg",
@@ -196,7 +202,6 @@ AVATAR_MIME = {
     "gif": "image/gif",
     "webp": "image/webp",
 }
-CHAT_UPLOAD_DIR = os.path.join(app.root_path, "static", "chat_uploads")
 CHAT_ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "webp", "pdf", "txt", "doc", "docx", "xls", "xlsx", "zip"}
 CHAT_IMAGE_EXT = {"png", "jpg", "jpeg", "gif", "webp"}
 CHAT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -5190,8 +5195,12 @@ with app.app_context():
     fix_database_schema()
     
     db.create_all()
-    os.makedirs(AVATAR_DIR, exist_ok=True)
-    os.makedirs(CHAT_UPLOAD_DIR, exist_ok=True)
+    try:
+        os.makedirs(AVATAR_DIR, exist_ok=True)
+        os.makedirs(CHAT_UPLOAD_DIR, exist_ok=True)
+    except OSError:
+        # Read-only filesystem (serverless); uploads won't persist
+        pass
     is_sqlite = db.engine.dialect.name == "sqlite"
     
     # Check if user table has required columns, drop and recreate if corrupted
