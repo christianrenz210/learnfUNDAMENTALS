@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+__pycache__/
+*.py[cod]
+instance/
+*.db
+.codefundamentals_db
+static/uploads/
+static/chat_uploads/
+*.docx
+*.pyc
+.history/
+.vscode/
+.kalai/

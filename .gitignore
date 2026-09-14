@@ -26,3 +26,4 @@ v_erd.svg
 # OS
 Thumbs.db
 .DS_Store
+.vercel
