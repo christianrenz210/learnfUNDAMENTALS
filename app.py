@@ -2033,6 +2033,7 @@ def dashboard():
     }
     return render_template(
         "dashboard.html",
+        hide_nav=True,
         sections=sections,
         section_stats=section_stats,
         locked_ids=locked_ids,
