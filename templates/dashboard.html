@@ -413,19 +413,6 @@
             </div>
           </div>
 
-          <div class="card mentor-card">
-            <div class="card-head">
-              <div>
-                <h3>E.R.E.N</h3>
-                <div class="meta">Your AI study assistant</div>
-              </div>
-            </div>
-            <div class="mentor-orb"></div>
-            <button type="button" class="mentor-cta" id="dashMentorOpen">
-              <i class="bi bi-robot"></i> Ask E.R.E.N a question
-            </button>
-          </div>
-
           <div class="card">
             <div class="card-head">
               <div>
@@ -674,11 +661,6 @@ document.getElementById('pRemoveAvatar')?.addEventListener('change', function ()
     preview.classList.remove('d-none');
     initials.classList.add('d-none');
   }
-});
-document.getElementById('dashMentorOpen')?.addEventListener('click', function () {
-  const toggle = document.getElementById('assistToggle');
-  if (toggle) { toggle.click(); return; }
-  window.location.href = "{{ url_for('aiassist') }}";
 });
 </script>
 {% endblock %}
